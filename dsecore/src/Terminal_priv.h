@@ -15,11 +15,11 @@
 #include <vector>
 #include <utility>
 #include <iostream>
-#include <dse/Terminal.h>
-#include <dse/CloseEvent.h>
-#include <dse/ResizeEvent.h>
-#include <dse/observer.h>
-#include <dse/KeyEvent.h>
+#include "../dse/Terminal.h"
+#include "../dse/CloseEvent.h"
+#include "../dse/ResizeEvent.h"
+#include "../dse/observer.h"
+#include "../dse/KeyEvent.h"
 
 namespace {
 
@@ -31,7 +31,7 @@ struct TerminalPrivate {
 	static LRESULT CALLBACK staticWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 	LRESULT wndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 	static ATOM getWindowClsID();
-	void notifyObservers(util::Event& event, Terminal::EventType type);
+	void notifyObservers(Event& event, Terminal::EventType type);
 
 	static constexpr int GWLP_THIS = 0;
 	struct {
@@ -39,7 +39,7 @@ struct TerminalPrivate {
 		HDC hdc;
 	} sysDepID; // System dependent identifier
 	//std::array<std::vector<std::pair<util::Observer*, util::handler_t>>, Terminal::EVENT_COUNT> events;
-	std::array<util::ObserverStore<void(util::Event&)>, Terminal::EVENT_COUNT> events;
+	std::array<ObserverStore<void(Event*)>, Terminal::EVENT_COUNT> events;
 };
 
 typedef TerminalPrivate PRIVATE_CLASSNAME;
@@ -133,11 +133,11 @@ inline ATOM TerminalPrivate::getWindowClsID() {
 	return clsID;
 }
 
-inline void TerminalPrivate::notifyObservers(util::Event& event, Terminal::EventType type) {
+inline void TerminalPrivate::notifyObservers(Event& event, Terminal::EventType type) {
 	/*for (auto& handlerPair : events[type]) {
 		handlerPair.second(handlerPair.first, &event);
 	}*/
-	events.at(type)(event);
+	events.at(type)(&event);
 }
 
 } //namespace

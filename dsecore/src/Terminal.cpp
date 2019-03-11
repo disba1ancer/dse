@@ -5,8 +5,8 @@
  *      Author: Anton
  */
 
-#include <dse/Terminal.h>
-#include <dse/util.h>
+#include "../dse/Terminal.h"
+#include "../dse/util.h"
 #include "Terminal_priv.h"
 
 namespace dse {
@@ -122,10 +122,10 @@ void Terminal::detach(EventType eventType,
 	}
 }*/
 
-void Terminal::attach(EventType eventType,
-		util::IConnection<void(util::Event&)>& connection) {
+Connection<void> Terminal::attach(EventType eventType,
+		void* owner, void (*callback)(void*, Event*)) {
 	auto& pthis = PRIVATE;
-	pthis.events.at(eventType).addConnection(&connection);
+	return pthis.events.at(eventType).add(owner, callback);
 }
 
 void Terminal::close() {

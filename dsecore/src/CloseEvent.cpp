@@ -5,8 +5,8 @@
  *      Author: Anton
  */
 
-#include <dse/Terminal.h>
-#include <dse/CloseEvent.h>
+#include "../dse/Terminal.h"
+#include "../dse/CloseEvent.h"
 
 namespace dse {
 namespace core {

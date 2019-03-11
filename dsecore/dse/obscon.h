@@ -8,6 +8,7 @@
 #ifndef DSE_OBSCON_H_
 #define DSE_OBSCON_H_
 
+#include <stdexcept>
 #include "obsbase.h"
 #include "util.h"
 
@@ -38,10 +39,11 @@ public:
 
 template <typename Owner>
 class Connection : public IConBase, private dse::util::OwnerStore<Owner, Connection<Owner>> {
+	friend class dse::util::OwnerStore<Owner, Connection<Owner>>;
 	IObservableLinkController* linkController;
 public:
 	Connection();
-	Connection(Connection<void>& con);
+	Connection(Connection<void>&& con);
 	~Connection();
 	Connection(const Connection&) = delete;
 	Connection(Connection&& src);
@@ -56,7 +58,8 @@ template <typename Owner>
 Connection<Owner>::Connection() : dse::util::OwnerStore<Owner, Connection>(nullptr), linkController(nullptr) {}
 
 template <typename Owner>
-Connection<Owner>::Connection(Connection<void>& con) : dse::util::OwnerStore<Owner, Connection>(static_cast<Owner*>(con.observer)), linkController(con.linkController) {
+Connection<Owner>::Connection(Connection<void>&& con) : dse::util::OwnerStore<Owner, Connection>(static_cast<Owner*>(con.observer)), linkController(con.linkController) {
+	linkController->move(this, &con);
 	con.linkController = nullptr;
 	con.observer = nullptr;
 }
@@ -68,8 +71,8 @@ Connection<Owner>::~Connection() {
 
 template <typename Owner>
 Connection<Owner>::Connection(Connection&& src) : linkController(src.linkController) {
-	src.linkController = nullptr;
 	linkController->move(this, &src);
+	src.linkController = nullptr;
 }
 
 template <typename Owner>
@@ -99,20 +102,20 @@ void* Connection<Owner>::getObserver() {
 	return this->getOwner();
 }
 
-Connection<void>::Connection() : observer(nullptr), linkController(nullptr) {}
+inline Connection<void>::Connection() : observer(nullptr), linkController(nullptr) {}
 
-Connection<void>::Connection(void* observer, IObservableLinkController* linkController) : observer(observer), linkController(linkController) {}
+inline Connection<void>::Connection(void* observer, IObservableLinkController* linkController) : observer(observer), linkController(linkController) {}
 
-Connection<void>::~Connection() {
+inline Connection<void>::~Connection() {
 	unlink();
 }
 
-Connection<void>::Connection(Connection&& src) : observer(src.observer), linkController(src.linkController) {
+inline Connection<void>::Connection(Connection&& src) : observer(src.observer), linkController(src.linkController) {
 	linkController = nullptr;
 	observer = nullptr;
 }
 
-Connection<void>& Connection<void>::operator =(Connection&& src) {
+inline Connection<void>& Connection<void>::operator =(Connection&& src) {
 	if (linkController) linkController->unlink(this);
 	linkController = src.linkController;
 	observer = src.observer;
@@ -122,18 +125,18 @@ Connection<void>& Connection<void>::operator =(Connection&& src) {
 	return *this;
 }
 
-void Connection<void>::unlink() {
+inline void Connection<void>::unlink() {
 	if (linkController) {
 		linkController->unlink(this);
 		linkController = nullptr;
 	}
 }
 
-void Connection<void>::move(IObservableLinkController* dst) {
+inline void Connection<void>::move(IObservableLinkController* dst) {
 	linkController = dst;
 }
 
-void* Connection<void>::getObserver() {
+inline void* Connection<void>::getObserver() {
 	return this->observer;
 }
 

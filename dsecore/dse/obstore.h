@@ -15,15 +15,19 @@
 namespace dse {
 namespace core {
 
+template <typename M>
+class ObserverStore;
+
 template <typename ... Args>
-class ObserverStore : public IObservableLinkController {
+class ObserverStore<void(Args...)> : public IObservableLinkController {
 	/*struct Observer {
 		void* object;
 		void (*call)(void*, Args...);
 	};*/
 
-	std::map<IConBase, void (*)(void*, Args...)> observers;
+	std::map<IConBase*, void (*)(void*, Args...)> observers;
 public:
+	ObserverStore() = default;
 	ObserverStore(const ObserverStore&) = delete;
 	ObserverStore(ObserverStore&& src);
 	~ObserverStore();
@@ -36,21 +40,21 @@ public:
 };
 
 template <typename ... Args>
-ObserverStore<Args...>::ObserverStore(ObserverStore&& src) : observers(std::move(src.observers)) {
+ObserverStore<void(Args...)>::ObserverStore(ObserverStore&& src) : observers(std::move(src.observers)) {
 	for (auto pair : observers) {
 		pair.first->move(this);
 	}
 }
 
 template <typename ... Args>
-ObserverStore<Args...>::~ObserverStore() {
+ObserverStore<void(Args...)>::~ObserverStore() {
 	for (auto pair : observers) {
 		pair.first->unlink();
 	}
 }
 
 template <typename ... Args>
-ObserverStore<Args...>& ObserverStore<Args...>::operator =(ObserverStore&& src) {
+ObserverStore<void(Args...)>& ObserverStore<void(Args...)>::operator =(ObserverStore&& src) {
 	for (auto pair : observers) {
 		pair.first->unlink();
 	}
@@ -61,28 +65,28 @@ ObserverStore<Args...>& ObserverStore<Args...>::operator =(ObserverStore&& src) 
 }
 
 template <typename ... Args>
-Connection<void> ObserverStore<Args...>::add(void* object, void (*method)(void*, Args...)) {
+Connection<void> ObserverStore<void(Args...)>::add(void* object, void (*method)(void*, Args...)) {
 	Connection<void> con(object, this);
-	observers.insert(decltype(observers)::value_type(&con, method));
+	observers.insert(typename decltype(observers)::value_type(&con, method));
 	return con;
 }
 
 template <typename ... Args>
-void ObserverStore<Args...>::unlink(IConBase* con) {
+void ObserverStore<void(Args...)>::unlink(IConBase* con) {
 	observers.erase(observers.find(con));
 }
 
 template <typename ... Args>
-void ObserverStore<Args...>::move(IConBase* dst, IConBase* src) {
+void ObserverStore<void(Args...)>::move(IConBase* dst, IConBase* src) {
 	auto iter = observers.find(src);
 	auto pair = *iter;
-	pair.first = dst;
+	//pair.first = dst;
 	observers.erase(iter);
-	observers.insert(pair);
+	observers.insert(typename decltype(observers)::value_type(dst, pair.second));
 }
 
 template <typename ... Args>
-void ObserverStore<Args...>::operator ()(Args ... args) {
+void ObserverStore<void(Args...)>::operator ()(Args ... args) {
 	for (auto pair : observers) {
 		pair.second(pair.first->getObserver(), args...);
 	}
