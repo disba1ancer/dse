@@ -20,6 +20,7 @@
 #include "../dse/ResizeEvent.h"
 #include "../dse/observer.h"
 #include "../dse/KeyEvent.h"
+#include "../dse/RedrawEvent.h"
 
 namespace {
 
@@ -76,7 +77,24 @@ inline LRESULT TerminalPrivate::wndProc(HWND hWnd, UINT message, WPARAM wParam, 
 	switch(message) {
 	case WM_ERASEBKGND:
 		return TRUE;
-	case WM_PAINT:
+	case WM_PAINT: {
+		/*MSG msg;
+		while(PeekMessage(&msg, 0, WM_TIMER, WM_TIMER, PM_REMOVE)) {
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);
+		}*/
+		/*ValidateRect(sysDepID.hWnd, nullptr);
+		while(PeekMessage(&msg, 0, WM_PAINT, WM_PAINT, PM_REMOVE)) {
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);
+		}
+		InvalidateRect(sysDepID.hWnd, nullptr, FALSE);*/
+		PAINTSTRUCT ps;
+		BeginPaint(sysDepID.hWnd, &ps);
+		RedrawEvent event;
+		notifyObservers(event, Terminal::EVENT_ON_REDRAW);
+		EndPaint(sysDepID.hWnd, &ps);
+	}
 		break;
 	case WM_CLOSE: {
 		CloseEvent event;

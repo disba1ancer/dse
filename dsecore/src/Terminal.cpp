@@ -94,7 +94,7 @@ void Terminal::resize(int width, int height) {
 	RECT rc{};
 	rc.right = width;
 	rc.bottom = height;
-	AdjustWindowRect(&rc, GetWindowLongPtr(pthis.sysDepID.hWnd, GWL_STYLE), FALSE);
+	AdjustWindowRect(&rc, static_cast<LONG>(GetWindowLongPtr(pthis.sysDepID.hWnd, GWL_STYLE)), FALSE);
 	SetWindowPos(pthis.sysDepID.hWnd, 0, 0, 0, rc.right - rc.left, rc.bottom - rc.top, SWP_NOMOVE | SWP_NOZORDER);
 }
 
@@ -102,25 +102,6 @@ void Terminal::makeSizable(bool sizable) {
 	auto& pthis = PRIVATE;
 	SetWindowLongPtr(pthis.sysDepID.hWnd, GWL_STYLE, (GetWindowLongPtr(pthis.sysDepID.hWnd, GWL_STYLE) & ~WS_SIZEBOX) | (sizable ? WS_SIZEBOX : 0));
 }
-
-/*void Terminal::attach(EventType eventType,
-		util::handler_t handler, Observer* observ) {
-	auto& pthis = PRIVATE;
-	pthis.events.at(eventType).push_back(std::make_pair(observ, handler));
-}
-
-void Terminal::detach(EventType eventType,
-		util::handler_t handler, Observer* observ) {
-	// TODO: detaching while observer notify
-	auto& pthis = PRIVATE;
-	auto end = pthis.events.at(eventType).end();
-	for (auto i = pthis.events.at(eventType).begin(); i != end; ++i) {
-		if (*i == std::make_pair(observ, handler)) {
-			pthis.events.at(eventType).erase(i);
-			break;
-		}
-	}
-}*/
 
 Connection<void> Terminal::attach(EventType eventType,
 		void* owner, void (*callback)(void*, Event*)) {
@@ -132,6 +113,12 @@ void Terminal::close() {
 	auto& pthis = PRIVATE;
 	CloseWindow(pthis.sysDepID.hWnd);
 }
+
+void Terminal::forceRedraw() {
+	auto& pthis = PRIVATE;
+	InvalidateRect(pthis.sysDepID.hWnd, nullptr, FALSE);
+}
+
 
 } /* namespace core */
 } /* namespace dse */

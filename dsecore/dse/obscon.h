@@ -70,7 +70,7 @@ Connection<Owner>::~Connection() {
 }
 
 template <typename Owner>
-Connection<Owner>::Connection(Connection&& src) : linkController(src.linkController) {
+Connection<Owner>::Connection(Connection&& src) : dse::util::OwnerStore<Owner, Connection<Owner>>(src), linkController(src.linkController) {
 	linkController->move(this, &src);
 	src.linkController = nullptr;
 }

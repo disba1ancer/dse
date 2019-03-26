@@ -21,6 +21,7 @@ public:
 		EVENT_ON_CLOSE,
 		EVENT_ON_RESIZE,
 		EVENT_ON_KEY_INPUT,
+		EVENT_ON_REDRAW,
 		EVENT_COUNT
 	};
 
@@ -51,6 +52,7 @@ public:
 	/*template <typename Recv, typename Evt>
 	Connection<void> attach(EventType eventType, Recv* recv, void (Recv::*method)(Evt&));*/
 	void close();
+	void forceRedraw();
 
 private:
 	//unsigned char storage[256 - sizeof(void*)];
