@@ -2,7 +2,7 @@
  * ExecutionThread.h
  *
  *  Created on: 22 дек. 2019 г.
- *      Author: Anton
+ *      Author: disba1ancer
  */
 
 #ifndef EXECUTIONTHREAD_H_

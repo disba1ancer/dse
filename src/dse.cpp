@@ -2,7 +2,7 @@
  * dse.cpp
  *
  *  Created on: 25 дек. 2019 г.
- *      Author: Anton
+ *      Author: disba1ancer
  */
 
 #include "threadutils/ExecutionThread.h"

@@ -2,7 +2,7 @@
  * Window_win32.cpp
  *
  *  Created on: 27 дек. 2019 г.
- *      Author: Anton
+ *      Author: disba1ancer
  */
 
 #include "Window_win32.h"

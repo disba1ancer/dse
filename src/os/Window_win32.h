@@ -2,7 +2,7 @@
  * Window_win32.h
  *
  *  Created on: 27 дек. 2019 г.
- *      Author: Anton
+ *      Author: disba1ancer
  */
 
 #ifndef OS_WINDOW_WIN32_H_

@@ -2,7 +2,7 @@
  * vector.h
  *
  *  Created on: 6 окт. 2018 г.
- *      Author: Anton
+ *      Author: disba1ancer
  */
 
 #ifndef VEC_H_

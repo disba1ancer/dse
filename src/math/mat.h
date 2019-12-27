@@ -2,7 +2,7 @@
  * mat.h
  *
  *  Created on: 24 февр. 2019 г.
- *      Author: Anton
+ *      Author: disba1ancer
  */
 
 #ifndef MAT_H_

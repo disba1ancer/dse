@@ -2,7 +2,7 @@
  * WindowShowCommand.h
  *
  *  Created on: 27 дек. 2019 г.
- *      Author: Anton
+ *      Author: disba1ancer
  */
 
 #ifndef OS_WINDOWSHOWCOMMAND_H_

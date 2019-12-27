@@ -2,7 +2,7 @@
  * ThreadPool.cpp
  *
  *  Created on: 22 дек. 2019 г.
- *      Author: Anton
+ *      Author: disba1ancer
  */
 
 #include "ThreadPool.h"
