@@ -11,6 +11,7 @@
 #include <windows.h>
 #include <map>
 #include "WindowShowCommand.h"
+#include "../notifier/notifier.h"
 
 namespace dse {
 namespace os {
@@ -18,7 +19,8 @@ namespace os {
 class Window_win32 {
 	HWND hWnd;
 	static std::map<HWND, Window_win32*> hWndMap;
-private:
+	notifier::notifier<void()> closeSubscribers;
+
 	static LRESULT CALLBACK staticWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 	LRESULT wndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 	static ATOM makeWindowClsID();
@@ -31,6 +33,7 @@ public:
 	Window_win32& operator=(Window_win32 &&other) = delete;
 	bool isVisible() const;
 	void show(WindowShowCommand command = WindowShowCommand::SHOW);
+	notifier::connection<void()> subscribeCloseEvent(std::function<void()>&& c);
 };
 
 } /* namespace os */

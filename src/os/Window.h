@@ -10,6 +10,7 @@
 
 #include <memory>
 #include "WindowShowCommand.h"
+#include "../notifier/notifier.h"
 
 namespace dse {
 namespace os {
@@ -29,6 +30,7 @@ public:
 	Window& operator=(Window &&other) = delete;
 	bool isVisible() const;
 	void show(WindowShowCommand command = WindowShowCommand::SHOW);
+	notifier::connection<void()> subscribeCloseEvent(std::function<void()>&& c);
 };
 
 } /* namespace os */

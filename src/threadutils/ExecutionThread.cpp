@@ -66,7 +66,7 @@ void ExecutionThread::exit(int r) {
 
 void ExecutionThread::addTask(std::function<bool()> &&task) {
 	std::lock_guard lock(mtx);
-	if (!isExit) { // TODO: notify user about fail
+	if (!isExit) {
 		tasks.emplace_back(std::move(task));
 		cond_var.notify_one();
 	}

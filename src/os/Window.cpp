@@ -25,5 +25,10 @@ void Window::show(WindowShowCommand command) {
 	return impl->show(command);
 }
 
+notifier::connection<void()> Window::subscribeCloseEvent(
+		std::function<void()>&& c) {
+	return impl->subscribeCloseEvent(std::move(c));
+}
+
 } /* namespace os */
 } /* namespace dse */

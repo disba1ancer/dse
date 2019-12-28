@@ -49,7 +49,7 @@ LRESULT Window_win32::wndProc(HWND hWnd, UINT message, WPARAM wParam,
 	case WM_CLOSE: {
 		//CloseEvent event;
 		//notifyObservers(event, Terminal::EVENT_ON_CLOSE);
-		PostQuitMessage(0);
+		closeSubscribers.notify();
 	}
 		break;
 	case WM_SIZE: {
@@ -141,6 +141,11 @@ void Window_win32::show(WindowShowCommand command) {
 		SetWindowLongPtr(hWnd, GWL_STYLE, style);
 	}
 	ShowWindow(hWnd, showCmd);
+}
+
+notifier::connection<void()> Window_win32::subscribeCloseEvent(
+		std::function<void()>&& c) {
+	return closeSubscribers.subscribe(std::move(c));
 }
 
 std::map<HWND, Window_win32*> Window_win32::hWndMap;

@@ -15,8 +15,11 @@ using dse::os::Window;
 ExecutionThread mainThread;
 
 int main(int argc, char* argv[]) {
-	std::unique_ptr<Window> window(new Window);
-	window->show();
+	Window window;
+	window.show();
+	auto con = window.subscribeCloseEvent([&window, &argc, &argv](){
+		mainThread.exit(0);
+	});
 	mainThread.addTask(dse::os::nonLockLoop);
 	return mainThread.runOnCurent();
 }
