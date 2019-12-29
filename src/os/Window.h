@@ -11,6 +11,7 @@
 #include <memory>
 #include "WindowShowCommand.h"
 #include "../notifier/notifier.h"
+#include "KeyboardKeyState.h"
 
 namespace dse {
 namespace os {
@@ -30,7 +31,12 @@ public:
 	Window& operator=(Window &&other) = delete;
 	bool isVisible() const;
 	void show(WindowShowCommand command = WindowShowCommand::SHOW);
-	notifier::connection<void()> subscribeCloseEvent(std::function<void()>&& c);
+	typedef void(CloseHandler)();
+	notifier::connection<CloseHandler> subscribeCloseEvent(std::function<CloseHandler>&& c);
+	typedef void(ResizeHandler)(WindowShowCommand, int, int);
+	notifier::connection<ResizeHandler> subscribeResizeEvent(std::function<ResizeHandler>&& c);
+	typedef void(KeyHandler)(KeyboardKeyState, int, int);
+	notifier::connection<KeyHandler> subscribeKeyEvent(std::function<KeyHandler>&& c);
 };
 
 } /* namespace os */

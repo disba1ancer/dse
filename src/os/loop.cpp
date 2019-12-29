@@ -13,7 +13,7 @@ using dse::threadutils::ExecutionThread;
 
 bool dse::os::nonLockLoop() {
 	MSG msg;
-	if (PeekMessageW(&msg, 0, 0, 0, PM_REMOVE)) {
+	if (PeekMessage(&msg, 0, 0, 0, PM_REMOVE)) {
 		if (msg.message == WM_QUIT) {
 			ExecutionThread::getCurrentThread().exit(msg.wParam);
 			return false;

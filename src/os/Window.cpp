@@ -25,9 +25,19 @@ void Window::show(WindowShowCommand command) {
 	return impl->show(command);
 }
 
-notifier::connection<void()> Window::subscribeCloseEvent(
-		std::function<void()>&& c) {
+notifier::connection<Window::CloseHandler> Window::subscribeCloseEvent(
+		std::function<CloseHandler>&& c) {
 	return impl->subscribeCloseEvent(std::move(c));
+}
+
+notifier::connection<Window::ResizeHandler> Window::subscribeResizeEvent(
+		std::function<ResizeHandler>&& c) {
+	return impl->subscribeResizeEvent(std::move(c));
+}
+
+notifier::connection<Window::KeyHandler> Window::subscribeKeyEvent(
+		std::function<KeyHandler> &&c) {
+	return impl->subscribeKeyEvent(std::move(c));
 }
 
 } /* namespace os */

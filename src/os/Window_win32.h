@@ -8,9 +8,9 @@
 #ifndef OS_WINDOW_WIN32_H_
 #define OS_WINDOW_WIN32_H_
 
-#include <windows.h>
+#include "win32.h"
 #include <map>
-#include "WindowShowCommand.h"
+#include "Window.h"
 #include "../notifier/notifier.h"
 
 namespace dse {
@@ -19,7 +19,9 @@ namespace os {
 class Window_win32 {
 	HWND hWnd;
 	static std::map<HWND, Window_win32*> hWndMap;
-	notifier::notifier<void()> closeSubscribers;
+	notifier::notifier<Window::CloseHandler> closeSubscribers;
+	notifier::notifier<Window::ResizeHandler> resizeSubscribers;
+	notifier::notifier<Window::KeyHandler> keySubscribers;
 
 	static LRESULT CALLBACK staticWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 	LRESULT wndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
@@ -33,7 +35,9 @@ public:
 	Window_win32& operator=(Window_win32 &&other) = delete;
 	bool isVisible() const;
 	void show(WindowShowCommand command = WindowShowCommand::SHOW);
-	notifier::connection<void()> subscribeCloseEvent(std::function<void()>&& c);
+	notifier::connection<Window::CloseHandler> subscribeCloseEvent(std::function<Window::CloseHandler>&& c);
+	notifier::connection<Window::ResizeHandler> subscribeResizeEvent(std::function<Window::ResizeHandler>&& c);
+	notifier::connection<Window::KeyHandler> subscribeKeyEvent(std::function<Window::KeyHandler>&& c);
 };
 
 } /* namespace os */

@@ -47,27 +47,40 @@ LRESULT Window_win32::wndProc(HWND hWnd, UINT message, WPARAM wParam,
 	}
 		break;
 	case WM_CLOSE: {
-		//CloseEvent event;
-		//notifyObservers(event, Terminal::EVENT_ON_CLOSE);
 		closeSubscribers.notify();
 	}
 		break;
 	case WM_SIZE: {
-		//ResizeEvent event{LOWORD(lParam), HIWORD(lParam)};
-		//notifyObservers(event, Terminal::EVENT_ON_RESIZE);
+		WindowShowCommand cmd = WindowShowCommand::SHOW_RESTORED;
+
+		switch (wParam) {
+		case SIZE_MINIMIZED:
+			cmd = WindowShowCommand::SHOW_MINIMIZED;
+			break;
+		case SIZE_MAXIMIZED:
+			cmd = WindowShowCommand::SHOW_MAXIMIZED;
+			break;
+		}
+
+		resizeSubscribers.notify(cmd, LOWORD(lParam), HIWORD(lParam));
 	}
 		break;
-	case WM_KEYDOWN: {
-		/*KeyEvent::State state = KeyEvent::DOWN;
-		if (lParam & 0x40000000) state = KeyEvent::PRESSED;
-		KeyEvent event(state, wParam, (lParam >> 16) & 0xFF);
-		notifyObservers(event, Terminal::EVENT_ON_KEY_INPUT);*/
+	case WM_SYSKEYDOWN:
+	case WM_KEYDOWN:
+	{
+		KeyboardKeyState state = (lParam & 0x40000000 ? KeyboardKeyState::PRESSED : KeyboardKeyState::DOWN);
+		keySubscribers.notify(state, wParam, (lParam >> 24) & 0x1);
+		//return DefWindowProc(hWnd, message, wParam, lParam);
 	}
 		break;
-	case WM_KEYUP: {
-		//KeyEvent event(KeyEvent::UP, wParam, (lParam >> 16) & 0xFF);
-		//notifyObservers(event, Terminal::EVENT_ON_KEY_INPUT);
+	case WM_SYSKEYUP:
+	case WM_KEYUP:
+	{
+		keySubscribers.notify(KeyboardKeyState::UP, wParam, (lParam >> 24) & 0x1);
+		//return DefWindowProc(hWnd, message, wParam, lParam);
 	}
+		break;
+	case WM_SYSCHAR:
 		break;
 	default:
 		return DefWindowProc(hWnd, message, wParam, lParam);
@@ -143,12 +156,22 @@ void Window_win32::show(WindowShowCommand command) {
 	ShowWindow(hWnd, showCmd);
 }
 
-notifier::connection<void()> Window_win32::subscribeCloseEvent(
-		std::function<void()>&& c) {
+notifier::connection<Window::CloseHandler> Window_win32::subscribeCloseEvent(
+		std::function<Window::CloseHandler>&& c) {
 	return closeSubscribers.subscribe(std::move(c));
 }
 
 std::map<HWND, Window_win32*> Window_win32::hWndMap;
+
+notifier::connection<Window::ResizeHandler> Window_win32::subscribeResizeEvent(
+		std::function<Window::ResizeHandler>&& c) {
+	return resizeSubscribers.subscribe(std::move(c));
+}
+
+notifier::connection<Window::KeyHandler> Window_win32::subscribeKeyEvent(
+		std::function<Window::KeyHandler> &&c) {
+	return keySubscribers.subscribe(std::move(c));
+}
 
 } /* namespace os */
 } /* namespace dse */
