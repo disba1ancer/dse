@@ -1,4 +1,4 @@
-﻿/*
+/*
  * ThreadPool.h
  *
  *  Created on: 22 дек. 2019 г.

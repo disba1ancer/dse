@@ -1,4 +1,4 @@
-﻿/*
+/*
  * ExecutionThread.h
  *
  *  Created on: 22 дек. 2019 г.
@@ -13,7 +13,6 @@
 #include <functional>
 #include <mutex>
 #include <condition_variable>
-#include <map>
 
 namespace dse {
 namespace threadutils {
@@ -26,15 +25,7 @@ class ExecutionThread {
 	bool m_isRun = false;
 	bool isExit = false;
 	int result = 0;
-	static std::map<std::thread::id, ExecutionThread*> threads;
-
-	class ThreadMapLock {
-		ExecutionThread* thread;
-	public:
-		ThreadMapLock(ExecutionThread* thread);
-		void lock();
-		void unlock();
-	};
+	static thread_local ExecutionThread* currentThread;
 
 	void threadEntry();
 public:

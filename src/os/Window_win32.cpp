@@ -51,14 +51,15 @@ LRESULT Window_win32::wndProc(HWND hWnd, UINT message, WPARAM wParam,
 	}
 		break;
 	case WM_SIZE: {
-		WindowShowCommand cmd = WindowShowCommand::SHOW_RESTORED;
+		typedef WindowShowCommand WSC;
+		WSC cmd = WSC::SHOW_RESTORED;
 
 		switch (wParam) {
 		case SIZE_MINIMIZED:
-			cmd = WindowShowCommand::SHOW_MINIMIZED;
+			cmd = WSC::SHOW_MINIMIZED;
 			break;
 		case SIZE_MAXIMIZED:
-			cmd = WindowShowCommand::SHOW_MAXIMIZED;
+			cmd = WSC::SHOW_MAXIMIZED;
 			break;
 		}
 
@@ -70,14 +71,12 @@ LRESULT Window_win32::wndProc(HWND hWnd, UINT message, WPARAM wParam,
 	{
 		KeyboardKeyState state = (lParam & 0x40000000 ? KeyboardKeyState::PRESSED : KeyboardKeyState::DOWN);
 		keySubscribers.notify(state, wParam, (lParam >> 24) & 0x1);
-		//return DefWindowProc(hWnd, message, wParam, lParam);
 	}
 		break;
 	case WM_SYSKEYUP:
 	case WM_KEYUP:
 	{
 		keySubscribers.notify(KeyboardKeyState::UP, wParam, (lParam >> 24) & 0x1);
-		//return DefWindowProc(hWnd, message, wParam, lParam);
 	}
 		break;
 	case WM_SYSCHAR:

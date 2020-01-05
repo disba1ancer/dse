@@ -55,8 +55,9 @@ public:
 	}
 
 	void unsubscribeAll() {
-		for (auto& c : callbacks) {
-			unsubscribe(c.first);
+		typename connection::iterator it;
+		while ((it = callbacks.begin()) != callbacks.end()) {
+			unsubscribe(it->first);
 		}
 	}
 };

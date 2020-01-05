@@ -1,4 +1,4 @@
-﻿/*
+/*
  * ExecutionThread.cpp
  *
  *  Created on: 22 дек. 2019 г.
@@ -12,15 +12,14 @@ namespace dse {
 namespace threadutils {
 
 void ExecutionThread::threadEntry() {
-	ThreadMapLock mapLockObj(this);
-	std::lock_guard mapLock(mapLockObj);
 	std::unique_lock lock(mtx);
+	currentThread = this;
 	while (m_isRun && !(isExit && tasks.empty())) {
 		if (!tasks.empty()){
 			auto& task = tasks.front();
 			bool repeat;
 			{
-				unlock_guard<std::mutex> unlock(mtx);
+				unlock_guard unlock(mtx);
 				repeat = task();
 			}
 			if (repeat && !isExit) tasks.emplace_back(std::move(task));
@@ -81,21 +80,10 @@ bool ExecutionThread::getResult() {
 	return result;
 }
 
-ExecutionThread::ThreadMapLock::ThreadMapLock(ExecutionThread* thread) : thread(thread) {
-}
+thread_local ExecutionThread* ExecutionThread::currentThread = nullptr;
 
-std::map<std::thread::id, ExecutionThread*> ExecutionThread::threads;
-
-void ExecutionThread::ThreadMapLock::lock() {
-	ExecutionThread::threads.insert(std::make_pair(std::this_thread::get_id(), thread));
-}
-
-void ExecutionThread::ThreadMapLock::unlock() {
-	ExecutionThread::threads.erase(std::this_thread::get_id());
-}
-
-ExecutionThread& dse::threadutils::ExecutionThread::getCurrentThread() {
-	return *(threads[std::this_thread::get_id()]);
+ExecutionThread& ExecutionThread::getCurrentThread() {
+	return *currentThread;
 }
 
 } /* namespace threadutils */
