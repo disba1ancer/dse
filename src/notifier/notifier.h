@@ -10,23 +10,26 @@
 
 #include <list>
 #include <functional>
+#include "../threadutils/emptylock.h"
+#include <mutex>
 
 namespace dse {
 namespace notifier {
 
-template <typename T>
+template <typename T, typename Lockable = threadutils::emptylock>
 class connection;
 
-template <typename T>
+template <typename T, typename Lockable = threadutils::emptylock>
 class notifier;
 
-template <typename R, typename ... Args>
-class notifier<R(Args...)> {
+template <typename R, typename ... Args, typename Lockable>
+class notifier<R(Args...), Lockable> {
 public:
 	typedef std::function<R(Args...)> callback;
-	typedef connection<R(Args...)> connection;
+	typedef connection<R(Args...), Lockable> connection;
 private:
 	std::list<std::pair<connection*, callback>> callbacks;
+	Lockable lock;
 public:
 	notifier() = default;
 	notifier(const notifier&) = delete;
@@ -39,32 +42,40 @@ public:
 	}
 
 	connection subscribe(callback&& c) {
+		std::lock_guard lock(this->lock);
 		auto iter = callbacks.emplace(callbacks.end(), std::make_pair<connection*>(nullptr, std::move(c)));
 		return connection(this, iter);
 	}
 
 	void unsubscribe(connection* c) {
+		std::lock_guard lock(this->lock);
+		unsubscribe_lockless(c);
+	}
+private:
+	void unsubscribe_lockless(connection* c) {
 		callbacks.erase(c->it);
 		c->notif = nullptr;
 	}
-
+public:
 	void notify(Args...args) {
+		std::lock_guard lock(this->lock);
 		for (auto& c : callbacks) {
 			c.second(args...);
 		}
 	}
 
 	void unsubscribeAll() {
+		std::lock_guard lock(this->lock);
 		typename connection::iterator it;
 		while ((it = callbacks.begin()) != callbacks.end()) {
-			unsubscribe(it->first);
+			unsubscribe_lockless(it->first);
 		}
 	}
 };
 
-template <typename R, typename ... Args>
-class connection<R(Args...)> {
-	typedef notifier<R(Args...)> notifier;
+template <typename R, typename ... Args, typename Lockable>
+class connection<R(Args...), Lockable> {
+	typedef notifier<R(Args...), Lockable> notifier;
 	typedef typename notifier::callback callback;
 	friend notifier;
 	typedef typename std::list<std::pair<connection*, callback>>::iterator iterator;
