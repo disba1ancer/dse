@@ -18,10 +18,11 @@ namespace os {
 
 class Window_win32 {
 	HWND hWnd;
-	static std::map<HWND, Window_win32*> hWndMap;
 	notifier::notifier<Window::CloseHandler> closeSubscribers;
 	notifier::notifier<Window::ResizeHandler> resizeSubscribers;
 	notifier::notifier<Window::KeyHandler> keySubscribers;
+
+	static constexpr int GWLP_THIS = 0;
 
 	static LRESULT CALLBACK staticWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 	LRESULT wndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);

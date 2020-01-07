@@ -19,18 +19,17 @@ Window_win32::Window_win32() : hWnd(CreateWindowEx(0, reinterpret_cast<LPCTSTR>(
 	}
 }
 
-LRESULT Window_win32::staticWndProc(HWND hWnd, UINT message, WPARAM wParam,
+LRESULT CALLBACK Window_win32::staticWndProc(HWND hWnd, UINT message, WPARAM wParam,
 		LPARAM lParam) {
 	Window_win32 *aThis;
 	if (message == WM_NCCREATE){
 		aThis = reinterpret_cast<Window_win32*>(reinterpret_cast<CREATESTRUCT*>(lParam)->lpCreateParams);
-		hWndMap.insert(std::make_pair(hWnd, aThis));
+		SetWindowLongPtr(hWnd, GWLP_THIS, reinterpret_cast<LONG_PTR>(aThis));
 	} else {
-		auto iter = hWndMap.find(hWnd);
-		if (iter == hWndMap.end()) {
+		aThis = reinterpret_cast<Window_win32*>(GetWindowLongPtr(hWnd, GWLP_THIS));
+		if (!aThis) {
 			return DefWindowProc(hWnd, message, wParam, lParam);
 		}
-		aThis = iter->second;
 	}
 	return aThis->wndProc(hWnd, message, wParam, lParam);
 }
@@ -95,7 +94,7 @@ ATOM Window_win32::makeWindowClsID() {
 		wcex.style = CS_OWNDC;
 		wcex.lpfnWndProc = &staticWndProc;
 		wcex.cbClsExtra = 0;
-		wcex.cbWndExtra = 8;
+		wcex.cbWndExtra = sizeof(LONG_PTR);
 		wcex.hInstance = static_cast<HINSTANCE>(GetModuleHandle(0));
 		wcex.hIcon = LoadIcon(0, static_cast<LPCTSTR>(IDI_APPLICATION));
 		wcex.hCursor = LoadCursor(0, static_cast<LPCTSTR>(IDC_ARROW));
@@ -114,7 +113,6 @@ ATOM Window_win32::makeWindowClsID() {
 
 Window_win32::~Window_win32() {
 	DestroyWindow(hWnd);
-	hWndMap.erase(hWnd);
 }
 
 bool Window_win32::isVisible() const {
@@ -159,8 +157,6 @@ notifier::connection<Window::CloseHandler> Window_win32::subscribeCloseEvent(
 		std::function<Window::CloseHandler>&& c) {
 	return closeSubscribers.subscribe(std::move(c));
 }
-
-std::map<HWND, Window_win32*> Window_win32::hWndMap;
 
 notifier::connection<Window::ResizeHandler> Window_win32::subscribeResizeEvent(
 		std::function<Window::ResizeHandler>&& c) {
