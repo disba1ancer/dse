@@ -63,12 +63,14 @@ void ExecutionThread::exit(int r) {
 	cond_var.notify_one();
 }
 
-void ExecutionThread::addTask(std::function<bool()> &&task) {
+bool ExecutionThread::addTask(std::function<bool()> &&task) {
 	std::lock_guard lock(mtx);
 	if (!isExit) {
 		tasks.emplace_back(std::move(task));
 		cond_var.notify_one();
+		return true;
 	}
+	return false;
 }
 
 bool ExecutionThread::isRun() {

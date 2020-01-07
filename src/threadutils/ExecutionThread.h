@@ -34,7 +34,7 @@ public:
 	void join();
 	void terminate();
 	void exit(int r);
-	void addTask(std::function<bool()>&& task);
+	bool addTask(std::function<bool()>&& task);
 	bool isRun();
 	bool getResult();
 	static ExecutionThread& getCurrentThread();
