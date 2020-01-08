@@ -19,6 +19,7 @@ class make_handler<method> {
 	Obj* obj;
 public:
 	make_handler(Obj* obj) : obj(obj) {}
+	make_handler(Obj& obj) : obj(&obj) {}
 	Ret operator()(Args ... args) { return (obj->*method)(args...); }
 };
 

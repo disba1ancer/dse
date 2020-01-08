@@ -133,8 +133,6 @@ notifier::connection<Window::ResizeHandler> Window_win32::subscribeResizeEvent(
 LRESULT Window_win32::onPaint(WindowEventData_win32& d) {
 	PAINTSTRUCT ps;
 	PaintEventData_win32 pd = { BeginPaint(hWnd, &ps) };
-	//RedrawEvent event;
-	//notifyObservers(event, Terminal::EVENT_ON_REDRAW);
 	paintSubscribers.notify(d, pd);
 	EndPaint(hWnd, &ps);
 	return 0;

@@ -10,6 +10,8 @@
 #include "os/Window.h"
 #include <cstdio>
 #include "CustomPainter.h"
+#include "subsys/RenderOpenGL31.h"
+#include "notifier/make_handler.h"
 
 using dse::threadutils::ExecutionThread;
 using dse::os::Window;
@@ -17,28 +19,22 @@ using dse::os::WindowShowCommand;
 using dse::os::KeyboardKeyState;
 using dse::os::WndEvtDt;
 using dse::os::PntEvtDt;
+using dse::subsys::RenderOpenGL31;
 
 ExecutionThread mainThread;
 
 int main(int argc, char* argv[]) {
 	Window window;
-	CustomPainter painter(window);
+	RenderOpenGL31 render(window);
 	window.show();
-	auto con1 = window.subscribeCloseEvent([](WndEvtDt){
+	auto closeCon = window.subscribeCloseEvent([](WndEvtDt){
 		mainThread.exit(0);
 	});
-	auto con2 = window.subscribeResizeEvent([](WndEvtDt, int width, int height, WindowShowCommand cmd){
-		std::printf("%i %i %i\n", static_cast<int>(cmd), width, height);
-		std::fflush(stdout);
-	});
-	auto con3 = window.subscribeKeyEvent([](WndEvtDt, KeyboardKeyState cmd, int key){
+	auto keyCon = window.subscribeKeyEvent([](WndEvtDt, KeyboardKeyState cmd, int key){
 		std::printf("%i %i\n", static_cast<int>(cmd), key);
 		std::fflush(stdout);
 	});
 	mainThread.addTask(dse::os::nonLockLoop);
-	mainThread.addTask([&painter](){
-		painter.invalidate();
-		return true;
-	});
+	mainThread.addTask(dse::notifier::make_handler<&RenderOpenGL31::renderTask>(render));
 	return mainThread.runOnCurent();
 }
