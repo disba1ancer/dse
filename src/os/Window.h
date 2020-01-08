@@ -16,9 +16,22 @@
 namespace dse {
 namespace os {
 
+#ifdef _WIN32
+
 class Window_win32;
+struct WindowData_win32;
+struct WindowEventData_win32;
+struct PaintEventData_win32;
 
 typedef Window_win32 Window_impl;
+typedef WindowData_win32 WindowData;
+typedef WindowEventData_win32 WindowEventData;
+typedef PaintEventData_win32 PaintEventData;
+
+#endif
+
+typedef const WindowEventData& WndEvtDt;
+typedef const PaintEventData& PntEvtDt;
 
 class Window {
 	std::unique_ptr<Window_impl> impl;
@@ -31,12 +44,16 @@ public:
 	Window& operator=(Window &&other) = delete;
 	bool isVisible() const;
 	void show(WindowShowCommand command = WindowShowCommand::SHOW);
-	typedef void(CloseHandler)();
+	const WindowData& getSysData();
+	typedef void(SimpleHandler)(WndEvtDt);
+	typedef SimpleHandler CloseHandler;
 	notifier::connection<CloseHandler> subscribeCloseEvent(std::function<CloseHandler>&& c);
-	typedef void(ResizeHandler)(WindowShowCommand, int, int);
+	typedef void(ResizeHandler)(WndEvtDt, int, int, WindowShowCommand);
 	notifier::connection<ResizeHandler> subscribeResizeEvent(std::function<ResizeHandler>&& c);
-	typedef void(KeyHandler)(KeyboardKeyState, int, int);
+	typedef void(KeyHandler)(WndEvtDt, KeyboardKeyState, int);
 	notifier::connection<KeyHandler> subscribeKeyEvent(std::function<KeyHandler>&& c);
+	typedef void(PaintHandler)(WndEvtDt, PntEvtDt);
+	notifier::connection<PaintHandler> subscribePaintEvent(std::function<PaintHandler>&& c);
 };
 
 } /* namespace os */

@@ -5,8 +5,11 @@
  *      Author: disba1ancer
  */
 
-#include "Window.h"
+#ifdef _WIN32
 #include "Window_win32.h"
+#endif
+
+#include "Window.h"
 
 namespace dse {
 namespace os {
@@ -25,6 +28,10 @@ void Window::show(WindowShowCommand command) {
 	return impl->show(command);
 }
 
+const WindowData& Window::getSysData() {
+	return impl->getSysData();
+}
+
 notifier::connection<Window::CloseHandler> Window::subscribeCloseEvent(
 		std::function<CloseHandler>&& c) {
 	return impl->subscribeCloseEvent(std::move(c));
@@ -38,6 +45,11 @@ notifier::connection<Window::ResizeHandler> Window::subscribeResizeEvent(
 notifier::connection<Window::KeyHandler> Window::subscribeKeyEvent(
 		std::function<KeyHandler> &&c) {
 	return impl->subscribeKeyEvent(std::move(c));
+}
+
+notifier::connection<Window::PaintHandler> Window::subscribePaintEvent(
+		std::function<PaintHandler> &&c) {
+	return impl->subscribePaintEvent(std::move(c));
 }
 
 } /* namespace os */

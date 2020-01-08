@@ -5,9 +5,13 @@
  *      Author: disba1ancer
  */
 
-#include "loop.h"
-#include "windows.h"
+#ifdef _WIN32
+#include "win32.h"
+#endif
+
 #include "../threadutils/ExecutionThread.h"
+#include <iostream>
+#include "loop.h"
 
 using dse::threadutils::ExecutionThread;
 

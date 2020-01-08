@@ -21,12 +21,18 @@ class Window_win32 {
 	notifier::notifier<Window::CloseHandler> closeSubscribers;
 	notifier::notifier<Window::ResizeHandler> resizeSubscribers;
 	notifier::notifier<Window::KeyHandler> keySubscribers;
+	notifier::notifier<Window::PaintHandler> paintSubscribers;
 
 	static constexpr int GWLP_THIS = 0;
 
 	static LRESULT CALLBACK staticWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 	LRESULT wndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 	static ATOM makeWindowClsID();
+	LRESULT onPaint(WindowEventData_win32& d);
+	LRESULT onClose(WindowEventData_win32& d);
+	LRESULT onSize(WindowEventData_win32& d);
+	LRESULT onKeyDown(WindowEventData_win32& d);
+	LRESULT onKeyUp(WindowEventData_win32& d);
 public:
 	Window_win32();
 	~Window_win32();
@@ -36,9 +42,11 @@ public:
 	Window_win32& operator=(Window_win32 &&other) = delete;
 	bool isVisible() const;
 	void show(WindowShowCommand command = WindowShowCommand::SHOW);
+	const WindowData& getSysData();
 	notifier::connection<Window::CloseHandler> subscribeCloseEvent(std::function<Window::CloseHandler>&& c);
 	notifier::connection<Window::ResizeHandler> subscribeResizeEvent(std::function<Window::ResizeHandler>&& c);
 	notifier::connection<Window::KeyHandler> subscribeKeyEvent(std::function<Window::KeyHandler>&& c);
+	notifier::connection<Window::PaintHandler> subscribePaintEvent(std::function<Window::PaintHandler>&& c);
 };
 
 } /* namespace os */

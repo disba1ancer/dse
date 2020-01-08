@@ -7,6 +7,8 @@
 
 #include "Window_win32.h"
 #include <exception>
+#include "WindowEventData_win32.h"
+#include "PaintEventData_win32.h"
 
 namespace dse {
 namespace os {
@@ -36,52 +38,17 @@ LRESULT CALLBACK Window_win32::staticWndProc(HWND hWnd, UINT message, WPARAM wPa
 
 LRESULT Window_win32::wndProc(HWND hWnd, UINT message, WPARAM wParam,
 		LPARAM lParam) {
+	WindowEventData_win32 d{hWnd, message, wParam, lParam};
 	switch(message) {
-	case WM_PAINT: {
-		PAINTSTRUCT ps;
-		BeginPaint(hWnd, &ps);
-		//RedrawEvent event;
-		//notifyObservers(event, Terminal::EVENT_ON_REDRAW);
-		EndPaint(hWnd, &ps);
-	}
-		break;
-	case WM_CLOSE: {
-		closeSubscribers.notify();
-	}
-		break;
-	case WM_SIZE: {
-		typedef WindowShowCommand WSC;
-		WSC cmd = WSC::SHOW_RESTORED;
-
-		switch (wParam) {
-		case SIZE_MINIMIZED:
-			cmd = WSC::SHOW_MINIMIZED;
-			break;
-		case SIZE_MAXIMIZED:
-			cmd = WSC::SHOW_MAXIMIZED;
-			break;
-		}
-
-		resizeSubscribers.notify(cmd, LOWORD(lParam), HIWORD(lParam));
-	}
-		break;
+	case WM_PAINT: return onPaint(d);
+	case WM_CLOSE: return onClose(d);
+	case WM_SIZE: return onSize(d);
 	case WM_SYSKEYDOWN:
-	case WM_KEYDOWN:
-	{
-		KeyboardKeyState state = (lParam & 0x40000000 ? KeyboardKeyState::PRESSED : KeyboardKeyState::DOWN);
-		keySubscribers.notify(state, wParam, (lParam >> 24) & 0x1);
-	}
-		break;
+	case WM_KEYDOWN: return onKeyDown(d);
 	case WM_SYSKEYUP:
-	case WM_KEYUP:
-	{
-		keySubscribers.notify(KeyboardKeyState::UP, wParam, (lParam >> 24) & 0x1);
-	}
-		break;
-	case WM_SYSCHAR:
-		break;
-	default:
-		return DefWindowProc(hWnd, message, wParam, lParam);
+	case WM_KEYUP: return onKeyUp(d);
+	case WM_SYSCHAR: break;
+	default: return DefWindowProc(hWnd, message, wParam, lParam);
 	}
 	return 0;
 }
@@ -163,9 +130,62 @@ notifier::connection<Window::ResizeHandler> Window_win32::subscribeResizeEvent(
 	return resizeSubscribers.subscribe(std::move(c));
 }
 
+LRESULT Window_win32::onPaint(WindowEventData_win32& d) {
+	PAINTSTRUCT ps;
+	PaintEventData_win32 pd = { BeginPaint(hWnd, &ps) };
+	//RedrawEvent event;
+	//notifyObservers(event, Terminal::EVENT_ON_REDRAW);
+	paintSubscribers.notify(d, pd);
+	EndPaint(hWnd, &ps);
+	return 0;
+}
+
+LRESULT Window_win32::onClose(WindowEventData_win32& d) {
+	closeSubscribers.notify(d);
+	return 0;
+}
+
+LRESULT Window_win32::onSize(WindowEventData_win32& d) {
+	typedef WindowShowCommand WSC;
+	WSC cmd = WSC::SHOW_RESTORED;
+
+	switch (d.wParam) {
+	case SIZE_MINIMIZED:
+		cmd = WSC::SHOW_MINIMIZED;
+		break;
+	case SIZE_MAXIMIZED:
+		cmd = WSC::SHOW_MAXIMIZED;
+		break;
+	}
+
+	resizeSubscribers.notify(d, LOWORD(d.lParam), HIWORD(d.lParam), cmd);
+	return 0;
+}
+
+LRESULT Window_win32::onKeyDown(WindowEventData_win32& d) {
+	KeyboardKeyState state = (d.lParam & (1 << 30)
+			? KeyboardKeyState::PRESSED : KeyboardKeyState::DOWN);
+	keySubscribers.notify(d, state, d.wParam);
+	return 0;
+}
+
+LRESULT Window_win32::onKeyUp(WindowEventData_win32& d) {
+	keySubscribers.notify(d, KeyboardKeyState::UP, d.wParam);
+	return 0;
+}
+
 notifier::connection<Window::KeyHandler> Window_win32::subscribeKeyEvent(
 		std::function<Window::KeyHandler> &&c) {
 	return keySubscribers.subscribe(std::move(c));
+}
+
+notifier::connection<Window::PaintHandler> Window_win32::subscribePaintEvent(
+		std::function<Window::PaintHandler> &&c) {
+	return paintSubscribers.subscribe(std::move(c));
+}
+
+const WindowData& Window_win32::getSysData() {
+	return *reinterpret_cast<const WindowData*>(&hWnd);
 }
 
 } /* namespace os */
