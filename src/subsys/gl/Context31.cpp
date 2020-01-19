@@ -40,7 +40,7 @@ namespace subsys {
 namespace gl {
 
 #ifdef _WIN32
-Context31::Context31(os::Window& wnd) : hdc(GetDC(wnd.getSysData().hWnd)) {
+Context31::Context31(os::Window& wnd) : hWnd(wnd.getSysData().hWnd), hdc(GetDC(hWnd)) {
 	if (!(wglChoosePixelFormatARB && wglCreateContextAttribsARB)) {
 		os::Window wnd;
 		HDC hdc = GetDC(wnd.getSysData().hWnd);
@@ -75,6 +75,7 @@ Context31::Context31(os::Window& wnd) : hdc(GetDC(wnd.getSysData().hWnd)) {
 Context31::~Context31() {
 	wglMakeCurrent(0, 0);
 	wglDeleteContext(glrc);
+	ReleaseDC(hWnd, hdc);
 }
 
 void Context31::SwapBuffers() {

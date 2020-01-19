@@ -20,10 +20,11 @@ using dse::os::KeyboardKeyState;
 using dse::os::WndEvtDt;
 using dse::os::PntEvtDt;
 using dse::subsys::RenderOpenGL31;
+using dse::notifier::make_handler;
 
 ExecutionThread mainThread;
 
-int main(int argc, char* argv[]) {
+int main(int , char* []) {
 	Window window;
 	RenderOpenGL31 render(window);
 	window.show();
@@ -35,6 +36,6 @@ int main(int argc, char* argv[]) {
 		std::fflush(stdout);
 	});
 	mainThread.addTask(dse::os::nonLockLoop);
-	mainThread.addTask(dse::notifier::make_handler<&RenderOpenGL31::renderTask>(render));
+	mainThread.addTask(make_handler<&RenderOpenGL31::renderTask>(render));
 	return mainThread.runOnCurent();
 }

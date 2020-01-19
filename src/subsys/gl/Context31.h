@@ -19,8 +19,9 @@ namespace gl {
 
 class Context31 {
 #ifdef _WIN32
-	HGLRC glrc;
+	HWND hWnd;
 	HDC hdc;
+	HGLRC glrc;
 #endif
 public:
 	Context31(os::Window& wnd);
