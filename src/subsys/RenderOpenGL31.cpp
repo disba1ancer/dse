@@ -20,5 +20,9 @@ bool RenderOpenGL31::renderTask() {
 	return impl->renderTask();
 }
 
+void RenderOpenGL31::setScene(dse::scn::Scene &scene) {
+	impl->setScene(scene);
+}
+
 } /* namespace subsys */
 } /* namespace dse */

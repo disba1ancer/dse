@@ -12,6 +12,9 @@
 #include "CustomPainter.h"
 #include "subsys/RenderOpenGL31.h"
 #include "notifier/make_handler.h"
+#include "scn/Scene.h"
+#include "scn/Cube.h"
+#include "scn/Object.h"
 
 using dse::threadutils::ExecutionThread;
 using dse::os::Window;
@@ -21,6 +24,9 @@ using dse::os::WndEvtDt;
 using dse::os::PntEvtDt;
 using dse::subsys::RenderOpenGL31;
 using dse::notifier::make_handler;
+using dse::scn::Cube;
+using dse::scn::Scene;
+using dse::scn::Object;
 
 ExecutionThread mainThread;
 
@@ -28,6 +34,10 @@ int main(int , char* []) {
 	Window window;
 	RenderOpenGL31 render(window);
 	window.show();
+	Scene scene;
+	Cube cubeMesh;
+	auto cube = scene.createObject(Object(&cubeMesh));
+	render.setScene(scene);
 	auto closeCon = window.subscribeCloseEvent([](WndEvtDt){
 		mainThread.exit(0);
 	});

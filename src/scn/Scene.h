@@ -10,15 +10,22 @@
 
 #include "Object.h"
 #include <list>
-#include "../math/vec.h"
 #include "../util/ProxyIterator.h"
 #include "../util/ProxyContainer.h"
+#include "../notifier/notifier.h"
 
 namespace dse {
 namespace scn {
 
+enum class SceneChangeEventType {
+	OBJECT_CREATE,
+	OBJECT_DESTROY
+};
+
 class Scene {
 	std::list<Object> m_objects;
+	typedef void(ChangeEvent)(SceneChangeEventType, Object*);
+	notifier::notifier<ChangeEvent> changeSubscribers;
 public:
 	typedef util::ProxyIterator<decltype(m_objects), Scene> ObjectsIterator;
 	Scene();
@@ -31,9 +38,10 @@ public:
 	ObjectsIterator objectsEnd();
 	typedef util::ProxyContainer<&objectsBegin, &objectsEnd> Objects;
 	Objects objects();
-	ObjectsIterator objectsAdd(Object&& object);
-	ObjectsIterator objectsAdd(const Object& object);
-	void objectsRemove(ObjectsIterator it);
+	ObjectsIterator createObject(Object &&object = Object());
+	ObjectsIterator createObject(const Object &object);
+	void destroyObject(ObjectsIterator it);
+	notifier::connection<ChangeEvent> onChange(std::function<ChangeEvent> &&callback);
 };
 
 } /* namespace scn */

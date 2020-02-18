@@ -20,8 +20,9 @@ void RenderOpenGL31_impl::onPaint(os::WndEvtDt, os::PntEvtDt) {
 RenderOpenGL31_impl::RenderOpenGL31_impl(os::Window& wnd) : wnd(&wnd),
 		paintCon(wnd.subscribePaintEvent(notifier::make_handler<&onPaint>(this))),
 		sizeCon(wnd.subscribeResizeEvent(notifier::make_handler<&onResize>(this))),
-		context(wnd) {
-	glClearColor(0.f, 0.f, .4f, 1.f);
+		context(wnd),
+		scene(nullptr) {
+	glClearColor(0.f, 0.f, .0f, .0f);
 }
 
 void RenderOpenGL31_impl::onResize(os::WndEvtDt, int width, int height,
@@ -36,6 +37,10 @@ bool RenderOpenGL31_impl::renderTask() {
 	UpdateWindow(hWnd);
 #endif
 	return true;
+}
+
+void RenderOpenGL31_impl::setScene(dse::scn::Scene &scene) {
+	this->scene = &scene;
 }
 
 } /* namespace subsys */

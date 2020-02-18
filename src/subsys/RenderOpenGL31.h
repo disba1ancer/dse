@@ -10,6 +10,7 @@
 
 #include <memory>
 #include "../os/Window.h"
+#include "../scn/Scene.h"
 
 namespace dse {
 namespace subsys {
@@ -26,6 +27,7 @@ public:
 	RenderOpenGL31& operator=(const RenderOpenGL31&) = delete;
 	RenderOpenGL31& operator=(RenderOpenGL31&&) = delete;
 	bool renderTask();
+	void setScene(dse::scn::Scene& scene);
 };
 
 } /* namespace subsys */

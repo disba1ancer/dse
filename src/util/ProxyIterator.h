@@ -17,7 +17,13 @@ class ProxyIterator {
 	friend Owner;
 	ProxyIterator(const typename Cont::iterator& it) : it(it) {}
 public:
-	ProxyIterator& operator++() { ++it; return *this; };
+	ProxyIterator() = default;
+	~ProxyIterator() = default;
+	ProxyIterator(const ProxyIterator&) = default;
+	ProxyIterator(ProxyIterator&&) = default;
+	ProxyIterator& operator=(const ProxyIterator&) = default;
+	ProxyIterator& operator=(ProxyIterator&&) = default;
+	ProxyIterator& operator++() { ++it; return *this; }
 	typename Cont::value_type& operator*() { return *it; }
 	typename Cont::value_type& operator->() { return *it; }
 	bool operator!=(const ProxyIterator& other) const { return it != other.it; }

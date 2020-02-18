@@ -10,14 +10,9 @@
 namespace dse {
 namespace scn {
 
-Scene::Scene() {
-	// TODO Auto-generated constructor stub
+Scene::Scene() {}
 
-}
-
-Scene::~Scene() {
-	// TODO Auto-generated destructor stub
-}
+Scene::~Scene() {}
 
 Scene::ObjectsIterator Scene::objectsBegin() {
 	return ObjectsIterator(m_objects.begin());
@@ -27,20 +22,29 @@ Scene::ObjectsIterator Scene::objectsEnd() {
 	return ObjectsIterator(m_objects.end());
 }
 
-Scene::ObjectsIterator Scene::objectsAdd(Object &&object) {
-	return ObjectsIterator(m_objects.emplace(m_objects.end(), std::move(object)));
+Scene::ObjectsIterator Scene::createObject(Object &&object) {
+	ObjectsIterator it(m_objects.emplace(m_objects.end(), std::move(object)));
+	changeSubscribers.notify(SceneChangeEventType::OBJECT_CREATE, &(*it));
+	return it;
 }
 
-Scene::ObjectsIterator Scene::objectsAdd(const Object &object) {
-	return ObjectsIterator(m_objects.emplace(m_objects.end(), object));
+Scene::ObjectsIterator Scene::createObject(const Object &object) {
+	ObjectsIterator it(m_objects.emplace(m_objects.end(), object));
+	changeSubscribers.notify(SceneChangeEventType::OBJECT_CREATE, &(*it));
+	return it;
 }
 
 Scene::Objects Scene::objects() {
 	return Objects(this);
 }
 
-void Scene::objectsRemove(ObjectsIterator it) {
+void Scene::destroyObject(ObjectsIterator it) {
+	changeSubscribers.notify(SceneChangeEventType::OBJECT_DESTROY, &(*it));
 	m_objects.erase(it.it);
+}
+
+notifier::connection<Scene::ChangeEvent> Scene::onChange(std::function<ChangeEvent> &&callback) {
+	return changeSubscribers.subscribe(std::move(callback));
 }
 
 } /* namespace scn */

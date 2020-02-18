@@ -21,6 +21,7 @@ class RenderOpenGL31_impl {
 	notifier::connection<os::Window::PaintHandler> paintCon;
 	notifier::connection<os::Window::ResizeHandler> sizeCon;
 	gl::Context31 context;
+	scn::Scene* scene;
 
 	void onPaint(os::WndEvtDt, os::PntEvtDt);
 	void onResize(os::WndEvtDt, int width, int height, os::WindowShowCommand);
@@ -32,6 +33,7 @@ public:
 	RenderOpenGL31_impl& operator=(const RenderOpenGL31_impl &other) = delete;
 	RenderOpenGL31_impl& operator=(RenderOpenGL31_impl &&other) = delete;
 	bool renderTask();
+	void setScene(dse::scn::Scene& scene);
 };
 
 } /* namespace subsys */
