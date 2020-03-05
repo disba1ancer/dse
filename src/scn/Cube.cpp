@@ -7,6 +7,7 @@
 
 #include "Cube.h"
 #include <cstring>
+#include <iterator>
 
 namespace {
 static const dse::scn::IMesh::vertex vertices[24] = {
@@ -53,18 +54,26 @@ static const std::uint32_t elements[36] = {
 namespace dse {
 namespace scn {
 
-void Cube::fillSubmeshBuffers(std::uint32_t, vertex *vertexBuffer, std::uint32_t *elementBuffer) {
-	std::memcpy(vertexBuffer, vertices, sizeof(vertices));
-	std::memcpy(elementBuffer, elements, sizeof(elements));
+IMesh::mesh_parameters Cube::getMeshParameters() {
+	return {std::size(vertices), std::size(elements), 1};
 }
 
-std::uint32_t Cube::getSubmeshCount() {
-	return 1;
+unsigned dse::scn::Cube::getVersion() {
+	return 0;
 }
 
-IMesh::submesh_size Cube::getSubmeshSize(std::uint32_t submeshIndex) {
-	static_cast<void>(submeshIndex);
-	return {(sizeof(vertices) / sizeof(vertex)), (sizeof(elements) / sizeof(std::uint32_t))};
+void Cube::loadVerticesRange(IMesh::vertex *vertexBuffer,
+		uint32_t startVertex, uint32_t vertexCount) {
+	std::memcpy(vertexBuffer, vertices + startVertex, sizeof(IMesh::vertex) * vertexCount);
+}
+
+void Cube::loadElementsRange(uint32_t *elementBuffer, uint32_t startElement,
+		uint32_t elementCount) {
+	std::memcpy(elementBuffer, elements + startElement, sizeof(std::uint32_t) * elementCount);
+}
+
+dse::scn::IMesh::submesh_range Cube::getSubmeshRange(uint32_t submeshIndex) {
+	return {0, std::size(elements)};
 }
 
 } /* namespace scn */

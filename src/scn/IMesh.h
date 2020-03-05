@@ -14,8 +14,6 @@
 namespace dse {
 namespace scn {
 
-class Material;
-
 class IMesh {
 public:
 	struct vertex {
@@ -25,13 +23,22 @@ public:
 		math::vec2 uv;
 		float reserve;
 	};
-	struct submesh_size {
+	struct mesh_parameters {
 		std::uint32_t verticesCount;
 		std::uint32_t elementsCount;
+		std::uint32_t submeshCount;
 	};
-	virtual std::uint32_t getSubmeshCount() = 0;
-	virtual submesh_size getSubmeshSize(std::uint32_t submeshIndex) = 0;
-	virtual void fillSubmeshBuffers(std::uint32_t submeshIndex, vertex* vertexBuffer, std::uint32_t* elementBuffer) = 0;
+	struct submesh_range {
+		std::uint32_t start;
+		std::uint32_t end;
+	};
+	virtual mesh_parameters getMeshParameters() = 0;
+	virtual void loadVerticesRange(vertex* vertexBuffer, std::uint32_t startVertex, std::uint32_t vertexCount) = 0;
+	virtual void loadElementsRange(std::uint32_t* elementBuffer, std::uint32_t startElement, std::uint32_t elementCount) = 0;
+	virtual submesh_range getSubmeshRange(std::uint32_t submeshIndex) = 0;
+	virtual unsigned getVersion() = 0;
+	virtual void storeCustomValue(void *owner, void *value) = 0;
+	virtual void * getCustomValue(void *owner) = 0;
 protected:
 	~IMesh() = default;
 };

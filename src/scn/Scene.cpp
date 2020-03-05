@@ -12,8 +12,6 @@ namespace scn {
 
 Scene::Scene() {}
 
-Scene::~Scene() {}
-
 Scene::ObjectsIterator Scene::objectsBegin() {
 	return ObjectsIterator(m_objects.begin());
 }
@@ -43,7 +41,7 @@ void Scene::destroyObject(ObjectsIterator it) {
 	m_objects.erase(it.it);
 }
 
-notifier::connection<Scene::ChangeEvent> Scene::onChange(std::function<ChangeEvent> &&callback) {
+notifier::connection<Scene::ChangeEvent> Scene::subscribeChangeEvent(std::function<ChangeEvent> &&callback) {
 	return changeSubscribers.subscribe(std::move(callback));
 }
 

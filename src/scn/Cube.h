@@ -8,12 +8,12 @@
 #ifndef SCN_CUBE_H_
 #define SCN_CUBE_H_
 
-#include "IMesh.h"
+#include "IMeshStore.h"
 
 namespace dse {
 namespace scn {
 
-class Cube: public IMesh {
+class Cube final : public IMeshStore {
 public:
 	Cube() = default;
 	~Cube() = default;
@@ -22,9 +22,14 @@ public:
 	Cube& operator=(Cube &&other) = default;
 	Cube& operator=(const Cube &other) = default;
 
-	virtual void fillSubmeshBuffers(uint32_t submeshIndex, vertex *vertexBuffer, uint32_t *elementBuffer) override;
-	virtual uint32_t getSubmeshCount() override;
-	virtual dse::scn::IMesh::submesh_size getSubmeshSize(uint32_t submeshIndex) override;
+	virtual dse::scn::IMesh::mesh_parameters getMeshParameters() override;
+	virtual unsigned getVersion() override;
+	virtual void loadVerticesRange(dse::scn::IMesh::vertex *vertexBuffer,
+			uint32_t startVertex, uint32_t vertexCount) override;
+	virtual void loadElementsRange(uint32_t *elementBuffer, uint32_t startElement,
+			uint32_t elementCount) override;
+	virtual dse::scn::IMesh::submesh_range getSubmeshRange(
+			uint32_t submeshIndex) override;
 };
 
 } /* namespace scn */

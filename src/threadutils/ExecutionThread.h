@@ -38,6 +38,7 @@ public:
 	bool isRun();
 	bool getResult();
 	static ExecutionThread& getCurrentThread();
+	void yieldTasks();
 };
 
 } /* namespace threadutils */

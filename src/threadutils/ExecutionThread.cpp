@@ -16,14 +16,14 @@ void ExecutionThread::threadEntry() {
 	currentThread = this;
 	while (m_isRun && !(isExit && tasks.empty())) {
 		if (!tasks.empty()){
-			auto& task = tasks.front();
+			auto task = std::move(tasks.front());
+			tasks.pop_front();
 			bool repeat;
 			{
 				unlock_guard unlock(mtx);
 				repeat = task();
 			}
 			if (repeat && !isExit) tasks.emplace_back(std::move(task));
-			tasks.pop_front();
 		} else {
 			cond_var.wait(lock);
 		}
@@ -86,6 +86,23 @@ thread_local ExecutionThread* ExecutionThread::currentThread = nullptr;
 
 ExecutionThread& ExecutionThread::getCurrentThread() {
 	return *currentThread;
+}
+
+void ExecutionThread::yieldTasks() {
+	std::unique_lock lock(mtx);
+	if (currentThread == this) {
+		auto taskCount = tasks.size();
+		for (decltype(taskCount) i = 0; m_isRun && i < taskCount && !tasks.empty(); ++i) {
+			auto task = std::move(tasks.front());
+			tasks.pop_front();
+			bool repeat;
+			{
+				unlock_guard unlock(mtx);
+				repeat = task();
+			}
+			if (repeat && !isExit) tasks.emplace_back(std::move(task));
+		}
+	}
 }
 
 } /* namespace threadutils */

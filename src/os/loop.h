@@ -8,10 +8,12 @@
 #ifndef OS_LOOP_H_
 #define OS_LOOP_H_
 
+#include <functional>
+
 namespace dse {
 namespace os {
 
-bool nonLockLoop();
+std::function<bool()> nonLockLoop();
 
 }
 }

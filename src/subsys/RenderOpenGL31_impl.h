@@ -12,6 +12,16 @@
 #include "../notifier/notifier.h"
 #include "../notifier/make_handler.h"
 #include "gl/Context31.h"
+#include "gl/VAO.h"
+#include "../threadutils/ExecutionThread.h"
+#include <vector>
+#include <list>
+#include "gl31_impl/MeshInstance.h"
+#include "gl31_impl/ObjectInstance.h"
+#include "gl/Program.h"
+#include "gl/Buffer.h"
+#include "gl/VertexShader.h"
+#include "gl/FragmentShader.h"
 
 namespace dse {
 namespace subsys {
@@ -21,7 +31,17 @@ class RenderOpenGL31_impl {
 	notifier::connection<os::Window::PaintHandler> paintCon;
 	notifier::connection<os::Window::ResizeHandler> sizeCon;
 	gl::Context31 context;
+	gl::VAO vao;
 	scn::Scene* scene;
+	std::vector<gl31_impl::ObjectInstance> objects;
+	std::list<gl31_impl::MeshInstance> meshes;
+	gl::VertexBuffer vbo;
+	gl::Program fragmentProg;
+	gl::Program drawProg;
+	GLuint windowSizeUniform;
+	GLuint posUniform;
+	GLuint qRotUniform;
+	GLuint scaleUniform;
 
 	void onPaint(os::WndEvtDt, os::PntEvtDt);
 	void onResize(os::WndEvtDt, int width, int height, os::WindowShowCommand);

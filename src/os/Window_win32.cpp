@@ -65,7 +65,7 @@ ATOM Window_win32::makeWindowClsID() {
 		wcex.hInstance = static_cast<HINSTANCE>(GetModuleHandle(0));
 		wcex.hIcon = LoadIcon(0, static_cast<LPCTSTR>(IDI_APPLICATION));
 		wcex.hCursor = LoadCursor(0, static_cast<LPCTSTR>(IDC_ARROW));
-		wcex.hbrBackground = static_cast<HBRUSH>(GetStockObject(BLACK_BRUSH));
+		wcex.hbrBackground = NULL;
 		wcex.lpszMenuName = 0;
 		wcex.lpszClassName = TEXT("dse.os.Window");
 		wcex.hIconSm = LoadIcon(0, static_cast<LPCTSTR>(IDI_APPLICATION));

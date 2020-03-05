@@ -25,7 +25,7 @@ public:
 	ProxyIterator& operator=(ProxyIterator&&) = default;
 	ProxyIterator& operator++() { ++it; return *this; }
 	typename Cont::value_type& operator*() { return *it; }
-	typename Cont::value_type& operator->() { return *it; }
+	typename Cont::value_type* operator->() { return it.operator->(); }
 	bool operator!=(const ProxyIterator& other) const { return it != other.it; }
 };
 

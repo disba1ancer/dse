@@ -9,7 +9,6 @@
 #define SCN_OBJECT_H_
 
 #include "../math/vec.h"
-#include "../threadutils/spinlock.h"
 
 namespace dse {
 namespace scn {

@@ -29,7 +29,7 @@ class Scene {
 public:
 	typedef util::ProxyIterator<decltype(m_objects), Scene> ObjectsIterator;
 	Scene();
-	~Scene();
+	~Scene() = default;
 	Scene(const Scene &other) = default;
 	Scene(Scene &&other) = default;
 	Scene& operator=(const Scene &other) = default;
@@ -41,7 +41,7 @@ public:
 	ObjectsIterator createObject(Object &&object = Object());
 	ObjectsIterator createObject(const Object &object);
 	void destroyObject(ObjectsIterator it);
-	notifier::connection<ChangeEvent> onChange(std::function<ChangeEvent> &&callback);
+	notifier::connection<ChangeEvent> subscribeChangeEvent(std::function<ChangeEvent> &&callback);
 };
 
 } /* namespace scn */

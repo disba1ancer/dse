@@ -33,10 +33,16 @@ ExecutionThread mainThread;
 int main(int , char* []) {
 	Window window;
 	RenderOpenGL31 render(window);
+
 	window.show();
 	Scene scene;
 	Cube cubeMesh;
-	auto cube = scene.createObject(Object(&cubeMesh));
+	auto cube1 = scene.createObject(Object(&cubeMesh));
+	auto cube2 = scene.createObject(Object(&cubeMesh));
+	cube1->setPos({-.5f, -.625f, .0f});
+	cube1->setScale({.5f, .5f, .5f});
+	cube2->setPos({.5f, .625f, .0f});
+	cube2->setScale({.5f, .5f, .5f});
 	render.setScene(scene);
 	auto closeCon = window.subscribeCloseEvent([](WndEvtDt){
 		mainThread.exit(0);
@@ -45,7 +51,7 @@ int main(int , char* []) {
 		std::printf("%i %i\n", static_cast<int>(cmd), key);
 		std::fflush(stdout);
 	});
-	mainThread.addTask(dse::os::nonLockLoop);
+	mainThread.addTask(dse::os::nonLockLoop());
 	mainThread.addTask(make_handler<&RenderOpenGL31::renderTask>(render));
 	return mainThread.runOnCurent();
 }
