@@ -40,6 +40,7 @@ struct alignas((size * sizeof(type_t) % 16) == 0 ? 16 : alignof(type_t)) vec {
 	vec<type_t, size> operator /(const type_t& other) const;
 	vec<type_t, size> operator -() const;
 	type_t& operator[](unsigned i);
+	const type_t& operator[](unsigned i) const;
 	bool operator !=(const vec<type_t, size>& other) const;
 	bool operator ==(const vec<type_t, size>& other) const;
 	template <typename type_to_t>
@@ -172,6 +173,11 @@ type_t& vec<type_t, size>::operator[](unsigned i) {
 }
 
 template <typename type_t, unsigned size>
+const type_t& vec<type_t, size>::operator[](unsigned i) const {
+	return elements[i];
+}
+
+template <typename type_t, unsigned size>
 bool vec<type_t, size>::operator !=(const vec<type_t, size>& other) const {
 	for (unsigned i = 0; i < size; ++i) {
 		if (elements[i] != other.elements[i]) {
@@ -196,6 +202,12 @@ vec<type_t, size>::operator vec<type_to_t, size>() const {
 	return result;
 }
 
+template <typename type_t, unsigned size>
+vec<type_t, size> operator *(const type_t& c, const vec<type_t, size>& v) {
+	vec<type_t, size> result = v;
+	result *= c;
+	return result;
+}
 
 /*template <typename type_t, unsigned sizeA, unsigned sizeB>
 vec<vec<type_t, sizeB>, sizeA> transpose(const vec<vec<type_t, sizeA>, sizeB>& src) {

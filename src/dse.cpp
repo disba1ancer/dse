@@ -15,6 +15,8 @@
 #include "scn/Scene.h"
 #include "scn/Cube.h"
 #include "scn/Object.h"
+#include <cmath>
+#include "math/qmath.h"
 
 using dse::threadutils::ExecutionThread;
 using dse::os::Window;
@@ -39,10 +41,10 @@ int main(int , char* []) {
 	Cube cubeMesh;
 	auto cube1 = scene.createObject(Object(&cubeMesh));
 	auto cube2 = scene.createObject(Object(&cubeMesh));
-	cube1->setPos({-.5f, -.625f, .0f});
-	cube1->setScale({.5f, .5f, .5f});
-	cube2->setPos({.5f, .625f, .0f});
-	cube2->setScale({.5f, .5f, .5f});
+	cube1->setPos({-.25f, -.25f, -.25f});
+	cube1->setScale({.25f, .25f, .25f});
+	cube2->setPos({.25f, .25f, .25f});
+	cube2->setScale({.25f, .25f, .25f});
 	render.setScene(scene);
 	auto closeCon = window.subscribeCloseEvent([](WndEvtDt){
 		mainThread.exit(0);
@@ -53,5 +55,15 @@ int main(int , char* []) {
 	});
 	mainThread.addTask(dse::os::nonLockLoop());
 	mainThread.addTask(make_handler<&RenderOpenGL31::renderTask>(render));
+	mainThread.addTask([&cube1, &cube2]{
+		constexpr float PI = 3.14159265f;
+		using namespace dse::math;
+		auto axe = norm(vec3{1.f, 1.f, 1.f}) * std::sin(PI * .125f / 360.f);
+		auto cs = std::cos(PI * .0125f / 360.f);
+		auto rslt = qmul(norm(cube1->getQRot()), {axe[X], axe[Y], axe[Z], cs});
+		cube1->setQRot(rslt);
+		cube2->setQRot(rslt);
+		return true;
+	});
 	return mainThread.runOnCurent();
 }

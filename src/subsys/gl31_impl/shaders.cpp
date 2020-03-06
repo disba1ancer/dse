@@ -63,16 +63,25 @@ out vec3 fTang;
 out vec3 fBitang;
 out vec2 fUV;
 
+vec4 qmul(vec4 a, vec4 b) {
+    return vec4(
+        a.w * b.xyz + b.w * a.xyz + cross(a.xyz, b.xyz),
+        a.w * b.w - dot(a.xyz, b.xyz)
+    );
+}
+
 void main() {
 	mat3 rot = mat3(
-        cos(radians(30)), 0, sin(radians(30)),
+        cos(radians(30.f)), 0, sin(radians(30.f)),
         0, 1, 0,
-        -sin(radians(30)), 0, cos(radians(30))
+        -sin(radians(30.f)), 0, cos(radians(30.f))
     );
     fNorm = vNorm;
     fTang = vTang;
     fUV = vUV;
-    vec3 pos = vec3(vPos * rot * scale + iPos);
+    vec3 pos = vPos * scale;
+    pos = qmul(qmul(qRot, vec4(pos, 1.f)), vec4(-qRot.xyz, qRot.w)).xyz;
+    pos += iPos;
 	gl_Position = vec4(pos.xyz, max(-pos.z + 2, 1));
 }
 )glsl";
@@ -85,8 +94,19 @@ in vec2 fUV;
 
 out vec4 fragColor;
 
+float ltos(float c) {
+    if ( c <= .0031308f ) {
+        c *= 12.92f;
+    } else {
+        float t = pow(c, 0.416667f);
+        c = t + .055f * t - .055f;
+    }
+    return c;
+}
+
 void main() {
-	fragColor = vec4(1.f, 1.f, 1.f, 1.f);
+	fragColor = vec4(gl_FragCoord.z, gl_FragCoord.z, gl_FragCoord.z, 1.f);
+    fragColor = vec4(ltos(fragColor.x), ltos(fragColor.y), ltos(fragColor.z), fragColor.w);
 }
 )glsl";
 

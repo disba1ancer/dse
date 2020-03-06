@@ -32,7 +32,7 @@ namespace subsys {
 void RenderOpenGL31_impl::onPaint(os::WndEvtDt, os::PntEvtDt) {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glUseProgram(drawProg);
-	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	if (scene) {
 		for (scn::Object& object : (scene->objects())) {
 			if (object.getMesh()) {

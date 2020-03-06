@@ -42,7 +42,7 @@ public:
 		if (!timID) {
 			timID = SetTimer(NULL, 0, 10, yieldTimer);
 		}
-		if (PeekMessage(&msg, 0, 0, 0, PM_REMOVE)) {
+		while (PeekMessage(&msg, 0, 0, 0, PM_REMOVE)) {
 			if (msg.message == WM_QUIT) {
 				ExecutionThread::getCurrentThread().exit(msg.wParam);
 				return false;
