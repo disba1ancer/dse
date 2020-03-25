@@ -32,6 +32,14 @@ const WindowData& Window::getSysData() {
 	return impl->getSysData();
 }
 
+math::ivec2 Window::size() {
+	return impl->size();
+}
+
+void Window::resize(const math::ivec2& size) {
+	impl->resize(size);
+}
+
 notifier::connection<Window::CloseHandler> Window::subscribeCloseEvent(
 		std::function<CloseHandler>&& c) {
 	return impl->subscribeCloseEvent(std::move(c));
@@ -50,6 +58,11 @@ notifier::connection<Window::KeyHandler> Window::subscribeKeyEvent(
 notifier::connection<Window::PaintHandler> Window::subscribePaintEvent(
 		std::function<PaintHandler> &&c) {
 	return impl->subscribePaintEvent(std::move(c));
+}
+
+notifier::connection<Window::MouseMoveHandler> Window::subscribeMouseMoveEvent(
+		std::function<MouseMoveHandler> &&c) {
+	return impl->subscribeMouseMoveEvent(std::move(c));
 }
 
 } /* namespace os */

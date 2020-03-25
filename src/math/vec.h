@@ -29,7 +29,7 @@ struct alignas((size * sizeof(type_t) % 16) == 0 ? 16 : alignof(type_t)) vec {
 	vec<type_t, size>& operator *=(const vec<type_t, size>& other);
 	vec<type_t, size>& operator *=(const type_t& other);
 	vec<type_t, size>& operator /=(const vec<type_t, size>& other);
-	vec<type_t, size>& operator /=(const type_t& other);
+	constexpr vec<type_t, size>& operator /=(const type_t& other);
 	vec<type_t, size>& negate();
 	vec<type_t, size> operator +(const vec<type_t, size>& other) const;
 	vec<type_t, size> operator -(const vec<type_t, size>& other) const;
@@ -37,7 +37,7 @@ struct alignas((size * sizeof(type_t) % 16) == 0 ? 16 : alignof(type_t)) vec {
 	vec<type_t, size> operator *(const vec<type_t, size>& other) const;
 	vec<type_t, size> operator *(const type_t& other) const;
 	vec<type_t, size> operator /(const vec<type_t, size>& other) const;
-	vec<type_t, size> operator /(const type_t& other) const;
+	constexpr vec<type_t, size> operator /(const type_t& other) const;
 	vec<type_t, size> operator -() const;
 	type_t& operator[](unsigned i);
 	const type_t& operator[](unsigned i) const;
@@ -96,7 +96,7 @@ vec<type_t, size>& vec<type_t, size>::operator /=(const vec<type_t, size>& other
 }
 
 template <typename type_t, unsigned size>
-vec<type_t, size>& vec<type_t, size>::operator /=(const type_t& other) {
+constexpr vec<type_t, size>& vec<type_t, size>::operator /=(const type_t& other) {
 	for (unsigned i = 0; i < size; ++i) {
 		elements[i] /= other;
 	}
@@ -146,7 +146,7 @@ vec<type_t, size> vec<type_t, size>::operator /(const vec<type_t, size>& other) 
 }
 
 template <typename type_t, unsigned size>
-vec<type_t, size> vec<type_t, size>::operator /(const type_t& other) const {
+constexpr vec<type_t, size> vec<type_t, size>::operator /(const type_t& other) const {
 	vec<type_t, size> result = *this;
 	result /= other;
 	return result;

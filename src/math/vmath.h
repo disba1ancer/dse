@@ -24,18 +24,17 @@ vec<T, 3> cross(const vec<T, 3>& a, const vec<T, 3>& b) {
 }
 
 template <typename T, unsigned size>
-T dot(const vec<T, size>& a, const vec<T, size>& b) {
+constexpr T dot(const vec<T, size>& a, const vec<T, size>& b) {
 	T result = T();
 	for (unsigned i = 0; i < size; ++i) {
-		result += a[i] * b[i];
+		result += a.elements[i] * b.elements[i];
 	}
 	return result;
 }
 
 template <typename T, unsigned size>
-vec<T, size> norm(const vec<T, size>& a) {
-	T result = std::sqrt(dot(a, a));
-	return a / result;
+constexpr vec<T, size> norm(const vec<T, size>& a) {
+	return a / std::sqrt(dot(a, a));
 }
 
 } // namespace math

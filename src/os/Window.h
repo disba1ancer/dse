@@ -12,6 +12,7 @@
 #include "WindowShowCommand.h"
 #include "../notifier/notifier.h"
 #include "KeyboardKeyState.h"
+#include "../math/vec.h"
 
 namespace dse {
 namespace os {
@@ -45,6 +46,8 @@ public:
 	bool isVisible() const;
 	void show(WindowShowCommand command = WindowShowCommand::SHOW);
 	const WindowData& getSysData();
+	math::ivec2 size();
+	void resize(const math::ivec2& size);
 	typedef void(SimpleHandler)(WndEvtDt);
 	typedef SimpleHandler CloseHandler;
 	notifier::connection<CloseHandler> subscribeCloseEvent(std::function<CloseHandler>&& c);
@@ -54,6 +57,8 @@ public:
 	notifier::connection<KeyHandler> subscribeKeyEvent(std::function<KeyHandler>&& c);
 	typedef void(PaintHandler)(WndEvtDt, PntEvtDt);
 	notifier::connection<PaintHandler> subscribePaintEvent(std::function<PaintHandler>&& c);
+	typedef void(MouseMoveHandler)(WndEvtDt, int x, int y);
+	notifier::connection<MouseMoveHandler> subscribeMouseMoveEvent(std::function<MouseMoveHandler>&& c);
 };
 
 } /* namespace os */

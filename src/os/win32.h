@@ -12,5 +12,6 @@
 #include <sdkddkver.h>
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#include <windowsx.h>
 
 #endif /* OS_WIN32_H_ */

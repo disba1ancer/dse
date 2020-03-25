@@ -33,15 +33,23 @@ class RenderOpenGL31_impl {
 	gl::Context31 context;
 	gl::VAO vao;
 	scn::Scene* scene;
+	scn::Camera* camera;
 	std::vector<gl31_impl::ObjectInstance> objects;
 	std::list<gl31_impl::MeshInstance> meshes;
 	gl::VertexBuffer vbo;
 	gl::Program fragmentProg;
 	gl::Program drawProg;
-	GLuint windowSizeUniform;
-	GLuint posUniform;
-	GLuint qRotUniform;
-	GLuint scaleUniform;
+	GLint fragWindowSizeUniform;
+	GLint drawWindowSizeUniform;
+	GLint posUniform;
+	GLint qRotUniform;
+	GLint scaleUniform;
+	GLint camPosUniform;
+	GLint camQRotUniform;
+	GLint invFocLenUniform;
+	GLint zNearUniform;
+	GLint zFarUniform;
+	GLint aspRatioUniform;
 
 	void onPaint(os::WndEvtDt, os::PntEvtDt);
 	void onResize(os::WndEvtDt, int width, int height, os::WindowShowCommand);
@@ -54,6 +62,7 @@ public:
 	RenderOpenGL31_impl& operator=(RenderOpenGL31_impl &&other) = delete;
 	bool renderTask();
 	void setScene(dse::scn::Scene& scene);
+	void setCamera(dse::scn::Camera& camera);
 };
 
 } /* namespace subsys */

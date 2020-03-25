@@ -48,6 +48,7 @@ LRESULT Window_win32::wndProc(HWND hWnd, UINT message, WPARAM wParam,
 	case WM_SYSKEYUP:
 	case WM_KEYUP: return onKeyUp(d);
 	case WM_SYSCHAR: break;
+	case WM_MOUSEMOVE: return onMouseMove(d);
 	default: return DefWindowProc(hWnd, message, wParam, lParam);
 	}
 	return 0;
@@ -184,6 +185,30 @@ notifier::connection<Window::PaintHandler> Window_win32::subscribePaintEvent(
 
 const WindowData& Window_win32::getSysData() {
 	return *reinterpret_cast<const WindowData*>(&hWnd);
+}
+
+LRESULT Window_win32::onMouseMove(WindowEventData_win32 &d) {
+	mouseMoveSubscribers.notify(d, GET_X_LPARAM(d.lParam), GET_Y_LPARAM(d.lParam));
+	return 0;
+}
+
+notifier::connection<Window::MouseMoveHandler> Window_win32::subscribeMouseMoveEvent(
+		std::function<Window::MouseMoveHandler> &&c) {
+	return mouseMoveSubscribers.subscribe(std::move(c));
+}
+
+math::ivec2 Window_win32::size() {
+	RECT rc;
+	GetClientRect(hWnd, &rc);
+	return {rc.right, rc.bottom};
+}
+
+void Window_win32::resize(const math::ivec2& size) {
+	RECT rc = { 0, 0, size[0], size[1] };
+	DWORD style = GetWindowLongPtr(hWnd, GWL_STYLE);
+	DWORD styleex = GetWindowLongPtr(hWnd, GWL_EXSTYLE);
+	AdjustWindowRectEx(&rc, style, FALSE, styleex);
+	SetWindowPos(hWnd, NULL, 0, 0, rc.right - rc.left, rc.bottom - rc.top, SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOOWNERZORDER | SWP_NOZORDER);
 }
 
 } /* namespace os */

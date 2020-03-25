@@ -24,5 +24,9 @@ void RenderOpenGL31::setScene(dse::scn::Scene &scene) {
 	impl->setScene(scene);
 }
 
+void RenderOpenGL31::setCamera(dse::scn::Camera &camera) {
+	impl->setCamera(camera);
+}
+
 } /* namespace subsys */
 } /* namespace dse */

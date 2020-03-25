@@ -22,6 +22,7 @@ class Window_win32 {
 	notifier::notifier<Window::ResizeHandler> resizeSubscribers;
 	notifier::notifier<Window::KeyHandler> keySubscribers;
 	notifier::notifier<Window::PaintHandler> paintSubscribers;
+	notifier::notifier<Window::MouseMoveHandler> mouseMoveSubscribers;
 
 	static constexpr int GWLP_THIS = 0;
 
@@ -33,6 +34,7 @@ class Window_win32 {
 	LRESULT onSize(WindowEventData_win32& d);
 	LRESULT onKeyDown(WindowEventData_win32& d);
 	LRESULT onKeyUp(WindowEventData_win32& d);
+	LRESULT onMouseMove(WindowEventData_win32& d);
 public:
 	Window_win32();
 	~Window_win32();
@@ -43,10 +45,13 @@ public:
 	bool isVisible() const;
 	void show(WindowShowCommand command = WindowShowCommand::SHOW);
 	const WindowData& getSysData();
+	math::ivec2 size();
+	void resize(const math::ivec2& size);
 	notifier::connection<Window::CloseHandler> subscribeCloseEvent(std::function<Window::CloseHandler>&& c);
 	notifier::connection<Window::ResizeHandler> subscribeResizeEvent(std::function<Window::ResizeHandler>&& c);
 	notifier::connection<Window::KeyHandler> subscribeKeyEvent(std::function<Window::KeyHandler>&& c);
 	notifier::connection<Window::PaintHandler> subscribePaintEvent(std::function<Window::PaintHandler>&& c);
+	notifier::connection<Window::MouseMoveHandler> subscribeMouseMoveEvent(std::function<Window::MouseMoveHandler>&& c);
 };
 
 } /* namespace os */

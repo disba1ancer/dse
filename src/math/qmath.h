@@ -27,6 +27,17 @@ vec<T, 4> qmul(const vec<T, 4>& a, const vec<T, 4>& b) {
 	};
 }
 
+template <typename T>
+vec<T, 4> qinv(const vec<T, 4>& a) {
+    return {-a[0], -a[1], -a[2], a[3]};
+}
+
+template <typename T>
+vec<T, 3> vecrotquat(const vec<T, 3>& _vec, const vec<T, 4>& quat) {
+	auto rslt = qmul(qmul(quat, { _vec[0], _vec[1], _vec[2], 0.f }), qinv(quat));
+    return { rslt[0], rslt[1], rslt[2] };
+}
+
 } // namespace math
 } // namespace dse
 

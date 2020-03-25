@@ -11,6 +11,7 @@
 #include <memory>
 #include "../os/Window.h"
 #include "../scn/Scene.h"
+#include "../scn/Camera.h"
 
 namespace dse {
 namespace subsys {
@@ -28,6 +29,7 @@ public:
 	RenderOpenGL31& operator=(RenderOpenGL31&&) = delete;
 	bool renderTask();
 	void setScene(dse::scn::Scene& scene);
+	void setCamera(dse::scn::Camera& camera);
 };
 
 } /* namespace subsys */
