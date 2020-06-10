@@ -109,7 +109,7 @@ RenderOpenGL31_impl::RenderOpenGL31_impl(os::Window& wnd) : wnd(&wnd),
 		throw std::runtime_error("Required extensions is not available");
 	}
 
-	wglSwapIntervalEXT(-1);
+	context.enableVSync(1);
 	glEnable(GL_DEPTH_TEST);
 	/*glDepthFunc(GL_GEQUAL);
 	glClearDepth(.0);*/
@@ -177,13 +177,13 @@ void RenderOpenGL31_impl::onResize(os::WndEvtDt, int width, int height,
 	glUniform1f(aspRatioUniform, float(width) / float(height));
 }
 
-bool RenderOpenGL31_impl::renderTask() {
+threadutils::TaskState RenderOpenGL31_impl::renderTask() {
 #ifdef _WIN32
 	auto hWnd = wnd->getSysData().hWnd;
 	InvalidateRect(hWnd, nullptr, FALSE);
 	//UpdateWindow(hWnd);
 #endif
-	return true;
+	return threadutils::TaskState::YIELD;
 }
 
 void RenderOpenGL31_impl::setScene(dse::scn::Scene &scene) {

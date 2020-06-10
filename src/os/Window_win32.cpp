@@ -49,6 +49,21 @@ LRESULT Window_win32::wndProc(HWND hWnd, UINT message, WPARAM wParam,
 	case WM_KEYUP: return onKeyUp(d);
 	case WM_SYSCHAR: break;
 	case WM_MOUSEMOVE: return onMouseMove(d);
+	case WM_ACTIVATE: {
+		if (!LOWORD(wParam)) {
+			auto style = GetWindowLongPtr(hWnd, GWL_STYLE);
+			if (style & WS_POPUP) {
+				ShowWindow(hWnd, SW_MINIMIZE);
+			}
+		}
+		break;
+	}
+	/*case WM_SETCURSOR:
+		if (LOWORD(lParam) == HTCLIENT) {
+			SetCursor(NULL);
+			return TRUE;
+		}
+		[[fallthrough]];*/
 	default: return DefWindowProc(hWnd, message, wParam, lParam);
 	}
 	return 0;
@@ -57,19 +72,20 @@ LRESULT Window_win32::wndProc(HWND hWnd, UINT message, WPARAM wParam,
 ATOM Window_win32::makeWindowClsID() {
 	static ATOM clsID = 0;
 	if (clsID == 0) {
+		HINSTANCE hInst = GetModuleHandle(nullptr);
 		WNDCLASSEX wcex;
 		wcex.cbSize = sizeof(WNDCLASSEX);
 		wcex.style = CS_OWNDC;
 		wcex.lpfnWndProc = &staticWndProc;
 		wcex.cbClsExtra = 0;
 		wcex.cbWndExtra = sizeof(LONG_PTR);
-		wcex.hInstance = static_cast<HINSTANCE>(GetModuleHandle(0));
-		wcex.hIcon = LoadIcon(0, static_cast<LPCTSTR>(IDI_APPLICATION));
+		wcex.hInstance = hInst;
+		wcex.hIcon = LoadIcon(hInst, MAKEINTRESOURCE(100));
 		wcex.hCursor = LoadCursor(0, static_cast<LPCTSTR>(IDC_ARROW));
 		wcex.hbrBackground = NULL;
 		wcex.lpszMenuName = 0;
 		wcex.lpszClassName = TEXT("dse.os.Window");
-		wcex.hIconSm = LoadIcon(0, static_cast<LPCTSTR>(IDI_APPLICATION));
+		wcex.hIconSm = LoadIcon(hInst, MAKEINTRESOURCE(100));
 
 		clsID = RegisterClassEx(&wcex);
 		if (clsID == 0){
@@ -113,10 +129,12 @@ void Window_win32::show(WindowShowCommand command) {
 		style |= WS_POPUP;
 		style &= ~WS_OVERLAPPEDWINDOW;
 		SetWindowLongPtr(hWnd, GWL_STYLE, style);
+		SetWindowPos(hWnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
 	} else if(style & WS_POPUP) {
 		style &= ~WS_POPUP;
 		style |= WS_OVERLAPPEDWINDOW;
 		SetWindowLongPtr(hWnd, GWL_STYLE, style);
+		SetWindowPos(hWnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER);
 	}
 	ShowWindow(hWnd, showCmd);
 }

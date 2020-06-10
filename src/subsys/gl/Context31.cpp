@@ -10,6 +10,7 @@
 #include "gl.h"
 #include <exception>
 #include "Context31.h"
+#include "dwmapi.h"
 
 namespace {
 
@@ -83,7 +84,13 @@ Context31::~Context31() {
 }
 
 void Context31::SwapBuffers() {
+	if (vsync) DwmFlush();
 	::SwapBuffers(hdc);
+}
+
+void Context31::enableVSync(int val) {
+	vsync = val;
+	wglSwapIntervalEXT(val);
 }
 #endif
 

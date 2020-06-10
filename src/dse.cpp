@@ -21,6 +21,10 @@
 #include "scn/Camera.h"
 #include "os/mcursor.h"
 #include <algorithm>
+#include <filesystem>
+#include <windows.h>
+#include <vector>
+#include "os/io/File.h"
 
 using dse::threadutils::ExecutionThread;
 using dse::os::Window;
@@ -35,6 +39,11 @@ using dse::scn::Scene;
 using dse::scn::Object;
 using dse::scn::Camera;
 using dse::os::setMouseCursorPosWndRel;
+using dse::threadutils::TaskState;
+using dse::os::io::File;
+using dse::os::io::OpenMode;
+using dse::os::io::Result;
+using dse::os::io::StPoint;
 
 ExecutionThread mainThread;
 
@@ -91,30 +100,34 @@ int main(int , char* []) {
 			std::fflush(stdout);
 		}
 	});
-	auto mmoveCon = window.subscribeMouseMoveEvent([&window, &pitch, &yaw](WndEvtDt, int x, int y) {
+	auto mmoveCon = window.subscribeMouseMoveEvent([&window, &pitch, &yaw, &cam](WndEvtDt, int x, int y) {
+		using namespace dse::math;
 		auto center = window.size() / 2;
 		auto moffset = dse::math::ivec2{x, y} - center;
-		std::printf("%i %i\n", moffset[0], moffset[1]);
-		std::fflush(stdout);
-		pitch = std::clamp(pitch - moffset[1] * .0625f, 0.f, 180.f);
-		yaw -= moffset[0] * 0.0625;
+		constexpr float sens = 3.f / 4096.f;
+		pitch = std::clamp(pitch - moffset[1] * sens, 0.f, PI);
+		yaw -= moffset[0] * sens;
+		auto pitchHalf = pitch * .5f;
+		auto yawHalf = yaw * .5f;
+		auto camrot = qmul(vec4{ 0, 0, std::sin(yawHalf), std::cos(yawHalf) }, { std::sin(pitchHalf), 0, 0, std::cos(pitchHalf) });
+		cam.setRot(camrot);
 		setMouseCursorPosWndRel(center, window);
+	});
+	auto sizeCon = window.subscribeResizeEvent([](WndEvtDt, int, int, WindowShowCommand) {
+		mainThread.yieldTasks();
 	});
 	mainThread.addTask(dse::os::nonLockLoop());
 	mainThread.addTask(make_handler<&RenderOpenGL31::renderTask>(render));
-	mainThread.addTask([&cube1, &cube2, &cam, &spd, &sdspd, &pitch, &yaw] {
+	mainThread.addTask([&cube1, &cube2, &cam, &spd, &sdspd] {
 		using namespace dse::math;
-		auto axe1 = norm(-vec3{1.f, 1.f, 1.f}) * std::sin(PI * .25f / 360.f);
-		auto cs1 = std::cos(PI * .0125f / 360.f);
+		auto angle = 1.f;
+		auto axe1 = norm(-vec3{1.f, 1.f, 1.f}) * std::sin(PI * angle / 360.f);
+		auto cs1 = std::cos(PI * angle / 360.f);
 		auto rslt = norm(qmul({axe1[X], axe1[Y], axe1[Z], cs1}, cube1->getQRot()));
 		cube1->setQRot(rslt);
 		//cube2->setQRot(rslt);
-		auto pitchRad = (pitch) * PI / 360.f;
-		auto yawRad = (yaw) * PI / 360.f;
-		auto camrot = qmul(vec4{ 0, 0, std::sin(yawRad), std::cos(yawRad) }, { std::sin(pitchRad), 0, 0, std::cos(pitchRad) });
-		cam.setRot(camrot);
-		if (spd != 0.f || sdspd != 0.f) cam.setPos(cam.getPos() + vecrotquat(vec3{0.f, 0.f, -1.f} * spd + vec3{1.f, 0.f, 0.f} * sdspd, camrot) );
-		return true;
+		if (spd != 0.f || sdspd != 0.f) cam.setPos(cam.getPos() + vecrotquat(norm(vec3{0.f, 0.f, -1.f} * spd + vec3{1.f, 0.f, 0.f} * sdspd), cam.getRot()) );
+		return TaskState::YIELD;
 	});
 	return mainThread.runOnCurent();
 }

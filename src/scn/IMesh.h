@@ -9,7 +9,7 @@
 #define SCN_IMESH_H_
 
 #include "../math/vec.h"
-#include <cinttypes>
+#include <cstdint>
 
 namespace dse {
 namespace scn {

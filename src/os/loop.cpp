@@ -15,10 +15,14 @@
 #include <utility>
 
 using dse::threadutils::ExecutionThread;
+using dse::threadutils::TaskState;
 
 namespace {
 class NonLockLoopTask {
 	UINT_PTR timID;
+	static void CALLBACK yieldTimer(HWND, UINT, UINT_PTR, DWORD) {
+		ExecutionThread::getCurrentThread().yieldTasks();
+	}
 public:
 	NonLockLoopTask() : timID(0) {}
 	NonLockLoopTask(const NonLockLoopTask&) : NonLockLoopTask() {}
@@ -34,10 +38,7 @@ public:
 		return *this;
 	}
 	~NonLockLoopTask() { if (timID) KillTimer(NULL, timID); }
-	static void CALLBACK yieldTimer(HWND, UINT, UINT_PTR, DWORD) {
-		ExecutionThread::getCurrentThread().yieldTasks();
-	}
-	bool operator()() {
+	TaskState operator()() {
 		MSG msg;
 		if (!timID) {
 			timID = SetTimer(NULL, 0, 10, yieldTimer);
@@ -45,18 +46,18 @@ public:
 		while (PeekMessage(&msg, 0, 0, 0, PM_REMOVE)) {
 			if (msg.message == WM_QUIT) {
 				ExecutionThread::getCurrentThread().exit(msg.wParam);
-				return false;
+				return TaskState::END;
 			}
 			if (!(msg.message == WM_TIMER || msg.wParam == timID)) {
 				TranslateMessage(&msg);
 				DispatchMessage(&msg);
 			}
 		}
-		return true;
+		return TaskState::YIELD;
 	}
 };
 }
 
-std::function<bool()> dse::os::nonLockLoop() {
+std::function<TaskState()> dse::os::nonLockLoop() {
 	return NonLockLoopTask();
 }

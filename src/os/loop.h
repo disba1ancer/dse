@@ -9,11 +9,12 @@
 #define OS_LOOP_H_
 
 #include <functional>
+#include "../threadutils/TaskState.h"
 
 namespace dse {
 namespace os {
 
-std::function<bool()> nonLockLoop();
+std::function<threadutils::TaskState()> nonLockLoop();
 
 }
 }

@@ -60,7 +60,7 @@ public:
 	RenderOpenGL31_impl(RenderOpenGL31_impl &&other) = delete;
 	RenderOpenGL31_impl& operator=(const RenderOpenGL31_impl &other) = delete;
 	RenderOpenGL31_impl& operator=(RenderOpenGL31_impl &&other) = delete;
-	bool renderTask();
+	threadutils::TaskState renderTask();
 	void setScene(dse::scn::Scene& scene);
 	void setCamera(dse::scn::Camera& camera);
 };

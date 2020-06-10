@@ -14,20 +14,30 @@ namespace threadutils {
 void ExecutionThread::threadEntry() {
 	std::unique_lock lock(mtx);
 	currentThread = this;
-	while (m_isRun && !(isExit && tasks.empty())) {
-		if (!tasks.empty()){
-			auto task = std::move(tasks.front());
-			tasks.pop_front();
-			bool repeat;
+	while (m_isRun && !(isExit && queuedTasks.empty())) {
+		if (!queuedTasks.empty()){
+			auto task = queuedTasks.front();
+			queuedTasks.pop_front();
+			TaskState state;
 			{
 				unlock_guard unlock(mtx);
-				repeat = task();
+				state = (*task.taskid)();
 			}
-			if (repeat && !isExit) tasks.emplace_back(std::move(task));
+			switch (state) {
+			case TaskState::YIELD:
+				if (!isExit) queuedTasks.emplace_back(std::move(task));
+				break;
+			case TaskState::END:
+				tasks.erase(task.taskid);
+				break;
+			case TaskState::AWAIT:
+				break;
+			}
 		} else {
 			cond_var.wait(lock);
 		}
 	}
+	queuedTasks.clear();
 	tasks.clear();
 	isExit = false;
 	m_isRun = false;
@@ -63,14 +73,15 @@ void ExecutionThread::exit(int r) {
 	cond_var.notify_one();
 }
 
-bool ExecutionThread::addTask(std::function<bool()> &&task) {
+ auto ExecutionThread::addTask(Task &&task) -> std::optional<TaskID> {
 	std::lock_guard lock(mtx);
 	if (!isExit) {
-		tasks.emplace_back(std::move(task));
+		TaskID id{ tasks.emplace(tasks.end(), std::move(task)) };
+		queuedTasks.emplace_back(id);
 		cond_var.notify_one();
-		return true;
+		return id;
 	}
-	return false;
+	return {};
 }
 
 bool ExecutionThread::isRun() {
@@ -91,18 +102,37 @@ ExecutionThread& ExecutionThread::getCurrentThread() {
 void ExecutionThread::yieldTasks() {
 	std::unique_lock lock(mtx);
 	if (currentThread == this) {
-		auto taskCount = tasks.size();
-		for (decltype(taskCount) i = 0; m_isRun && i < taskCount && !tasks.empty(); ++i) {
-			auto task = std::move(tasks.front());
-			tasks.pop_front();
-			bool repeat;
+		auto taskCount = queuedTasks.size();
+		for (decltype(taskCount) i = 0; m_isRun && i < taskCount && !queuedTasks.empty(); ++i) {
+			auto task = queuedTasks.front();
+			queuedTasks.pop_front();
+			TaskState state;
 			{
 				unlock_guard unlock(mtx);
-				repeat = task();
+				state = (*task.taskid)();
 			}
-			if (repeat && !isExit) tasks.emplace_back(std::move(task));
+			switch (state) {
+			case TaskState::YIELD:
+				if (!isExit) queuedTasks.emplace_back(std::move(task));
+				break;
+			case TaskState::END:
+				tasks.erase(task.taskid);
+				break;
+			case TaskState::AWAIT:
+				break;
+			}
 		}
 	}
+}
+
+ExecutionThread::TaskID::TaskID(std::list<Task>::iterator taskid) : taskid(taskid) {}
+
+bool ExecutionThread::resumeTask(const TaskID& taskID) {
+	if (!isExit) {
+		queuedTasks.push_back(taskID);
+		return true;
+	}
+	return false;
 }
 
 } /* namespace threadutils */

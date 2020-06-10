@@ -22,6 +22,7 @@ class Context31 {
 	HWND hWnd;
 	HDC hdc;
 	HGLRC glrc;
+	int vsync = 0;
 #endif
 public:
 	Context31(os::Window& wnd);
@@ -31,6 +32,7 @@ public:
 	Context31& operator=(const Context31 &other) = delete;
 	Context31& operator=(Context31 &&other) = delete;
 	void SwapBuffers();
+	void enableVSync(int val);
 };
 
 } /* namespace gl */
