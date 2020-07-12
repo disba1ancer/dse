@@ -6,14 +6,18 @@
  */
 
 #include <cstring>
-#include "../../os/WindowData_win32.h"
 #include "gl.h"
 #include <exception>
 #include "Context31.h"
-#include "dwmapi.h"
+
+#ifdef _WIN32
+#include <dwmapi.h>
+#include "../../os/WindowData_win32.h"
+#endif
 
 namespace {
 
+#ifdef _WIN32
 const int pixelFormatAtributes[] =
 {
 	WGL_DRAW_TO_WINDOW_ARB, GL_TRUE,
@@ -31,9 +35,10 @@ const int contextAtributes[] =
 {
 	WGL_CONTEXT_MAJOR_VERSION_ARB, 3,
 	WGL_CONTEXT_MINOR_VERSION_ARB, 1,
-	//WGL_CONTEXT_FLAGS_ARB, WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB,
+	WGL_CONTEXT_FLAGS_ARB, WGL_CONTEXT_DEBUG_BIT_ARB,//WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB,
 	0, 0
 };
+#endif
 
 }
 
@@ -60,6 +65,9 @@ Context31::Context31(os::Window& wnd) : hWnd(wnd.getSysData().hWnd), hdc(GetDC(h
 		if (pfd.dwFlags & (PFD_GENERIC_FORMAT | PFD_GENERIC_ACCELERATED)) throw std::runtime_error("Pixel format not accelerated");
 		SetPixelFormat(hdc, format, &pfd);
 		HGLRC glrc = wglCreateContext(hdc);
+		if (!glrc) {
+			throw std::runtime_error("Unable to initialize OpenGL (dummy context)");
+		}
 		wglMakeCurrent(hdc, glrc);
 		wglChoosePixelFormatARB.load();
 		wglCreateContextAttribsARB.load();
@@ -73,7 +81,9 @@ Context31::Context31(os::Window& wnd) : hWnd(wnd.getSysData().hWnd), hdc(GetDC(h
 	if (pfd.dwFlags & (PFD_GENERIC_FORMAT | PFD_GENERIC_ACCELERATED)) throw std::runtime_error("Pixel format not accelerated");
 	SetPixelFormat(hdc, format, nullptr);
 	glrc = wglCreateContextAttribsARB(hdc, 0, contextAtributes);
-	if (!glrc) throw std::runtime_error("Unable to initialize OpenGL");
+	if (!glrc) {
+		throw std::runtime_error("Unable to initialize OpenGL");
+	}
 	wglMakeCurrent(hdc, glrc);
 }
 
@@ -84,13 +94,13 @@ Context31::~Context31() {
 }
 
 void Context31::SwapBuffers() {
-	if (vsync) DwmFlush();
 	::SwapBuffers(hdc);
+	if (vsync) DwmFlush();
 }
 
 void Context31::enableVSync(int val) {
 	vsync = val;
-	wglSwapIntervalEXT(val);
+	wglSwapIntervalEXT(0);
 }
 #endif
 

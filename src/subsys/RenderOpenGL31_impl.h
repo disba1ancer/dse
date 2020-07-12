@@ -20,8 +20,12 @@
 #include "gl31_impl/ObjectInstance.h"
 #include "gl/Program.h"
 #include "gl/Buffer.h"
-#include "gl/VertexShader.h"
-#include "gl/FragmentShader.h"
+#include "gl/Shader.h"
+#include "gl/FrameBuffer.h"
+#include "gl/Texture.h"
+#include "gl/RenderBuffer.h"
+
+//#define DSE_MULTISAMPLE 4
 
 namespace dse {
 namespace subsys {
@@ -32,27 +36,39 @@ class RenderOpenGL31_impl {
 	notifier::connection<os::Window::ResizeHandler> sizeCon;
 	gl::Context31 context;
 	gl::VAO vao;
-	scn::Scene* scene;
-	scn::Camera* camera;
+	scn::Scene* scene = nullptr;
+	scn::Camera* camera = nullptr;
 	std::vector<gl31_impl::ObjectInstance> objects;
 	std::list<gl31_impl::MeshInstance> meshes;
 	gl::VertexBuffer vbo;
 	gl::Program fragmentProg;
 	gl::Program drawProg;
-	GLint fragWindowSizeUniform;
-	GLint drawWindowSizeUniform;
-	GLint posUniform;
-	GLint qRotUniform;
-	GLint scaleUniform;
-	GLint camPosUniform;
-	GLint camQRotUniform;
-	GLint invFocLenUniform;
-	GLint zNearUniform;
-	GLint zFarUniform;
-	GLint aspRatioUniform;
+	GLint fragWindowSizeUniform = 0;
+	GLint fragColorBufferUniform = 0;
+	GLint fragDepthBufferUniform = 0;
+	GLint drawWindowSizeUniform = 0;
+	GLint posUniform = 0;
+	GLint qRotUniform = 0;
+	GLint scaleUniform = 0;
+	GLint camPosUniform = 0;
+	GLint camQRotUniform = 0;
+	GLint matColorUnifrom = 0;
+	GLint invAspRatioUniform = 0;
+	GLint perspArgsUniform = 0;
+	unsigned width = 1, height = 1;
+#ifdef DSE_MULTISAMPLE
+	gl::FrameBuffer renderFBOMSAA = 0;
+	gl::RenderBuffer colorBufferMSAA = 0;
+	gl::RenderBuffer depthBufferMSAA = 0;
+#endif
+	gl::FrameBuffer renderFBO = 0;
+	gl::TextureRectangle colorBuffer = 0;
+	gl::TextureRectangle depthBuffer = 0;
 
 	void onPaint(os::WndEvtDt, os::PntEvtDt);
 	void onResize(os::WndEvtDt, int width, int height, os::WindowShowCommand);
+	void rebuildSrgbFrameBuffer();
+	void prepareShaders();
 public:
 	RenderOpenGL31_impl(os::Window& wnd);
 	~RenderOpenGL31_impl() = default;

@@ -9,11 +9,13 @@
 #define SCN_OBJECT_H_
 
 #include "../math/vec.h"
+#include <vector>
 
 namespace dse {
 namespace scn {
 
 class IMesh;
+class Material;
 
 class Object {
 	math::vec3 pos;
@@ -21,6 +23,7 @@ class Object {
 	math::vec4 qRot;
 	math::vec3 scale;
 	IMesh* mesh;
+	std::vector<Material*> materials;
 public:
 	Object(IMesh* mesh = nullptr, math::vec3 pos = {0, 0, 0}, math::vec4 qRot = {0, 0, 0, 1}, math::vec3 scale = {1, 1, 1});
 	~Object() = default;
@@ -37,6 +40,8 @@ public:
 	math::vec3 getScale() const;
 	void setScale(const math::vec3 &scale);
 	unsigned getVersion() const;
+	void setMaterial(unsigned materialSlot, Material* mat);
+	Material* getMaterial(unsigned materialSlot);
 };
 
 } /* namespace scn */

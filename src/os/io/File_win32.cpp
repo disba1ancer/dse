@@ -11,6 +11,7 @@
 #include "IOCP_win32.h"
 #include "../../util/FinalStep.h"
 #include "../../util/Access.h"
+#include "../win32_helpers.h"
 
 namespace {
 std::wstring convertFilePath(std::u8string_view filepath) {
@@ -53,61 +54,6 @@ HANDLE open(std::u8string_view filepath, dse::os::io::OpenMode mode, DWORD& last
 	auto handle = CreateFile(path.c_str(), modeToAccess(mode), FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, modeToCreateMode(mode), FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OVERLAPPED, NULL);
 	lastError = GetLastError();
 	return handle;
-}
-
-void shiftAr(char8_t *str, size_t size) {
-	for (size_t i = size; i > 1; --i) {
-		str[i - 1] = str[i - 2];
-	}
-}
-
-int c32tou8(char8_t *str, char32_t ch) {
-	if (ch <= 127) {
-		str[0] = ch;
-	} else {
-		int bytesCount = 0;
-		while (ch) {
-			shiftAr(str, 4);
-			if (ch >= (1U << (6U - bytesCount))) {
-				str[0] = (ch & 0x3FU) | 0x80U;
-				++bytesCount;
-			} else {
-				++bytesCount;
-				auto mask = 0xFU << (8U - bytesCount);
-				str[0] = (ch & 0x3FU) | mask;
-			}
-			ch >>= 6;
-		}
-		return bytesCount;
-	}
-	return 1;
-}
-
-std::u8string wcTou8(std::wstring_view in) {
-	enum {
-		SurrogateA    = 0b1101100000000000,
-		SurrogateB    = 0b1101110000000000,
-		SurrogateMask = 0b1111110000000000,
-		CodeMask      = 0b0000001111111111,
-		Shift         = 10,
-		Base          = 0x10000
-	};
-	std::u8string result;
-	result.reserve(in.size() * sizeof(std::wstring_view::value_type));
-	char8_t u8code[4];
-	char32_t code;
-	for (std::size_t i = 0; bool((code = in[i])) || (i < in.size()); ++i) {
-		switch ((code & SurrogateMask)) {
-		case SurrogateA:
-			++i;
-			code = ((code & CodeMask) << Shift) + (in[i] & CodeMask) + Base;
-			break;
-		case SurrogateB:
-			continue;
-		}
-		result += std::u8string_view(u8code, u8code + c32tou8(u8code, code));
-	}
-	return result;
 }
 
 }
@@ -342,11 +288,7 @@ std::size_t File_win32::getTransfered() const {
 }
 
 std::u8string File_win32::getResultString() const {
-	constexpr std::size_t resultStringMaxSize = 512;
-	wchar_t buf[resultStringMaxSize];
-	auto lError = util::access(dataMtx, lastError);
-	auto size = FormatMessageW(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_MAX_WIDTH_MASK, nullptr, lError, 0, buf, resultStringMaxSize, nullptr);
-	return wcTou8(std::wstring_view(buf, buf + size));
+	return win32_helpers::getErrorString(util::access(dataMtx, lastError));
 }
 
 void File_win32::incRefs() {

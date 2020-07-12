@@ -10,16 +10,19 @@
 #include "gl/gl.h"
 #include "gl31_impl/shaders.h"
 #include "gl31_impl/binds.h"
+#include <array>
+#include <cstdio>
+#include "../scn/Material.h"
 
 namespace {
 struct ReqGLExt {
 	const char* name;
 	bool avail;
 };
-ReqGLExt reqGLExts[] = {
-		{"GL_ARB_draw_elements_base_vertex", false},
-		{"GL_ARB_instanced_arrays", false},
-};
+auto reqGLExts = std::to_array<ReqGLExt, 2>({
+	{"GL_ARB_draw_elements_base_vertex", false},
+	{"GL_ARB_instanced_arrays", false},
+});
 using dse::threadutils::ExecutionThread;
 using dse::subsys::gl31_impl::InputParams;
 using dse::subsys::gl31_impl::OutputParams;
@@ -30,21 +33,28 @@ namespace dse {
 namespace subsys {
 
 void RenderOpenGL31_impl::onPaint(os::WndEvtDt, os::PntEvtDt) {
+#ifdef DSE_MULTISAMPLE
+	glBindFramebuffer(GL_FRAMEBUFFER, renderFBOMSAA);
+#else
+	glBindFramebuffer(GL_FRAMEBUFFER, renderFBO);
+#endif
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glUseProgram(drawProg);
 	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	if (camera) {
 		glUniform3fv(camPosUniform, 1, camera->getPos().elements);
 		glUniform4fv(camQRotUniform, 1, camera->getRot().elements);
-		glUniform1f(invFocLenUniform, 1.f / camera->getFocalLength());
 		auto zNear = camera->getNear(),
 				zFar = camera->getFar();
 		if (zNear == zFar) {
 			zNear = 1.f;
 			zFar = 131072.f;
 		}
-		glUniform1f(zNearUniform, zNear);
-		glUniform1f(zFarUniform, zFar);
+		float c = -1.f / camera->getFocalLength();
+		float a = c / (zFar - zNear);
+		float b = 2 * zFar * zNear * a;
+		a *= (zFar+ zNear);
+		glUniform4f(perspArgsUniform, a, b, c, 0.f);
 		if (scene) {
 			for (scn::Object& object : (scene->objects())) {
 				if (object.getMesh()) {
@@ -61,6 +71,12 @@ void RenderOpenGL31_impl::onPaint(os::WndEvtDt, os::PntEvtDt) {
 						auto subCount = mesh->getSubmeshCount();
 						for (std::size_t i = 0; i < subCount; ++i) {
 							auto [start, count] = mesh->getSubmeshRange(i);
+							auto material = object.getMaterial(i);
+							if (material) {
+								glUniform4fv(matColorUnifrom, 1, (material->getColor()).elements);
+							} else {
+								glUniform4f(matColorUnifrom, 1.f, 0.f, 1.f, 0.f);
+							}
 							glDrawElements(GL_TRIANGLES, count, GL_UNSIGNED_INT, reinterpret_cast<void*>(start));
 						}
 					}
@@ -68,33 +84,32 @@ void RenderOpenGL31_impl::onPaint(os::WndEvtDt, os::PntEvtDt) {
 			}
 		}
 	}
-	/*glUseProgram(fragmentProg);
+#ifdef DSE_MULTISAMPLE
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, renderFBO);
+	glBlitFramebuffer(0, 0, width, height, 0, 0, width, height, GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT, GL_NEAREST);
+#endif
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glDepthFunc(GL_ALWAYS);
+	glActiveTexture(GL_TEXTURE1);
+	colorBuffer.bind();
+	glActiveTexture(GL_TEXTURE2);
+	depthBuffer.bind();
+	glActiveTexture(GL_TEXTURE0);
+	glUseProgram(fragmentProg);
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	glBindVertexArray(vao);
-	glDrawArrays(GL_TRIANGLES, 0, 3);*/
+	glDrawArrays(GL_TRIANGLES, 0, 3);
+	glDepthFunc(GL_LESS);
 	context.SwapBuffers();
 }
 
 RenderOpenGL31_impl::RenderOpenGL31_impl(os::Window& wnd) : wnd(&wnd),
 		paintCon(wnd.subscribePaintEvent(notifier::make_handler<&onPaint>(this))),
 		sizeCon(wnd.subscribeResizeEvent(notifier::make_handler<&onResize>(this))),
-		context(wnd),
-		scene(nullptr),
-		camera(nullptr),
-		fragWindowSizeUniform(0),
-		drawWindowSizeUniform(0),
-		posUniform(0),
-		qRotUniform(0),
-		scaleUniform(0),
-		camPosUniform(0),
-		camQRotUniform(0),
-		invFocLenUniform(0),
-		zNearUniform(0),
-		zFarUniform(0),
-		aspRatioUniform(0)
+		context(wnd)
 {
 	GLint numExts;
-	int availExtsNum = 0;
+	unsigned availExtsNum = 0;
 	glGetIntegerv(GL_NUM_EXTENSIONS, &numExts);
 	for (int i = 0; i < numExts; ++i) {
 		auto extName = reinterpret_cast<const char*>(glGetStringi(GL_EXTENSIONS, i));
@@ -105,15 +120,16 @@ RenderOpenGL31_impl::RenderOpenGL31_impl(os::Window& wnd) : wnd(&wnd),
 			}
 		}
 	}
-	if (availExtsNum != sizeof(reqGLExts) / sizeof(reqGLExts[0])) {
+	if (availExtsNum != std::size(reqGLExts)) {
 		throw std::runtime_error("Required extensions is not available");
 	}
 
 	context.enableVSync(1);
 	glEnable(GL_DEPTH_TEST);
-	/*glDepthFunc(GL_GEQUAL);
-	glClearDepth(.0);*/
 	glEnable(GL_CULL_FACE);
+#ifdef DSE_MULTISAMPLE
+	glEnable(GL_MULTISAMPLE);
+#endif
 
 	gl::VertexShader vertShader;
 	fragmentProg.attachShader(vertShader);
@@ -127,8 +143,12 @@ RenderOpenGL31_impl::RenderOpenGL31_impl(os::Window& wnd) : wnd(&wnd),
 	glBindFragDataLocation(fragmentProg, 0, "fragColor");
 	fragmentProg.link();
 	fragWindowSizeUniform = glGetUniformLocation(fragmentProg, "windowSize");
+	fragColorBufferUniform = glGetUniformLocation(fragmentProg, "colorBuffer");
+	fragDepthBufferUniform = glGetUniformLocation(fragmentProg, "depthBuffer");
 	glUseProgram(fragmentProg);
-	glUniform2f(fragWindowSizeUniform, 0, 0);
+	glUniform2f(fragWindowSizeUniform, width, height);
+	glUniform1i(fragColorBufferUniform, 1);
+	glUniform1i(fragDepthBufferUniform, 2);
 
 	vertShader = gl::VertexShader();
 	drawProg.attachShader(vertShader);
@@ -150,13 +170,12 @@ RenderOpenGL31_impl::RenderOpenGL31_impl(os::Window& wnd) : wnd(&wnd),
 	scaleUniform = glGetUniformLocation(drawProg, "scale");
 	camPosUniform = glGetUniformLocation(drawProg, "camPos");
 	camQRotUniform = glGetUniformLocation(drawProg, "camQRot");
-	invFocLenUniform = glGetUniformLocation(drawProg, "invFocLen");
-	zNearUniform = glGetUniformLocation(drawProg, "zNear");
-	zFarUniform = glGetUniformLocation(drawProg, "zFar");
-	aspRatioUniform = glGetUniformLocation(drawProg, "aspRatio");
+	matColorUnifrom = glGetUniformLocation(drawProg, "matColor");
+	invAspRatioUniform = glGetUniformLocation(drawProg, "invAspRatio");
+	perspArgsUniform = glGetUniformLocation(drawProg, "perspArgs");
 	glUseProgram(drawProg);
 	glUniform2f(drawWindowSizeUniform, 0, 0);
-	glUniform1f(aspRatioUniform, 1.f);
+	glUniform1f(invAspRatioUniform, 1.f);
 
 	glBindVertexArray(vao);
 	glBindBuffer(GL_ARRAY_BUFFER, vbo);
@@ -164,17 +183,21 @@ RenderOpenGL31_impl::RenderOpenGL31_impl(os::Window& wnd) : wnd(&wnd),
 	glEnableVertexAttribArray(0);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
 
-	glClearColor(.0f, .0f, .0f, .0f);
+	glClearColor(.03125f, .03125f, .0625f, 1.f);
 }
 
 void RenderOpenGL31_impl::onResize(os::WndEvtDt, int width, int height,
 		os::WindowShowCommand) {
+	this->width = width;
+	this->height = height;
 	glViewport(0, 0, width, height);
 	glUseProgram(fragmentProg);
 	glUniform2f(fragWindowSizeUniform, width, height);
 	glUseProgram(drawProg);
 	glUniform2f(drawWindowSizeUniform, width, height);
-	glUniform1f(aspRatioUniform, float(width) / float(height));
+	glUniform1f(invAspRatioUniform, float(height) / float(width));
+
+	rebuildSrgbFrameBuffer();
 }
 
 threadutils::TaskState RenderOpenGL31_impl::renderTask() {
@@ -188,6 +211,35 @@ threadutils::TaskState RenderOpenGL31_impl::renderTask() {
 
 void RenderOpenGL31_impl::setScene(dse::scn::Scene &scene) {
 	this->scene = &scene;
+}
+
+void RenderOpenGL31_impl::prepareShaders() {
+}
+
+void RenderOpenGL31_impl::rebuildSrgbFrameBuffer() {
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	renderFBO = gl::FrameBuffer();
+	glBindFramebuffer(GL_FRAMEBUFFER, renderFBO);
+	colorBuffer = gl::TextureRectangle();
+	glTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_R11F_G11F_B10F, width, height, 0, GL_RGB, GL_FLOAT, nullptr);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_RECTANGLE, colorBuffer, 0);
+	depthBuffer = gl::TextureRectangle();
+	glTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_DEPTH_COMPONENT24, width, height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_RECTANGLE, depthBuffer, 0);
+	glBindTexture(GL_TEXTURE_RECTANGLE, 0);
+#ifdef DSE_MULTISAMPLE
+	renderFBOMSAA = gl::FrameBuffer();
+	glBindFramebuffer(GL_FRAMEBUFFER, renderFBOMSAA);
+	colorBufferMSAA = gl::RenderBuffer();
+	glBindRenderbuffer(GL_RENDERBUFFER, colorBufferMSAA);
+	glRenderbufferStorageMultisample(GL_RENDERBUFFER, DSE_MULTISAMPLE, GL_R11F_G11F_B10F, width, height);
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, colorBufferMSAA);
+	depthBufferMSAA = gl::RenderBuffer();
+	glBindRenderbuffer(GL_RENDERBUFFER, depthBufferMSAA);
+	glRenderbufferStorageMultisample(GL_RENDERBUFFER, DSE_MULTISAMPLE, GL_DEPTH_COMPONENT24, width, height);
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthBufferMSAA);
+	glBindRenderbuffer(GL_RENDERBUFFER, 0);
+#endif
 }
 
 void RenderOpenGL31_impl::setCamera(dse::scn::Camera &camera) {

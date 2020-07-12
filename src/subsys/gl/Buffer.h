@@ -9,53 +9,43 @@
 #define SUBSYS_GL_BUFFER_H_
 
 #include "gl.h"
-#include <utility>
+#include "TrvMvOnlyRes.h"
 
 namespace dse {
 namespace subsys {
 namespace gl {
 
-class Buffer {
-	GLuint buffer;
+class Buffer : TrvMvOnlyRes<GLuint, true> {
 protected:
-	Buffer(bool isEmpty = false) noexcept : buffer(0) {
-		if (!isEmpty) {
-			glGenBuffers(1, &buffer);
+	Buffer(bool nonempty = true) noexcept : TrvMvOnlyRes(0) {
+		if (nonempty) {
+			glGenBuffers(1, &resource);
 		}
 	}
 public:
 	~Buffer() noexcept {
-		if (buffer) {
-			glDeleteBuffers(1, &buffer);
+		if (resource) {
+			glDeleteBuffers(1, &resource);
 		}
 	}
-	Buffer(const Buffer &other) = delete;
-	Buffer(Buffer &&other) noexcept : buffer(other.buffer) {
-		other.buffer = 0;
-	}
-	Buffer& operator=(const Buffer &other) = delete;
-	Buffer& operator=(Buffer &&other) noexcept {
-		std::swap(buffer, other.buffer);
-		return *this;
-	}
+	Buffer(Buffer &&other) noexcept = default;
+	Buffer& operator=(Buffer &&other) noexcept = default;
 	operator GLuint() noexcept {
-		return buffer;
+		return resource;
 	}
 };
 
 template <GLenum target>
 class TargetBuffer: public Buffer {
 public:
-	TargetBuffer(bool isEmpty = false) noexcept : Buffer(isEmpty) {
-		if (!isEmpty) {
-			glBindBuffer(target, *this);
+	TargetBuffer(bool nonempty = true) noexcept : Buffer(nonempty) {
+		if (nonempty) {
+			bind();
 		}
 	}
-	~TargetBuffer() = default;
-	TargetBuffer(const TargetBuffer &other) = default;
-	TargetBuffer(TargetBuffer &&other) = default;
-	TargetBuffer& operator=(const TargetBuffer &other) = default;
-	TargetBuffer& operator=(TargetBuffer &&other) = default;
+	void bind() {
+		glBindBuffer(target, *this);
+	}
 };
 
 typedef TargetBuffer<GL_ELEMENT_ARRAY_BUFFER> ElementBuffer;

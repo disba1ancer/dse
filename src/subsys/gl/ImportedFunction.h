@@ -25,16 +25,25 @@
 #ifndef IMPORTEDFUNCTION_H_
 #define IMPORTEDFUNCTION_H_
 
+#ifdef __GNUC__
+#define IMPORTEDFUNCTION_H_GNUC_WORKAROUND
+#endif
+
 #include <stdexcept>
 #ifdef _WIN32
 #include "../../os/win32.h"
 #endif
+#include <algorithm>
 
 template <typename Callback> class GLImportedFunction;
 
 template <typename RetVal, typename ... Args>
+#ifdef IMPORTEDFUNCTION_H_GNUC_WORKAROUND
+class GLImportedFunction<RetVal APIENTRY (Args...)> {
+#else
 class GLImportedFunction<RetVal(APIENTRY *)(Args...)> {
-	using Callback = RetVal(APIENTRY *)(Args...);
+#endif
+	typedef RetVal(APIENTRY *Callback)(Args...);
 	const char *functionName;
 	Callback glFunc;
 public:
@@ -64,7 +73,16 @@ public:
 	}
 };
 
+#ifdef IMPORTEDFUNCTION_H_GNUC_WORKAROUND
+#define IMPLEMENT_GL_FUNCTION(_name, _type) GLImportedFunction<std::remove_pointer<PFN ## _type ## PROC>::type> _name(#_name)
+#define IMPORT_GL_FUNCTION(_name, _type) extern GLImportedFunction<std::remove_pointer<PFN ## _type ## PROC>::type> _name
+#else
 #define IMPLEMENT_GL_FUNCTION(_name, _type) GLImportedFunction<PFN ## _type ## PROC> _name(#_name)
 #define IMPORT_GL_FUNCTION(_name, _type) extern GLImportedFunction<PFN ## _type ## PROC> _name
+#endif
+
+#ifdef IMPORTEDFUNCTION_H_GNUC_WORKAROUND
+#undef IMPORTEDFUNCTION_H_GNUC_WORKAROUND
+#endif
 
 #endif /* IMPORTEDFUNCTION_H_ */

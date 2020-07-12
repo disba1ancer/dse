@@ -9,7 +9,7 @@
 #include "os/loop.h"
 #include "os/Window.h"
 #include <cstdio>
-#include "CustomPainter.h"
+#include <cstdint>
 #include "subsys/RenderOpenGL31.h"
 #include "notifier/make_handler.h"
 #include "scn/Scene.h"
@@ -20,11 +20,8 @@
 #include "math/constants.h"
 #include "scn/Camera.h"
 #include "os/mcursor.h"
-#include <algorithm>
-#include <filesystem>
-#include <windows.h>
-#include <vector>
-#include "os/io/File.h"
+#include "scn/Material.h"
+#include <functional>
 
 using dse::threadutils::ExecutionThread;
 using dse::os::Window;
@@ -40,10 +37,7 @@ using dse::scn::Object;
 using dse::scn::Camera;
 using dse::os::setMouseCursorPosWndRel;
 using dse::threadutils::TaskState;
-using dse::os::io::File;
-using dse::os::io::OpenMode;
-using dse::os::io::Result;
-using dse::os::io::StPoint;
+using dse::scn::Material;
 
 ExecutionThread mainThread;
 
@@ -53,51 +47,56 @@ int main(int , char* []) {
 	Window window;
 	RenderOpenGL31 render(window);
 
+	setMouseCursorPosWndRel(window.size() / 2, window);
 	window.show();
 	Camera cam;
 	Scene scene;
 	Cube cubeMesh;
+	Material mat(dse::math::vec4{.2f, .8f, .4f, 1.f});
 	auto cube1 = scene.createObject(Object(&cubeMesh));
 	auto cube2 = scene.createObject(Object(&cubeMesh));
 	cube1->setPos({-1.f, -1.f, -1.f});
 	//cube1->setScale({.25f, .25f, .25f});
+	cube1->setMaterial(0, &mat);
 	cube2->setPos({1.f, 1.f, 1.f});
 	//cube2->setScale({.25f, .25f, .25f});
+	cube2->setMaterial(0, &mat);
 	render.setScene(scene);
 	cam.setPos({0.f, -4.f, 0.f});
 	cam.setRot({std::sqrt(2.f) * 0.5, 0.f, 0.f, std::sqrt(2.f) * 0.5});
-	/*cam.setNear(1.24f);
-	cam.setFar(16.f);*/
+	cam.setNear(.03125f);
+	cam.setFar(1024.f);
 	render.setCamera(cam);
 	auto closeCon = window.subscribeCloseEvent([](WndEvtDt){
 		mainThread.exit(0);
 	});
-	float pitch = 90.f, yaw = 0.f;
+	float pitch = dse::math::PI * 0.5, yaw = 0.f;
 	float spd = 0.f, sdspd = 0.f;
 	auto keyCon = window.subscribeKeyEvent([&spd, &sdspd](WndEvtDt, KeyboardKeyState cmd, int key){
+		constexpr auto speed = .015625f;
 		switch (key) {
 		case 'W':
-			if (cmd == KeyboardKeyState::DOWN) spd += .125f;
-			if (cmd == KeyboardKeyState::UP) spd -= .125f;
+			if (cmd == KeyboardKeyState::DOWN) spd += speed;
+			if (cmd == KeyboardKeyState::UP) spd -= speed;
 			break;
 		case 'A':
-			if (cmd == KeyboardKeyState::DOWN) sdspd -= .125f;
-			if (cmd == KeyboardKeyState::UP) sdspd += .125f;
+			if (cmd == KeyboardKeyState::DOWN) sdspd -= speed;
+			if (cmd == KeyboardKeyState::UP) sdspd += speed;
 			break;
 		case 'S':
-			if (cmd == KeyboardKeyState::DOWN) spd -= .125f;
-			if (cmd == KeyboardKeyState::UP) spd += .125f;
+			if (cmd == KeyboardKeyState::DOWN) spd -= speed;
+			if (cmd == KeyboardKeyState::UP) spd += speed;
 			break;
 		case 'D':
-			if (cmd == KeyboardKeyState::DOWN) sdspd += .125f;
-			if (cmd == KeyboardKeyState::UP) sdspd -= .125f;
+			if (cmd == KeyboardKeyState::DOWN) sdspd += speed;
+			if (cmd == KeyboardKeyState::UP) sdspd -= speed;
 			break;
 		case 27:
 			mainThread.exit(0);
 			break;
-		default:
-			std::printf("%i %i\n", static_cast<int>(cmd), key);
-			std::fflush(stdout);
+//		default:
+//			std::printf("%i %i\n", static_cast<int>(cmd), key);
+//			std::fflush(stdout);
 		}
 	});
 	auto mmoveCon = window.subscribeMouseMoveEvent([&window, &pitch, &yaw, &cam](WndEvtDt, int x, int y) {

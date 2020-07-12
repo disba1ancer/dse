@@ -129,12 +129,12 @@ void Window_win32::show(WindowShowCommand command) {
 		style |= WS_POPUP;
 		style &= ~WS_OVERLAPPEDWINDOW;
 		SetWindowLongPtr(hWnd, GWL_STYLE, style);
-		SetWindowPos(hWnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+		SetWindowPos(hWnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_FRAMECHANGED);
 	} else if(style & WS_POPUP) {
 		style &= ~WS_POPUP;
 		style |= WS_OVERLAPPEDWINDOW;
 		SetWindowLongPtr(hWnd, GWL_STYLE, style);
-		SetWindowPos(hWnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER);
+		SetWindowPos(hWnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
 	}
 	ShowWindow(hWnd, showCmd);
 }

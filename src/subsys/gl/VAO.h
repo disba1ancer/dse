@@ -9,37 +9,29 @@
 #define SUBSYS_GL_VAO_H_
 
 #include "gl.h"
-#include <utility>
+#include "TrvMvOnlyRes.h"
 
 namespace dse {
 namespace subsys {
 namespace gl {
 
-class VAO {
-	GLuint vao;
+class VAO : TrvMvOnlyRes<GLuint, true> {
 public:
-	VAO(bool isEmpty = false) : vao(0) {
-		if (!isEmpty) {
-			glGenVertexArrays(1, &vao);
-			glBindVertexArray(vao);
+	VAO(bool nonempty = true) noexcept : TrvMvOnlyRes(0) {
+		if (nonempty) {
+			glGenVertexArrays(1, &resource);
+			glBindVertexArray(resource);
 		}
 	}
 	~VAO() {
-		if (vao) {
-			glDeleteVertexArrays(1, &vao);
+		if (resource) {
+			glDeleteVertexArrays(1, &resource);
 		}
 	}
-	VAO(const VAO &other) = delete;
-	VAO(VAO &&other) : vao(other.vao) {
-		other.vao = 0;
-	}
-	VAO& operator=(const VAO &other) = delete;
-	VAO& operator=(VAO &&other) {
-		std::swap(vao, other.vao);
-		return *this;
-	}
-	operator GLuint() {
-		return vao;
+	VAO(VAO &&other) noexcept = default;
+	VAO& operator=(VAO &&other) noexcept = default;
+	operator GLuint() noexcept {
+		return resource;
 	}
 };
 

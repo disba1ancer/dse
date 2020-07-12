@@ -9,56 +9,57 @@
 #define SUBSYS_GL_SHADER_H_
 
 #include "gl.h"
-#include <utility>
 #include <string>
 #include <exception>
+#include "TrvMvOnlyRes.h"
 
 namespace dse {
 namespace subsys {
 namespace gl {
 
-class Shader {
-	GLuint shader;
+class Shader : TrvMvOnlyRes<GLuint, true> {
 protected:
-	Shader(GLuint shader) : shader(shader) {
+	Shader(GLuint shader) noexcept : TrvMvOnlyRes(shader) {
 	}
 public:
 	~Shader() {
-		glDeleteShader(shader);
+		glDeleteShader(resource);
 	}
-	Shader(const Shader &other) = delete;
-	Shader(Shader &&other) : shader(other.shader) {
-		other.shader = 0;
-	}
-	Shader& operator=(const Shader &other) = delete;
-	Shader& operator=(Shader &&other) {
-		std::swap(shader, other.shader);
-		return *this;
-	}
-	void loadSource(const char *source) {
+	Shader(Shader&&) noexcept = default;
+	Shader& operator=(Shader&&) noexcept = default;
+	void loadSource(const char *source) noexcept {
 		const char *src[] = {
 				"#version 140",
 				source
 		};
-		glShaderSource(shader, sizeof(src) / sizeof(src[0]), src, nullptr);
+		glShaderSource(resource, sizeof(src) / sizeof(src[0]), src, nullptr);
 	}
 	void compile() {
-		glCompileShader(shader);
+		glCompileShader(resource);
 		GLint status;
-		glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
+		glGetShaderiv(resource, GL_COMPILE_STATUS, &status);
 		if (!status) {
 			GLsizei logSize;
-			glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &logSize);
+			glGetShaderiv(resource, GL_INFO_LOG_LENGTH, &logSize);
 			std::string log;
 			log.resize(logSize);
-			glGetShaderInfoLog(shader, logSize, &logSize, log.data());
+			glGetShaderInfoLog(resource, logSize, &logSize, log.data());
 			throw std::runtime_error(std::move(log));
 		}
 	}
-	operator GLuint() {
-		return shader;
+	operator GLuint() noexcept {
+		return resource;
 	}
 };
+
+template <unsigned long type>
+class ConcreteShader : public Shader {
+public:
+	ConcreteShader() noexcept : Shader(glCreateShader(type)) {}
+};
+
+typedef ConcreteShader<GL_VERTEX_SHADER> VertexShader;
+typedef ConcreteShader<GL_FRAGMENT_SHADER> FragmentShader;
 
 } /* namespace gl */
 } /* namespace subsys */

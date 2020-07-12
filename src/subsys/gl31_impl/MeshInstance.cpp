@@ -6,15 +6,15 @@
  */
 
 #include "MeshInstance.h"
-#include <memory>
 #include <algorithm>
 #include "binds.h"
+#include <vector>
 
 namespace dse {
 namespace subsys {
 namespace gl31_impl {
 
-MeshInstance::MeshInstance(scn::IMesh* mesh) : mesh(mesh), lastVersion(0), vao(true), vbo(true), ibo(true) {
+MeshInstance::MeshInstance(scn::IMesh* mesh) : mesh(mesh), lastVersion(0), vao(0), vbo(0), ibo(0) {
 	if (!mesh) {
 		std::runtime_error("Mesh can not be nullptr");
 	}
@@ -29,11 +29,10 @@ scn::IMesh* MeshInstance::getMesh() const {
 }
 
 bool MeshInstance::isReady() {
-	// задействовать общий vbo и ibo на субмеши с требованием размещать элементы ibo одного субмеша друг за другом без разрывов
 	if (!vao || lastVersion != mesh->getVersion()) {
 		auto [vertCount, elemCount, submCount] = mesh->getMeshParameters();
-		std::unique_ptr<scn::IMesh::vertex[]> vertexData(new scn::IMesh::vertex[vertCount]);
-		std::unique_ptr<std::uint32_t[]> elementData(new std::uint32_t[elemCount]);
+		std::vector<scn::IMesh::vertex> vertexData(vertCount);
+		std::vector<std::uint32_t> elementData(elemCount);
 		submCount = std::max(submCount, std::uint32_t(1));
 		submeshRanges.resize(submCount);
 		if (submCount == 1) {
@@ -46,10 +45,10 @@ bool MeshInstance::isReady() {
 		vao = gl::VAO();
 		vbo = gl::VertexBuffer();
 		ibo = gl::ElementBuffer();
-		mesh->loadVerticesRange(vertexData.get(), 0, vertCount);
-		mesh->loadElementsRange(elementData.get(), 0, elemCount);
-		glBufferData(GL_ARRAY_BUFFER, vertCount * sizeof(scn::IMesh::vertex), vertexData.get(), GL_STATIC_DRAW);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, elemCount * sizeof(std::uint32_t), elementData.get(), GL_STATIC_DRAW);
+		mesh->loadVerticesRange(vertexData.data(), 0, vertCount);
+		mesh->loadElementsRange(elementData.data(), 0, elemCount);
+		glBufferData(GL_ARRAY_BUFFER, vertCount * sizeof(scn::IMesh::vertex), vertexData.data(), GL_STATIC_DRAW);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, elemCount * sizeof(std::uint32_t), elementData.data(), GL_STATIC_DRAW);
 		glEnableVertexAttribArray(InputParams::Position);
 		glEnableVertexAttribArray(InputParams::Normal);
 		glEnableVertexAttribArray(InputParams::Tangent);

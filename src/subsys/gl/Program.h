@@ -8,49 +8,39 @@
 #ifndef SUBSYS_GL_PROGRAM_H_
 #define SUBSYS_GL_PROGRAM_H_
 
-#include "gl.h"
-#include <utility>
 #include "Shader.h"
 
 namespace dse {
 namespace subsys {
 namespace gl {
 
-class Program {
-	GLuint program;
+class Program : TrvMvOnlyRes<GLuint, true> {
 public:
-	Program() : program(glCreateProgram()) {
+	Program() noexcept : TrvMvOnlyRes(glCreateProgram()) {
 	}
 	~Program() {
-		glDeleteProgram(program);
+		glDeleteProgram(resource);
 	}
-	Program(const Program &other) = delete;
-	Program(Program &&other) : program(other.program) {
-		other.program = 0;
-	}
-	Program& operator=(const Program &other) = delete;
-	Program& operator=(Program &&other) {
-		std::swap(program, other.program);
-		return *this;
-	}
-	void attachShader(Shader& shader) {
-		glAttachShader(program, shader);
+	Program(Program &&other) noexcept = default;
+	Program& operator=(Program &&other) noexcept = default;
+	void attachShader(Shader& shader) noexcept {
+		glAttachShader(resource, shader);
 	}
 	void link() {
-		glLinkProgram(program);
+		glLinkProgram(resource);
 		GLint status;
-		glGetProgramiv(program, GL_LINK_STATUS, &status);
+		glGetProgramiv(resource, GL_LINK_STATUS, &status);
 		if (!status) {
 			GLsizei logSize;
-			glGetProgramiv(program, GL_INFO_LOG_LENGTH, &logSize);
+			glGetProgramiv(resource, GL_INFO_LOG_LENGTH, &logSize);
 			std::string log;
 			log.resize(logSize);
-			glGetProgramInfoLog(program, logSize, &logSize, log.data());
+			glGetProgramInfoLog(resource, logSize, &logSize, log.data());
 			throw std::runtime_error(std::move(log));
 		}
 	}
-	operator GLuint() {
-		return program;
+	operator GLuint() noexcept {
+		return resource;
 	}
 };
 

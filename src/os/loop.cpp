@@ -48,7 +48,7 @@ public:
 				ExecutionThread::getCurrentThread().exit(msg.wParam);
 				return TaskState::END;
 			}
-			if (!(msg.message == WM_TIMER || msg.wParam == timID)) {
+			if (!(msg.message == WM_TIMER && msg.wParam == timID)) {
 				TranslateMessage(&msg);
 				DispatchMessage(&msg);
 			}

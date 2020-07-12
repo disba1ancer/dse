@@ -7,6 +7,7 @@
 
 #include "Object.h"
 #include <mutex>
+#include "IMesh.h"
 
 namespace dse {
 namespace scn {
@@ -56,6 +57,22 @@ void Object::setScale(const math::vec3 &scale) {
 
 unsigned Object::getVersion() const {
 	return version;
+}
+
+void Object::setMaterial(unsigned materialSlot, Material *mat) {
+	if (mesh) {
+		if (materials.empty()) {
+			materials.resize(mesh->getMeshParameters().submeshCount);
+		}
+		if (materialSlot < materials.size()) {
+			materials[materialSlot] = mat;
+			++version;
+		}
+	}
+}
+
+Material* Object::getMaterial(unsigned materialSlot) {
+	return (materials.size() > materialSlot ? materials[materialSlot] : nullptr);
 }
 
 } /* namespace scn */
