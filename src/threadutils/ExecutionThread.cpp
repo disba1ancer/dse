@@ -46,7 +46,7 @@ void ExecutionThread::threadEntry() {
 void ExecutionThread::run() {
 	m_isRun = true;
 	result = -1;
-	thread = std::thread(&threadEntry, this);
+	thread = std::thread(&ExecutionThread::threadEntry, this);
 }
 
 int ExecutionThread::runOnCurent() {

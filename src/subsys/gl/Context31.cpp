@@ -12,7 +12,7 @@
 
 #ifdef _WIN32
 #include <dwmapi.h>
-#include "../../os/WindowData_win32.h"
+#include "os/WindowData_win32.h"
 #endif
 
 namespace {

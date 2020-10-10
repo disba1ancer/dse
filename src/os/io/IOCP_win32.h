@@ -8,7 +8,8 @@
 #ifndef OS_IO_IOCP_WIN32_H_
 #define OS_IO_IOCP_WIN32_H_
 
-#include "../win32.h"
+#include "os/win32.h"
+#include <swal/handle.h>
 #include <thread>
 #include "File_win32.h"
 #include <set>
@@ -19,7 +20,7 @@ namespace os {
 namespace io {
 
 class IOCP_win32 {
-	HandleWrapper iocp;
+	swal::IOCompletionPort iocp;
 	std::thread iocpThread;
 	std::set<HANDLE> preventedCallbacks;
 	std::mutex hndlsMtx;

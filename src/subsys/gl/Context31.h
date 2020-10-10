@@ -9,9 +9,9 @@
 #define SUBSYS_GL_CONTEXT_H_
 
 #ifdef _WIN32
-#include "../../os/win32.h"
+#include "os/win32.h"
 #endif
-#include "../../os/Window.h"
+#include "os/Window.h"
 
 namespace dse {
 namespace subsys {

@@ -8,7 +8,7 @@
 #ifndef SUBSYS_GL31_IMPL_SCENE_H_
 #define SUBSYS_GL31_IMPL_SCENE_H_
 
-#include "../../scn/Scene.h"
+#include "scn/Scene.h"
 
 namespace dse {
 namespace subsys {

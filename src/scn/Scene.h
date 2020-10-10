@@ -10,9 +10,9 @@
 
 #include "Object.h"
 #include <list>
-#include "../util/ProxyIterator.h"
-#include "../util/ProxyContainer.h"
-#include "../notifier/notifier.h"
+#include "util/ProxyIterator.h"
+#include "util/ProxyContainer.h"
+#include "notifier/notifier.h"
 
 namespace dse {
 namespace scn {

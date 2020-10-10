@@ -6,7 +6,7 @@
  */
 
 #include "Camera.h"
-#include "../math/constants.h"
+#include "math/constants.h"
 
 namespace dse {
 namespace scn {
@@ -61,8 +61,8 @@ void Camera::setNear(float near) {
 
 Camera::Camera() :
 		pos {0.f, 0.f, 0.f},
-		qRot {0.f, 0.f, 0.f, 1.f},
 		aspect (0.f),
+		qRot {0.f, 0.f, 0.f, 1.f},
 		focalLength (1.0),
 		zNear (0.f),
 		zFar (0.f)

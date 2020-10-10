@@ -5,14 +5,16 @@
  *      Author: disba1ancer
  */
 
-#include "../os/WindowData_win32.h"
+#include "os/win32.h"
+#include <swal/window.h>
+#include "os/WindowData_win32.h"
 #include "RenderOpenGL31_impl.h"
 #include "gl/gl.h"
 #include "gl31_impl/shaders.h"
 #include "gl31_impl/binds.h"
 #include <array>
 #include <cstdio>
-#include "../scn/Material.h"
+#include "scn/Material.h"
 
 namespace {
 struct ReqGLExt {
@@ -32,7 +34,7 @@ dse::math::vec3 fullscreenPrimitive[] = { {-1.f, -1.f, -1.f}, {3.f, -1.f, -1.f},
 namespace dse {
 namespace subsys {
 
-void RenderOpenGL31_impl::onPaint(os::WndEvtDt, os::PntEvtDt) {
+void RenderOpenGL31_impl::onPaint(os::WndEvtDt) {
 #ifdef DSE_MULTISAMPLE
 	glBindFramebuffer(GL_FRAMEBUFFER, renderFBOMSAA);
 #else
@@ -101,11 +103,12 @@ void RenderOpenGL31_impl::onPaint(os::WndEvtDt, os::PntEvtDt) {
 	glDrawArrays(GL_TRIANGLES, 0, 3);
 	glDepthFunc(GL_LESS);
 	context.SwapBuffers();
+	swal::Wnd(wnd->getSysData().hWnd).ValidateRect();
 }
 
 RenderOpenGL31_impl::RenderOpenGL31_impl(os::Window& wnd) : wnd(&wnd),
-		paintCon(wnd.subscribePaintEvent(notifier::make_handler<&onPaint>(this))),
-		sizeCon(wnd.subscribeResizeEvent(notifier::make_handler<&onResize>(this))),
+		paintCon(wnd.subscribePaintEvent(notifier::make_handler<&RenderOpenGL31_impl::onPaint>(this))),
+		sizeCon(wnd.subscribeResizeEvent(notifier::make_handler<&RenderOpenGL31_impl::onResize>(this))),
 		context(wnd)
 {
 	GLint numExts;
@@ -131,6 +134,45 @@ RenderOpenGL31_impl::RenderOpenGL31_impl(os::Window& wnd) : wnd(&wnd),
 	glEnable(GL_MULTISAMPLE);
 #endif
 
+	prepareShaders();
+
+	glBindVertexArray(vao);
+	glBindBuffer(GL_ARRAY_BUFFER, vbo);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(fullscreenPrimitive), fullscreenPrimitive, GL_STATIC_DRAW);
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
+
+	glClearColor(.03125f, .03125f, .0625f, 1.f);
+}
+
+void RenderOpenGL31_impl::onResize(os::WndEvtDt, int width, int height,
+		os::WindowShowCommand) {
+	this->width = width;
+	this->height = height;
+	glViewport(0, 0, width, height);
+	glUseProgram(fragmentProg);
+	glUniform2f(fragWindowSizeUniform, width, height);
+	glUseProgram(drawProg);
+	glUniform2f(drawWindowSizeUniform, width, height);
+	glUniform1f(invAspRatioUniform, float(height) / float(width));
+
+	rebuildSrgbFrameBuffer();
+}
+
+threadutils::TaskState RenderOpenGL31_impl::renderTask() {
+#ifdef _WIN32
+	auto hWnd = wnd->getSysData().hWnd;
+	InvalidateRect(hWnd, nullptr, FALSE);
+	//UpdateWindow(hWnd);
+#endif
+	return threadutils::TaskState::YIELD;
+}
+
+void RenderOpenGL31_impl::setScene(dse::scn::Scene &scene) {
+	this->scene = &scene;
+}
+
+void RenderOpenGL31_impl::prepareShaders() {
 	gl::VertexShader vertShader;
 	fragmentProg.attachShader(vertShader);
 	vertShader.loadSource(gl31_impl::fbVertexShader);
@@ -176,44 +218,6 @@ RenderOpenGL31_impl::RenderOpenGL31_impl(os::Window& wnd) : wnd(&wnd),
 	glUseProgram(drawProg);
 	glUniform2f(drawWindowSizeUniform, 0, 0);
 	glUniform1f(invAspRatioUniform, 1.f);
-
-	glBindVertexArray(vao);
-	glBindBuffer(GL_ARRAY_BUFFER, vbo);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(fullscreenPrimitive), fullscreenPrimitive, GL_STATIC_DRAW);
-	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
-
-	glClearColor(.03125f, .03125f, .0625f, 1.f);
-}
-
-void RenderOpenGL31_impl::onResize(os::WndEvtDt, int width, int height,
-		os::WindowShowCommand) {
-	this->width = width;
-	this->height = height;
-	glViewport(0, 0, width, height);
-	glUseProgram(fragmentProg);
-	glUniform2f(fragWindowSizeUniform, width, height);
-	glUseProgram(drawProg);
-	glUniform2f(drawWindowSizeUniform, width, height);
-	glUniform1f(invAspRatioUniform, float(height) / float(width));
-
-	rebuildSrgbFrameBuffer();
-}
-
-threadutils::TaskState RenderOpenGL31_impl::renderTask() {
-#ifdef _WIN32
-	auto hWnd = wnd->getSysData().hWnd;
-	InvalidateRect(hWnd, nullptr, FALSE);
-	//UpdateWindow(hWnd);
-#endif
-	return threadutils::TaskState::YIELD;
-}
-
-void RenderOpenGL31_impl::setScene(dse::scn::Scene &scene) {
-	this->scene = &scene;
-}
-
-void RenderOpenGL31_impl::prepareShaders() {
 }
 
 void RenderOpenGL31_impl::rebuildSrgbFrameBuffer() {

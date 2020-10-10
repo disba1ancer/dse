@@ -22,6 +22,7 @@
 #include "os/mcursor.h"
 #include "scn/Material.h"
 #include <functional>
+#include <algorithm>
 
 using dse::threadutils::ExecutionThread;
 using dse::os::Window;
@@ -40,8 +41,6 @@ using dse::threadutils::TaskState;
 using dse::scn::Material;
 
 ExecutionThread mainThread;
-
-constexpr auto test = dse::math::norm(dse::math::vec3{1, 1, 1});
 
 int main(int , char* []) {
 	Window window;
@@ -63,7 +62,7 @@ int main(int , char* []) {
 	cube2->setMaterial(0, &mat);
 	render.setScene(scene);
 	cam.setPos({0.f, -4.f, 0.f});
-	cam.setRot({std::sqrt(2.f) * 0.5, 0.f, 0.f, std::sqrt(2.f) * 0.5});
+	cam.setRot({std::sqrt(2.f) * 0.5f, 0.f, 0.f, std::sqrt(2.f) * 0.5f});
 	cam.setNear(.03125f);
 	cam.setFar(1024.f);
 	render.setCamera(cam);
@@ -117,7 +116,7 @@ int main(int , char* []) {
 	});
 	mainThread.addTask(dse::os::nonLockLoop());
 	mainThread.addTask(make_handler<&RenderOpenGL31::renderTask>(render));
-	mainThread.addTask([&cube1, &cube2, &cam, &spd, &sdspd] {
+	mainThread.addTask([&cube1, &cube2, &cam, &spd, &sdspd, &render] {
 		using namespace dse::math;
 		auto angle = 1.f;
 		auto axe1 = norm(-vec3{1.f, 1.f, 1.f}) * std::sin(PI * angle / 360.f);

@@ -42,9 +42,9 @@ bool MeshInstance::isReady() {
 				submeshRanges[i] = mesh->getSubmeshRange(i);
 			}
 		}
-		vao = gl::VAO();
-		vbo = gl::VertexBuffer();
-		ibo = gl::ElementBuffer();
+		vao = std::move(gl::VAO());
+		vbo = std::move(gl::VertexBuffer());
+		ibo = std::move(gl::ElementBuffer());
 		mesh->loadVerticesRange(vertexData.data(), 0, vertCount);
 		mesh->loadElementsRange(elementData.data(), 0, elemCount);
 		glBufferData(GL_ARRAY_BUFFER, vertCount * sizeof(scn::IMesh::vertex), vertexData.data(), GL_STATIC_DRAW);

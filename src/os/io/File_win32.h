@@ -8,8 +8,9 @@
 #ifndef OS_IO_FILE_WIN32_H_
 #define OS_IO_FILE_WIN32_H_
 
-#include "../win32.h"
+#include "os/win32.h"
 #include <mutex>
+#include <swal/handle.h>
 #include "File.h"
 
 namespace dse {
@@ -18,7 +19,7 @@ namespace io {
 
 class IOCP_win32;
 
-class HandleWrapper {
+/*class HandleWrapper {
 	HANDLE handle;
 public:
 	HandleWrapper(HANDLE handle = NULL);
@@ -28,7 +29,7 @@ public:
 	HandleWrapper& operator =(HandleWrapper&& orig);
 	~HandleWrapper();
 	operator HANDLE() const;
-};
+};*/
 
 class File_win32;
 
@@ -38,10 +39,10 @@ struct ExtendedOverlapped {
 };
 
 class File_win32 {
-	ExtendedOverlapped ovl = {0};
+	ExtendedOverlapped ovl = {};
 	DWORD lastError = ERROR_SUCCESS;
-	HandleWrapper handle;
-	HandleWrapper event = CreateEvent(nullptr, TRUE, TRUE, nullptr);
+	swal::File handle;
+	swal::Event event {true, true};
 	FilePos pos = 0; // be careful with positions and file sizes more than max value for FileOff (unreal large files)
 	bool eof = false;
 	bool error = false;
@@ -52,7 +53,7 @@ class File_win32 {
 public:
 	File_win32();
 	File_win32(std::u8string_view filepath, OpenMode mode);
-	~File_win32() noexcept;
+	~File_win32();
 	File_win32(const File_win32 &other) = delete;
 	File_win32(File_win32 &&other) = default;
 	File_win32& operator=(const File_win32 &other) = delete;
@@ -80,8 +81,6 @@ private:
 	void incPtr(DWORD transfered);
 	void incRefs();
 };
-
-static_assert(std::is_standard_layout<ExtendedOverlapped>::value, "ExtendedOverlapped is non standard layout");
 
 } /* namespace io */
 } /* namespace os */

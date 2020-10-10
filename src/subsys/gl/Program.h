@@ -21,8 +21,8 @@ public:
 	~Program() {
 		glDeleteProgram(resource);
 	}
-	Program(Program &&other) noexcept = default;
-	Program& operator=(Program &&other) noexcept = default;
+	Program(Program &&other) = default;
+	Program& operator=(Program &&other) = default;
 	void attachShader(Shader& shader) noexcept {
 		glAttachShader(resource, shader);
 	}

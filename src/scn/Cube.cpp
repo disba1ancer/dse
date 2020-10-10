@@ -65,12 +65,14 @@ unsigned dse::scn::Cube::getVersion() {
 
 void Cube::loadVerticesRange(IMesh::vertex *vertexBuffer,
 		uint32_t startVertex, uint32_t vertexCount) {
-	std::memcpy(vertexBuffer, std::begin(vertices) + startVertex, sizeof(IMesh::vertex) * vertexCount);
+	//std::memcpy(vertexBuffer, std::begin(vertices) + startVertex, sizeof(IMesh::vertex) * vertexCount);
+	std::copy(std::begin(vertices) + startVertex, std::begin(vertices) + startVertex + vertexCount , vertexBuffer);
 }
 
 void Cube::loadElementsRange(uint32_t *elementBuffer, uint32_t startElement,
 		uint32_t elementCount) {
-	std::memcpy(elementBuffer, std::begin(elements) + startElement, sizeof(std::uint32_t) * elementCount);
+	//std::memcpy(elementBuffer, std::begin(elements) + startElement, sizeof(std::uint32_t) * elementCount);
+	std::copy(std::begin(elements) + startElement, std::begin(elements) + startElement + elementCount, elementBuffer);
 }
 
 dse::scn::IMesh::submesh_range Cube::getSubmeshRange([[maybe_unused]] uint32_t submeshIndex) {

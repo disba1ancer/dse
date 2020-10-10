@@ -31,7 +31,7 @@
 
 #include <stdexcept>
 #ifdef _WIN32
-#include "../../os/win32.h"
+#include "os/win32.h"
 #endif
 #include <algorithm>
 
@@ -51,7 +51,7 @@ public:
 	void load() {
 		if (!glFunc) {
 			glFunc = reinterpret_cast<Callback>(
-					wglGetProcAddress(functionName)
+				reinterpret_cast<void(*)(void)>(wglGetProcAddress(functionName))
 			);
 			if (!glFunc) {
 				throw std::runtime_error("Couldn't load OpenGL function");

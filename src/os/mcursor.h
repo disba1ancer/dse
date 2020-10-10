@@ -8,7 +8,7 @@
 #ifndef OS_MCURSOR_H_
 #define OS_MCURSOR_H_
 
-#include "../math/vec.h"
+#include "math/vec.h"
 #include "Window.h"
 
 namespace dse {

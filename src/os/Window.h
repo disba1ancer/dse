@@ -10,9 +10,9 @@
 
 #include <memory>
 #include "WindowShowCommand.h"
-#include "../notifier/notifier.h"
+#include "notifier/notifier.h"
 #include "KeyboardKeyState.h"
-#include "../math/vec.h"
+#include "math/vec.h"
 
 namespace dse {
 namespace os {
@@ -55,7 +55,7 @@ public:
 	notifier::connection<ResizeHandler> subscribeResizeEvent(std::function<ResizeHandler>&& c);
 	typedef void(KeyHandler)(WndEvtDt, KeyboardKeyState, int);
 	notifier::connection<KeyHandler> subscribeKeyEvent(std::function<KeyHandler>&& c);
-	typedef void(PaintHandler)(WndEvtDt, PntEvtDt);
+	typedef void(PaintHandler)(WndEvtDt);
 	notifier::connection<PaintHandler> subscribePaintEvent(std::function<PaintHandler>&& c);
 	typedef void(MouseMoveHandler)(WndEvtDt, int x, int y);
 	notifier::connection<MouseMoveHandler> subscribeMouseMoveEvent(std::function<MouseMoveHandler>&& c);

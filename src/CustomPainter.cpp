@@ -5,25 +5,27 @@
  *      Author: disba1ancer
  */
 
-#include "os/PaintEventData_win32.h"
+#include "os/win32.h"
+#include <swal/gdi.h>
+#include "os/WindowEventData_win32.h"
 #include "os/WindowData_win32.h"
 #include "notifier/make_handler.h"
 #include "CustomPainter.h"
 
 using dse::notifier::make_handler;
 
-void CustomPainter::paint(dse::os::WndEvtDt, dse::os::PntEvtDt pd) {
-	auto& hdc = pd.hdc;
+void CustomPainter::paint(dse::os::WndEvtDt data) {
+	auto dc = swal::PaintDC::BeginPaint(data.hWnd);
 	RECT rc;
 	rc.top = 8;
 	rc.left = 8;
 	rc.bottom = 100;
 	rc.right = 100;
-	FillRect(hdc, &rc, static_cast<HBRUSH>(GetStockObject(WHITE_BRUSH)));
+	dc.FillRect(rc, static_cast<HBRUSH>(GetStockObject(WHITE_BRUSH)));
 }
 
 CustomPainter::CustomPainter(dse::os::Window &wnd) : wnd(&wnd),
-		paintCon(wnd.subscribePaintEvent(make_handler<&paint>(this))) {
+		paintCon(wnd.subscribePaintEvent(make_handler<&CustomPainter::paint>(this))) {
 }
 
 void CustomPainter::invalidate() {

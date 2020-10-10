@@ -8,31 +8,59 @@
 #ifndef THREADPOOL_H_
 #define THREADPOOL_H_
 
-#include <vector>
-#include <thread>
-#include <deque>
+#include <list>
 #include <functional>
-#include <mutex>
+#include <deque>
 #include <condition_variable>
+#include <mutex>
+#include <memory>
+#include "TaskState.h"
 
 namespace dse {
 namespace threadutils {
 
-class ThreadPool {
-	std::vector<std::thread> threads;
-	std::deque<std::function<bool()>> tasks;
-	std::mutex mtx;
-	std::condition_variable cond_var;
-	bool m_isRun = false;
+#ifdef _WIN32
+typedef class ThreadPool_win32 ThreadPool_impl;
+#endif
 
-	void poolEntry();
+enum class ThreadType {
+	NORMAL,
+	UI
+};
+
+class TaskInternal : std::enable_shared_from_this<TaskInternal> {
 public:
-	void startThreads(std::size_t num);
-	void terminate();
-	void join();
-	void addTask(std::function<bool()>&& task);
-	void clearTasks();
-	bool isRun();
+	TaskInternal(std::function<void()>&& func);
+	void then(std::function<void()>&& taskFunc);
+	void run();
+private:
+	std::function<void()> taskFunc;
+	std::list<std::function<void()>> continuations;
+};
+
+class Task {
+public:
+	Task(std::shared_ptr<TaskInternal> intern);
+	void then(std::function<void()>&& taskFunc);
+private:
+	std::shared_ptr<TaskInternal> internal;
+};
+
+class ThreadPool {
+public:
+	ThreadPool();
+	~ThreadPool();
+	int join(ThreadType type = ThreadType::NORMAL);
+	void spawnThreads(int count, ThreadType type = ThreadType::NORMAL);
+	Task addTask(std::function<void()>&& taskFunc);
+	void stop();
+	//void addTask(Task& task);
+private:
+	std::mutex mtx;
+	std::condition_variable condVar;
+	int threadCount = 0;
+	bool isStop = false;
+	std::deque<std::shared_ptr<TaskInternal>> tasksQueue;
 };
 
 } /* namespace threadutils */

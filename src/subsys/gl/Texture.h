@@ -23,13 +23,13 @@ protected:
 		}
 	}
 public:
-	~Texture() noexcept {
+	~Texture() {
 		if (resource) {
 			glDeleteTextures(1, &resource);
 		}
 	}
-	Texture(Texture &&other) noexcept = default;
-	Texture& operator=(Texture &&other) noexcept = default;
+	Texture(Texture &&other) = default;
+	Texture& operator=(Texture &&other) = default;
 	operator GLuint() noexcept {
 		return resource;
 	}

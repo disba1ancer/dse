@@ -9,7 +9,7 @@
 #include "win32.h"
 #endif
 
-#include "../threadutils/ExecutionThread.h"
+#include "threadutils/ExecutionThread.h"
 #include <iostream>
 #include "loop.h"
 #include <utility>

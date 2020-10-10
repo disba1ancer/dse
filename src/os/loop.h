@@ -9,7 +9,7 @@
 #define OS_LOOP_H_
 
 #include <functional>
-#include "../threadutils/TaskState.h"
+#include "threadutils/TaskState.h"
 
 namespace dse {
 namespace os {

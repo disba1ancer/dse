@@ -59,7 +59,7 @@ std::u8string wcTou8(std::wstring_view in) {
 		case SurrogateB:
 			continue;
 		}
-		result += std::u8string_view(u8code, u8code + c32tou8(u8code, code));
+		result += std::u8string_view(u8code, c32tou8(u8code, code));
 	}
 	return result;
 }
@@ -74,7 +74,7 @@ std::u8string getErrorString(DWORD error) {
 	constexpr std::size_t resultStringMaxSize = 512;
 	wchar_t buf[resultStringMaxSize];
 	auto size = FormatMessageW(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_MAX_WIDTH_MASK, nullptr, error, 0, buf, resultStringMaxSize, nullptr);
-	return wcTou8(std::wstring_view(buf, buf + size));
+	return wcTou8(std::wstring_view(buf, size));
 }
 
 }

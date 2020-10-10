@@ -8,7 +8,7 @@
 #ifndef SCN_IMESH_H_
 #define SCN_IMESH_H_
 
-#include "../math/vec.h"
+#include "math/vec.h"
 #include <cstdint>
 
 namespace dse {

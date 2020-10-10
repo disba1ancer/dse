@@ -19,7 +19,7 @@ public:
 	CustomPainter(CustomPainter&&) = delete;
 	CustomPainter& operator=(const CustomPainter&) = delete;
 	CustomPainter& operator=(CustomPainter&&) = delete;
-	void paint(dse::os::WndEvtDt, dse::os::PntEvtDt pd);
+	void paint(dse::os::WndEvtDt);
 	void invalidate();
 };
 

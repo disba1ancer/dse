@@ -25,8 +25,8 @@ public:
 	~Shader() {
 		glDeleteShader(resource);
 	}
-	Shader(Shader&&) noexcept = default;
-	Shader& operator=(Shader&&) noexcept = default;
+	Shader(Shader&&) = default;
+	Shader& operator=(Shader&&) = default;
 	void loadSource(const char *source) noexcept {
 		const char *src[] = {
 				"#version 140",

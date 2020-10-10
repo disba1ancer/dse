@@ -13,28 +13,26 @@
 namespace dse {
 namespace os {
 
-Window_win32::Window_win32() : hWnd(CreateWindowEx(0, reinterpret_cast<LPCTSTR>(makeWindowClsID()), 0,
-		WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, 0, CW_USEDEFAULT, 0,
-		0, 0, static_cast<HINSTANCE>(GetModuleHandle(0)), this)) {
-	if (hWnd == 0) {
-		throw std::runtime_error("Fail to create window");
-	}
+Window_win32::Window_win32() : wnd(makeWindowClsID(), static_cast<HINSTANCE>(GetModuleHandle(0)), this) {
+//	if (wnd == 0) {
+//		throw std::runtime_error("Fail to create window");
+//	}
 }
 
-LRESULT CALLBACK Window_win32::staticWndProc(HWND hWnd, UINT message, WPARAM wParam,
-		LPARAM lParam) {
-	Window_win32 *aThis;
-	if (message == WM_NCCREATE){
-		aThis = reinterpret_cast<Window_win32*>(reinterpret_cast<CREATESTRUCT*>(lParam)->lpCreateParams);
-		SetWindowLongPtr(hWnd, GWLP_THIS, reinterpret_cast<LONG_PTR>(aThis));
-	} else {
-		aThis = reinterpret_cast<Window_win32*>(GetWindowLongPtr(hWnd, GWLP_THIS));
-		if (!aThis) {
-			return DefWindowProc(hWnd, message, wParam, lParam);
-		}
-	}
-	return aThis->wndProc(hWnd, message, wParam, lParam);
-}
+//LRESULT CALLBACK Window_win32::staticWndProc(HWND hWnd, UINT message, WPARAM wParam,
+//		LPARAM lParam) {
+//	Window_win32 *aThis;
+//	if (message == WM_NCCREATE){
+//		aThis = reinterpret_cast<Window_win32*>(reinterpret_cast<CREATESTRUCT*>(lParam)->lpCreateParams);
+//		SetWindowLongPtr(hWnd, GWLP_THIS, reinterpret_cast<LONG_PTR>(aThis));
+//	} else {
+//		aThis = reinterpret_cast<Window_win32*>(GetWindowLongPtr(hWnd, GWLP_THIS));
+//		if (!aThis) {
+//			return DefWindowProc(hWnd, message, wParam, lParam);
+//		}
+//	}
+//	return aThis->wndProc(hWnd, message, wParam, lParam);
+//}
 
 LRESULT Window_win32::wndProc(HWND hWnd, UINT message, WPARAM wParam,
 		LPARAM lParam) {
@@ -53,7 +51,7 @@ LRESULT Window_win32::wndProc(HWND hWnd, UINT message, WPARAM wParam,
 		if (!LOWORD(wParam)) {
 			auto style = GetWindowLongPtr(hWnd, GWL_STYLE);
 			if (style & WS_POPUP) {
-				ShowWindow(hWnd, SW_MINIMIZE);
+				wnd.Show(swal::ShowCmd::Minimize);
 			}
 		}
 		break;
@@ -70,13 +68,12 @@ LRESULT Window_win32::wndProc(HWND hWnd, UINT message, WPARAM wParam,
 }
 
 ATOM Window_win32::makeWindowClsID() {
-	static ATOM clsID = 0;
-	if (clsID == 0) {
+	static ATOM clsID = []{
 		HINSTANCE hInst = GetModuleHandle(nullptr);
 		WNDCLASSEX wcex;
 		wcex.cbSize = sizeof(WNDCLASSEX);
 		wcex.style = CS_OWNDC;
-		wcex.lpfnWndProc = &staticWndProc;
+		wcex.lpfnWndProc = swal::ClsWndProc<Window_win32, &Window_win32::wndProc, GWLP_THIS>;
 		wcex.cbClsExtra = 0;
 		wcex.cbWndExtra = sizeof(LONG_PTR);
 		wcex.hInstance = hInst;
@@ -87,56 +84,55 @@ ATOM Window_win32::makeWindowClsID() {
 		wcex.lpszClassName = TEXT("dse.os.Window");
 		wcex.hIconSm = LoadIcon(hInst, MAKEINTRESOURCE(100));
 
-		clsID = RegisterClassEx(&wcex);
-		if (clsID == 0){
-			throw std::runtime_error("Fail to register window class");
-		}
-	}
+		return swal::error::throw_or_result(RegisterClassEx(&wcex));
+	}();
 	return clsID;
 }
 
 Window_win32::~Window_win32() {
-	DestroyWindow(hWnd);
 }
 
 bool Window_win32::isVisible() const {
-	return IsWindowVisible(hWnd);
+	return wnd.IsVisible();
 }
 
 void Window_win32::show(WindowShowCommand command) {
-	int showCmd = SW_SHOW;
+	using swal::ShowCmd;
+	typedef swal::SetPosFlags SP;
+
+	auto showCmd = ShowCmd::Show;
 	switch (command) {
 	case WindowShowCommand::HIDE:
-		showCmd = SW_HIDE;
+		showCmd = ShowCmd::Hide;
 		break;
 	case WindowShowCommand::SHOW:
 		break;
 	case WindowShowCommand::SHOW_MINIMIZED:
-		showCmd = SW_SHOWMINIMIZED;
+		showCmd = ShowCmd::ShowMinimized;
 		break;
 	case (WindowShowCommand::SHOW_RESTORED):
-		showCmd = SW_SHOWNORMAL;
+		showCmd = ShowCmd::ShowNormal;
 		break;
 	case WindowShowCommand::SHOW_MAXIMIZED:
-		showCmd = SW_SHOWMAXIMIZED;
+		showCmd = ShowCmd::ShowMaximized;
 		break;
 	case WindowShowCommand::SHOW_FULL_SCREEN:
-		showCmd = SW_SHOWMAXIMIZED;
+		showCmd = ShowCmd::ShowMaximized;
 		break;
 	}
-	auto style = GetWindowLongPtr(hWnd, GWL_STYLE);
+	auto style = wnd.GetLongPtr(GWL_STYLE);
 	if (command == WindowShowCommand::SHOW_FULL_SCREEN && !(style & WS_POPUP)) {
 		style |= WS_POPUP;
 		style &= ~WS_OVERLAPPEDWINDOW;
-		SetWindowLongPtr(hWnd, GWL_STYLE, style);
-		SetWindowPos(hWnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_FRAMECHANGED);
+		wnd.SetLongPtr(GWL_STYLE, style);
+		wnd.SetPos(HWND_TOPMOST, 0, 0, 0, 0, SP::NoMove | SP::NoSize | SP::FrameChanged);
 	} else if(style & WS_POPUP) {
 		style &= ~WS_POPUP;
 		style |= WS_OVERLAPPEDWINDOW;
-		SetWindowLongPtr(hWnd, GWL_STYLE, style);
-		SetWindowPos(hWnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
+		wnd.SetLongPtr(GWL_STYLE, style);
+		wnd.SetPos(HWND_TOPMOST, 0, 0, 0, 0, SP::NoMove | SP::NoSize | SP::NoZOrder | SP::FrameChanged);
 	}
-	ShowWindow(hWnd, showCmd);
+	wnd.Show(showCmd);
 }
 
 notifier::connection<Window::CloseHandler> Window_win32::subscribeCloseEvent(
@@ -150,10 +146,7 @@ notifier::connection<Window::ResizeHandler> Window_win32::subscribeResizeEvent(
 }
 
 LRESULT Window_win32::onPaint(WindowEventData_win32& d) {
-	PAINTSTRUCT ps;
-	PaintEventData_win32 pd = { BeginPaint(hWnd, &ps) };
-	paintSubscribers.notify(d, pd);
-	EndPaint(hWnd, &ps);
+	paintSubscribers.notify(d);
 	return 0;
 }
 
@@ -202,7 +195,7 @@ notifier::connection<Window::PaintHandler> Window_win32::subscribePaintEvent(
 }
 
 const WindowData& Window_win32::getSysData() {
-	return *reinterpret_cast<const WindowData*>(&hWnd);
+	return *reinterpret_cast<const WindowData*>(wnd.get_ptr());
 }
 
 LRESULT Window_win32::onMouseMove(WindowEventData_win32 &d) {
@@ -216,17 +209,17 @@ notifier::connection<Window::MouseMoveHandler> Window_win32::subscribeMouseMoveE
 }
 
 math::ivec2 Window_win32::size() {
-	RECT rc;
-	GetClientRect(hWnd, &rc);
+	RECT rc = wnd.GetClientRect();
 	return {rc.right, rc.bottom};
 }
 
 void Window_win32::resize(const math::ivec2& size) {
+	typedef swal::SetPosFlags SP;
 	RECT rc = { 0, 0, size[0], size[1] };
-	DWORD style = GetWindowLongPtr(hWnd, GWL_STYLE);
-	DWORD styleex = GetWindowLongPtr(hWnd, GWL_EXSTYLE);
+	DWORD style = wnd.GetLongPtr(GWL_STYLE);
+	DWORD styleex = wnd.GetLongPtr(GWL_EXSTYLE);
 	AdjustWindowRectEx(&rc, style, FALSE, styleex);
-	SetWindowPos(hWnd, NULL, 0, 0, rc.right - rc.left, rc.bottom - rc.top, SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOOWNERZORDER | SWP_NOZORDER);
+	wnd.SetPos(NULL, 0, 0, rc.right - rc.left, rc.bottom - rc.top, SP::NoActivate | SP::NoMove | SP::NoOwnerZOrder | SP::NoZOrder);
 }
 
 } /* namespace os */

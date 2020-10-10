@@ -9,9 +9,8 @@
 #include <filesystem>
 #include <algorithm>
 #include "IOCP_win32.h"
-#include "../../util/FinalStep.h"
-#include "../../util/Access.h"
-#include "../win32_helpers.h"
+#include "util/FinalStep.h"
+#include "util/Access.h"
 
 namespace {
 std::wstring convertFilePath(std::u8string_view filepath) {
@@ -20,8 +19,8 @@ std::wstring convertFilePath(std::u8string_view filepath) {
 	std::wstring rslt;
 	if (path.native().length() > MAX_PATH - 1) {
 		path = std::filesystem::absolute(path);
-		rslt.reserve(path.native().length() + 5);
-		(rslt += LR"(//?/)") += path.native();
+		//rslt.reserve(path.native().length() + 5);
+		rslt.append(LR"(//?/)").append(path.native());
 	} else {
 		rslt = path.native();
 	}
@@ -42,18 +41,19 @@ DWORD modeToAccess(dse::os::io::OpenMode mode) {
 	return result;
 }
 
-DWORD modeToCreateMode(dse::os::io::OpenMode mode) {
+swal::CreateMode modeToCreateMode(dse::os::io::OpenMode mode) {
+	typedef swal::CreateMode CM;
 	using dse::os::io::OpenMode;
 	if ((mode & (OpenMode::READ | OpenMode::WRITE | OpenMode::APPEND)) == OpenMode::READ) mode |= OpenMode::EXISTING;
-	static const DWORD modeMap[] = { OPEN_ALWAYS, CREATE_ALWAYS, OPEN_EXISTING, TRUNCATE_EXISTING };
+	static const CM modeMap[] = { CM::OpenAlways, CM::CreateAlways, CM::OpenExisting, CM::TruncateExisting };
 	return modeMap[ static_cast<unsigned>(mode & (OpenMode::CLEAR | OpenMode::EXISTING)) >> 3 ];
 }
 
-HANDLE open(std::u8string_view filepath, dse::os::io::OpenMode mode, DWORD& lastError) {
+swal::File open(std::u8string_view filepath, dse::os::io::OpenMode mode) {
+	typedef swal::ShareMode SM;
+
 	auto path = convertFilePath(filepath);
-	auto handle = CreateFile(path.c_str(), modeToAccess(mode), FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, modeToCreateMode(mode), FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OVERLAPPED, NULL);
-	lastError = GetLastError();
-	return handle;
+	return swal::File(path, modeToAccess(mode), SM::Read | SM::Write, modeToCreateMode(mode), FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OVERLAPPED);
 }
 
 }
@@ -62,15 +62,19 @@ namespace dse {
 namespace os {
 namespace io {
 
-File_win32::File_win32() : handle(INVALID_HANDLE_VALUE) {
+File_win32::File_win32() : handle() {
 }
 
 File_win32::File_win32(std::u8string_view filepath, OpenMode mode) :
-	handle(open(filepath, mode, lastError))
+	handle()
 {
-	error = handle == INVALID_HANDLE_VALUE;
-	if (!error) {
+	try {
+		handle = open(filepath, mode);
+		lastError = GetLastError();
 		IOCP_win32::instance.attach(this);
+	} catch (swal::error& err) {
+		error = true;
+		lastError = err.get();
 	}
 }
 
@@ -93,11 +97,33 @@ bool File_win32::isValid() const {
 
 void File_win32::read(std::byte buf[], std::size_t size) {
 	std::lock_guard lck(dataMtx);
-	ovl.ovl.hEvent = reinterpret_cast<HANDLE>(reinterpret_cast<ULONG_PTR>(event.operator HANDLE()) | 1);
+	ovl.ovl.hEvent = reinterpret_cast<HANDLE>(reinterpret_cast<ULONG_PTR>(HANDLE(event)) | 1);
 	ovl.ovl.Offset = pos;
 	ovl.ovl.OffsetHigh = pos >> (sizeof(ovl.ovl.Offset) * CHAR_BIT);
 	ovl.target = this;
-	error = !ReadFile(handle, buf, size, nullptr, &ovl.ovl);
+	lastTransfered = 0;
+	try {
+		handle.Read(buf, size, ovl.ovl);
+		error = false;
+		lastError = ERROR_SUCCESS;
+	} catch (swal::error& err) {
+		error = true;
+		lastError = err.get();
+	}
+	if (!error || lastError == ERROR_IO_PENDING) {
+		try {
+			lastTransfered = handle.GetOverlappedResult(ovl.ovl, true);
+			error = false;
+			lastError = ERROR_SUCCESS;
+			incPtr(lastTransfered);
+		} catch (swal::error& err) {
+			error = true;
+			lastError = err.get();
+		}
+	}
+	eof = (error && lastError == ERROR_HANDLE_EOF);
+	error = error && !eof;
+	/*error = !ReadFile(handle, buf, size, nullptr, &ovl.ovl);
 	lastError = GetLastError();
 	if (error && lastError != ERROR_IO_PENDING) {
 		lastTransfered = 0;
@@ -112,7 +138,7 @@ void File_win32::read(std::byte buf[], std::size_t size) {
 				eof = true;
 			}
 		}
-	}
+	}*/
 }
 
 void File_win32::write(std::byte buf[], std::size_t size) {
@@ -121,7 +147,27 @@ void File_win32::write(std::byte buf[], std::size_t size) {
 	ovl.ovl.Offset = pos;
 	ovl.ovl.OffsetHigh = pos >> (sizeof(ovl.ovl.Offset) * CHAR_BIT);
 	ovl.target = this;
-	error = !WriteFile(handle, buf, size, nullptr, &ovl.ovl);
+	lastTransfered = 0;
+	try {
+		handle.Write(buf, size, ovl.ovl);
+		error = false;
+		lastError = ERROR_SUCCESS;
+	} catch (swal::error& err) {
+		error = true;
+		lastError = err.get();
+	}
+	if (!error || lastError == ERROR_IO_PENDING) {
+		try {
+			lastTransfered = handle.GetOverlappedResult(ovl.ovl, true);
+			error = false;
+			lastError = ERROR_SUCCESS;
+			incPtr(lastTransfered);
+		} catch (swal::error& err) {
+			error = true;
+			lastError = err.get();
+		}
+	}
+	/*error = !WriteFile(handle, buf, size, nullptr, &ovl.ovl);
 	lastError = GetLastError();
 	if (error && lastError != ERROR_IO_PENDING) {
 		lastTransfered = 0;
@@ -131,7 +177,7 @@ void File_win32::write(std::byte buf[], std::size_t size) {
 		if (!error) {
 			incPtr(lastTransfered);
 		}
-	}
+	}*/
 }
 
 void File_win32::complete(DWORD transfered, DWORD error) {
@@ -161,11 +207,20 @@ void File_win32::resize() {
 	LARGE_INTEGER li;
 	li.LowPart = pos;
 	li.HighPart = pos >> (sizeof(li.LowPart) * CHAR_BIT);
-	if (!((error = !SetFilePointerEx(handle, li, nullptr, FILE_BEGIN)) && (lastError = GetLastError()))) {
+	try {
+		handle.SetPointerEx(li, swal::SetPointerModes::Begin);
+		handle.SetEndOfFile();
+		error = false;
+		lastError = ERROR_SUCCESS;
+	} catch (swal::error& err) {
+		error = true;
+		lastError = err.get();
+	}
+	/*if (!((error = !SetFilePointerEx(handle, li, nullptr, FILE_BEGIN)) && (lastError = GetLastError()))) {
 		if (!((error = !SetEndOfFile(handle)) && (lastError = GetLastError()))) {
 			lastError = ERROR_SUCCESS;
 		}
-	}
+	}*/
 }
 
 void File_win32::read_async(std::byte buf[], std::size_t size, std::function<void()>&& onFinish) {
@@ -175,13 +230,27 @@ void File_win32::read_async(std::byte buf[], std::size_t size, std::function<voi
 	ovl.ovl.OffsetHigh = pos >> (sizeof(ovl.ovl.Offset) * CHAR_BIT);
 	ovl.target = this;
 	callback = std::move(onFinish);
-	auto result = ReadFile(handle, buf, size, nullptr, &ovl.ovl);
+	try {
+		handle.Read(buf, size, ovl.ovl);
+		error = false;
+		lastError = ERROR_SUCCESS;
+	} catch (swal::error& err) {
+		lastError = err.get();
+		error = (lastError != ERROR_IO_PENDING);
+		if (!error) {
+			++references;
+			return;
+		}
+	}
+	eof = (error && lastError == ERROR_HANDLE_EOF);
+	error = error && !eof;
+	/*auto result = ReadFile(handle, buf, size, nullptr, &ovl.ovl);
 	lastError = GetLastError();
 	error = (!result && lastError != ERROR_IO_PENDING);
 	references += !error;
 	error = (error && lastError != ERROR_HANDLE_EOF);
 	eof = lastError == ERROR_HANDLE_EOF;
-	lastTransfered *= (!error);
+	lastTransfered *= (!error);*/
 }
 
 void File_win32::write_async(std::byte buf[], std::size_t size, std::function<void()>&& onFinish) {
@@ -191,6 +260,18 @@ void File_win32::write_async(std::byte buf[], std::size_t size, std::function<vo
 	ovl.ovl.OffsetHigh = pos >> (sizeof(ovl.ovl.Offset) * CHAR_BIT);
 	ovl.target = this;
 	callback = std::move(onFinish);
+	try {
+		handle.Write(buf, size, ovl.ovl);
+		error = false;
+		error = ERROR_SUCCESS;
+	} catch (swal::error& err) {
+		lastError = err.get();
+		error = (lastError != ERROR_IO_PENDING);
+		if (!error) {
+			++references;
+			return;
+		}
+	}
 	auto result = WriteFile(handle, buf, size, nullptr, &ovl.ovl);
 	lastError = GetLastError();
 	error = (!result && lastError != ERROR_IO_PENDING);
@@ -199,19 +280,24 @@ void File_win32::write_async(std::byte buf[], std::size_t size, std::function<vo
 }
 
 bool File_win32::isBusy() {
-	return WaitForSingleObject(event, 0) == WAIT_OBJECT_0;
+	return event.WaitFor(0) != WAIT_OBJECT_0;
 }
 
 void File_win32::cancel() {
 	std::lock_guard lck(dataMtx);
-	if (!CancelIoEx(handle, nullptr)) {
-		lastError = GetLastError();
+	try {
+		handle.CancelIoEx();
+		error = false;
+		lastError = ERROR_SUCCESS;
+	} catch (swal::error& err) {
+		error = true;
+		lastError = err.get();
 	}
 }
 
 File_win32::~File_win32() {
 	IOCP_win32::instance.preventCallback(this);
-	WaitForSingleObject(event, INFINITE);
+	event.WaitFor(INFINITE);
 }
 
 void File_win32::release() {
@@ -288,7 +374,7 @@ std::size_t File_win32::getTransfered() const {
 }
 
 std::u8string File_win32::getResultString() const {
-	return win32_helpers::getErrorString(util::access(dataMtx, lastError));
+	return swal::wide_char_to_u8(swal::error::get_error_string((util::access(dataMtx, lastError))));
 }
 
 void File_win32::incRefs() {
@@ -307,7 +393,7 @@ void IOTargetDelete::operator()(IOTarget_impl *obj) {
 	obj->release();
 }
 
-HandleWrapper::HandleWrapper(HANDLE handle) : handle(handle) {
+/*HandleWrapper::HandleWrapper(HANDLE handle) : handle(handle) {
 }
 
 HandleWrapper::~HandleWrapper() {}
@@ -323,7 +409,7 @@ HandleWrapper& HandleWrapper::operator =(HandleWrapper &&orig) {
 
 HandleWrapper::operator HANDLE() const {
 	return handle;
-}
+}*/
 
 } /* namespace io */
 } /* namespace os */

@@ -9,11 +9,11 @@
 #define SUBSYS_RENDEROPENGL_IMPL_H_
 
 #include "RenderOpenGL31.h"
-#include "../notifier/notifier.h"
-#include "../notifier/make_handler.h"
+#include "notifier/notifier.h"
+#include "notifier/make_handler.h"
 #include "gl/Context31.h"
 #include "gl/VAO.h"
-#include "../threadutils/ExecutionThread.h"
+#include "threadutils/ExecutionThread.h"
 #include <vector>
 #include <list>
 #include "gl31_impl/MeshInstance.h"
@@ -65,7 +65,7 @@ class RenderOpenGL31_impl {
 	gl::TextureRectangle colorBuffer = 0;
 	gl::TextureRectangle depthBuffer = 0;
 
-	void onPaint(os::WndEvtDt, os::PntEvtDt);
+	void onPaint(os::WndEvtDt);
 	void onResize(os::WndEvtDt, int width, int height, os::WindowShowCommand);
 	void rebuildSrgbFrameBuffer();
 	void prepareShaders();

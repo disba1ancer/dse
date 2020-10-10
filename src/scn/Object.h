@@ -8,7 +8,7 @@
 #ifndef SCN_OBJECT_H_
 #define SCN_OBJECT_H_
 
-#include "../math/vec.h"
+#include "math/vec.h"
 #include <vector>
 
 namespace dse {

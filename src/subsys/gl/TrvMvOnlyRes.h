@@ -26,11 +26,11 @@ public:
 protected:
 	TrvMvOnlyRes(Rs res) : resource(res){}
 	TrvMvOnlyRes(const TrvMvOnlyRes&) = delete;
-	TrvMvOnlyRes(TrvMvOnlyRes&& other) : resource(other.resource) {
+	TrvMvOnlyRes(TrvMvOnlyRes&& other) noexcept : resource(other.resource) {
 		other.resource = 0;
 	}
 	TrvMvOnlyRes& operator=(const TrvMvOnlyRes&) = delete;
-	TrvMvOnlyRes& operator=(TrvMvOnlyRes&& other) {
+	TrvMvOnlyRes& operator=(TrvMvOnlyRes&& other) noexcept {
 		std::swap(resource, other.resource);
 		return *this;
 	}
@@ -42,11 +42,11 @@ class TrvMvOnlyRes<Rs, false> {
 public:
 	TrvMvOnlyRes(Rs res) : resource(res){}
 	TrvMvOnlyRes(const TrvMvOnlyRes&) = delete;
-	TrvMvOnlyRes(TrvMvOnlyRes&& other) : resource(other.resource) {
+	TrvMvOnlyRes(TrvMvOnlyRes&& other) noexcept : resource(other.resource) {
 		other.resource = 0;
 	}
 	TrvMvOnlyRes& operator=(const TrvMvOnlyRes&) = delete;
-	TrvMvOnlyRes& operator=(TrvMvOnlyRes&& other) {
+	TrvMvOnlyRes& operator=(TrvMvOnlyRes&& other) noexcept {
 		std::swap(resource, other.resource);
 		return *this;
 	}

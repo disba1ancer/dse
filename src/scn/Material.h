@@ -8,7 +8,7 @@
 #ifndef SCN_MATERIAL_H_
 #define SCN_MATERIAL_H_
 
-#include "../math/vec.h"
+#include "math/vec.h"
 
 namespace dse {
 namespace scn {

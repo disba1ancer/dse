@@ -9,10 +9,10 @@
 #define SUBSYS_RENDEROPENGL_H_
 
 #include <memory>
-#include "../os/Window.h"
-#include "../scn/Scene.h"
-#include "../scn/Camera.h"
-#include "../threadutils/TaskState.h"
+#include "os/Window.h"
+#include "scn/Scene.h"
+#include "scn/Camera.h"
+#include "threadutils/TaskState.h"
 
 namespace dse {
 namespace subsys {

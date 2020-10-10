@@ -28,8 +28,8 @@ public:
 			glDeleteVertexArrays(1, &resource);
 		}
 	}
-	VAO(VAO &&other) noexcept = default;
-	VAO& operator=(VAO &&other) noexcept = default;
+	VAO(VAO &&other) = default;
+	VAO& operator=(VAO &&other) = default;
 	operator GLuint() noexcept {
 		return resource;
 	}

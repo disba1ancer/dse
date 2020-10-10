@@ -23,13 +23,13 @@ protected:
 		}
 	}
 public:
-	~Buffer() noexcept {
+	~Buffer() {
 		if (resource) {
 			glDeleteBuffers(1, &resource);
 		}
 	}
-	Buffer(Buffer &&other) noexcept = default;
-	Buffer& operator=(Buffer &&other) noexcept = default;
+	Buffer(Buffer &&other) = default;
+	Buffer& operator=(Buffer &&other) = default;
 	operator GLuint() noexcept {
 		return resource;
 	}

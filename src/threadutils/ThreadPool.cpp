@@ -8,57 +8,85 @@
 #include "ThreadPool.h"
 #include "unlock_guard.h"
 
+#ifdef _WIN32
+#include "ThreadPool_win32.h"
+#endif
+
 namespace dse {
 namespace threadutils {
 
-void ThreadPool::poolEntry() {
+ThreadPool::ThreadPool() {
+}
+
+int ThreadPool::join(ThreadType type) {
 	std::unique_lock lock(mtx);
-	while (m_isRun) {
-		if (!tasks.empty()){
-			auto& task = tasks.front();
-			bool repeat;
+	++threadCount;
+	//currentThread = this;
+	while (!isStop) {
+		if (!tasksQueue.empty()){
+			auto task = tasksQueue.front();
+			tasksQueue.pop_front();
+			//TaskState state;
 			{
-				unlock_guard<std::mutex> unlock(mtx);
-				repeat = task();
+				unlock_guard unlock(mtx);
+				task->run();
 			}
-			if (repeat) tasks.emplace_back(std::move(task));
-			tasks.pop_front();
+			/*switch (state) {
+			case TaskState::YIELD:
+				if (!isExit) queuedTasks.emplace_back(std::move(task));
+				break;
+			case TaskState::END:
+				tasks.erase(task.taskid);
+				break;
+			case TaskState::AWAIT:
+				break;
+			}*/
 		} else {
-			cond_var.wait(lock);
+			condVar.wait(lock);
 		}
 	}
-	tasks.clear();
-	m_isRun = false;
-}
-
-void ThreadPool::startThreads(std::size_t num) {
-	m_isRun = true;
-	threads.clear();
-	threads.resize(num);
-	for (auto& thread : threads) {
-		thread = std::thread(&poolEntry, this);
+	tasksQueue.clear();
+	//tasks.clear();
+	if (!--threadCount) {
+		isStop = false;
 	}
+	return 0;
 }
 
-void ThreadPool::terminate() {
+ThreadPool::~ThreadPool() {
+	std::unique_lock lock(mtx);
+}
+
+Task ThreadPool::addTask(std::function<void()>&& taskFunc) {
 	std::lock_guard lock(mtx);
-	m_isRun = false;
+	auto task = std::make_shared<TaskInternal>(std::move(taskFunc));
+	tasksQueue.push_back(task);
+	return Task(task);
 }
 
-void ThreadPool::join() {
-	for (auto& thread : threads) {
-		thread.join();
+TaskInternal::TaskInternal(std::function<void()>&& function) : taskFunc(std::move(function)) {
+}
+
+Task::Task(std::shared_ptr<TaskInternal> intern) : internal(intern) {
+}
+
+void TaskInternal::then(std::function<void()>&& taskFunc) {
+	continuations.emplace_back(std::move(taskFunc));
+}
+
+void Task::then(std::function<void()>&& taskFunc) {
+	internal->then(std::move(taskFunc));
+}
+
+void ThreadPool::stop() {
+	isStop = true;
+}
+
+void TaskInternal::run() {
+	taskFunc();
+	for (auto continuation : continuations) {
+		continuation();
 	}
-}
-
-void ThreadPool::addTask(std::function<bool()> &&task) {
-	std::lock_guard lock(mtx);
-	tasks.emplace_back(std::move(task));
-}
-
-bool ThreadPool::isRun() {
-	std::lock_guard lock(mtx);
-	return m_isRun;
 }
 
 } /* namespace threadutils */

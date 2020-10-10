@@ -22,13 +22,13 @@ public:
 			glGenFramebuffers(1, &resource);
 		}
 	}
-	~FrameBuffer() noexcept {
+	~FrameBuffer() {
 		if (resource) {
 			glDeleteFramebuffers(1, &resource);
 		}
 	}
-	FrameBuffer(FrameBuffer &&other) noexcept = default;
-	FrameBuffer& operator=(FrameBuffer &&other) noexcept = default;
+	FrameBuffer(FrameBuffer &&other) = default;
+	FrameBuffer& operator=(FrameBuffer &&other) = default;
 	operator GLuint() noexcept {
 		return resource;
 	}

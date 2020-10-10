@@ -25,11 +25,11 @@ public:
 	virtual dse::scn::IMesh::mesh_parameters getMeshParameters() override;
 	virtual unsigned getVersion() override;
 	virtual void loadVerticesRange(dse::scn::IMesh::vertex *vertexBuffer,
-			uint32_t startVertex, uint32_t vertexCount) override;
-	virtual void loadElementsRange(uint32_t *elementBuffer, uint32_t startElement,
-			uint32_t elementCount) override;
+			std::uint32_t startVertex, std::uint32_t vertexCount) override;
+	virtual void loadElementsRange(std::uint32_t *elementBuffer, std::uint32_t startElement,
+			std::uint32_t elementCount) override;
 	virtual dse::scn::IMesh::submesh_range getSubmeshRange(
-			uint32_t submeshIndex) override;
+			std::uint32_t submeshIndex) override;
 };
 
 } /* namespace scn */

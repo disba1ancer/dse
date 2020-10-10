@@ -8,7 +8,7 @@
 #ifndef SCN_CAMERA_H_
 #define SCN_CAMERA_H_
 
-#include "../math/vec.h"
+#include "math/vec.h"
 
 namespace dse {
 namespace scn {

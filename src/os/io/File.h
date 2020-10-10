@@ -10,9 +10,9 @@
 
 #include <memory>
 #include <string_view>
-#include "../../util/enum_bitwise.h"
 #include <string>
 #include <functional>
+#include "util/enum_bitwise.h"
 
 namespace dse {
 namespace os {
@@ -89,7 +89,7 @@ public:
 namespace util {
 
 template <>
-struct enable_enum_bitwise<os::io::OpenMode> {
+struct enable_enum_bitwise<enum os::io::OpenMode> {
 	static constexpr bool value = true;
 };
 

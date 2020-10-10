@@ -8,7 +8,7 @@
 #ifndef SUBSYS_GL31_IMPL_OBJECTINSTANCE_H_
 #define SUBSYS_GL31_IMPL_OBJECTINSTANCE_H_
 
-#include "../../scn/Object.h"
+#include "scn/Object.h"
 
 namespace dse {
 namespace subsys {

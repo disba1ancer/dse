@@ -8,10 +8,10 @@
 #ifndef SUBSYS_GL31_IMPL_MESHINSTANCE_H_
 #define SUBSYS_GL31_IMPL_MESHINSTANCE_H_
 
-#include "../../scn/IMesh.h"
+#include "scn/IMesh.h"
 #include <functional>
-#include "../gl/VAO.h"
-#include "../gl/Buffer.h"
+#include "subsys/gl/VAO.h"
+#include "subsys/gl/Buffer.h"
 #include <vector>
 
 namespace dse {
