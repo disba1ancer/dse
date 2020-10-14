@@ -23,16 +23,24 @@ typedef std::string_view tstring_view;
 
 inline std::u8string wide_char_to_u8(std::wstring_view str) {
 	std::u8string result;
-	result.resize(WideCharToMultiByte(CP_UTF8, 0, str.data(), str.size(), nullptr, 0, nullptr, nullptr));
-	WideCharToMultiByte(CP_UTF8, 0, str.data(), str.size(), reinterpret_cast<char*>(result.data()), result.size(), nullptr, nullptr);
+	result.resize(WideCharToMultiByte(CP_UTF8, 0, str.data(), int(str.size()), nullptr, 0, nullptr, nullptr));
+	WideCharToMultiByte(CP_UTF8, 0, str.data(), int(str.size()), reinterpret_cast<char*>(result.data()), int(result.size()), nullptr, nullptr);
 	return result;
 }
 
 inline std::wstring u8_to_wide_char(std::u8string_view str) {
 	std::wstring result;
-	result.resize(MultiByteToWideChar(CP_UTF8, 0, reinterpret_cast<const char*>(str.data()), str.size(), nullptr, 0));
-	MultiByteToWideChar(CP_UTF8, 0, reinterpret_cast<const char*>(str.data()), str.size(), result.data(), result.size());
+	result.resize(MultiByteToWideChar(CP_UTF8, 0, reinterpret_cast<const char*>(str.data()), int(str.size()), nullptr, 0));
+	MultiByteToWideChar(CP_UTF8, 0, reinterpret_cast<const char*>(str.data()), int(str.size()), result.data(), int(result.size()));
 	return result;
+}
+
+inline std::u8string fromTString(tstring_view str) {
+#ifdef UNICODE
+	return wide_char_to_u8(str);
+#else
+	return std::u8string(reinterpret_cast<const char8_t*>(str.data()), str.size());
+#endif
 }
 
 }

@@ -28,39 +28,21 @@ enum class ThreadType {
 	UI
 };
 
-class TaskInternal : std::enable_shared_from_this<TaskInternal> {
+class ThreadPoolTask {
 public:
-	TaskInternal(std::function<void()>&& func);
-	void then(std::function<void()>&& taskFunc);
-	void run();
 private:
-	std::function<void()> taskFunc;
-	std::list<std::function<void()>> continuations;
-};
-
-class Task {
-public:
-	Task(std::shared_ptr<TaskInternal> intern);
-	void then(std::function<void()>&& taskFunc);
-private:
-	std::shared_ptr<TaskInternal> internal;
 };
 
 class ThreadPool {
 public:
 	ThreadPool();
 	~ThreadPool();
-	int join(ThreadType type = ThreadType::NORMAL);
-	void spawnThreads(int count, ThreadType type = ThreadType::NORMAL);
-	Task addTask(std::function<void()>&& taskFunc);
-	void stop();
-	//void addTask(Task& task);
+	ThreadPoolTask& add(std::function<TaskState()> task);
+	int join(ThreadType type);
 private:
-	std::mutex mtx;
-	std::condition_variable condVar;
-	int threadCount = 0;
-	bool isStop = false;
-	std::deque<std::shared_ptr<TaskInternal>> tasksQueue;
+	typedef std::list<ThreadPoolTask> TaskList;
+	TaskList tasks;
+	std::deque<TaskList::iterator> tasksQueue;
 };
 
 } /* namespace threadutils */

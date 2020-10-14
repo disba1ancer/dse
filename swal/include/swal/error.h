@@ -54,7 +54,7 @@ public:
 		return tstring(wStr, wSize);
 	}
 
-	error(DWORD error) noexcept : m_error(error), errStr(std::make_shared<std::u8string>(wide_char_to_u8(get_error_string(error)))) {}
+	error(DWORD error) noexcept : m_error(error), errStr(std::make_shared<std::u8string>(fromTString(get_error_string(error)))) {}
 
 	virtual const char* what() const noexcept override {
 		return reinterpret_cast<const char*>(errStr->c_str());
@@ -82,7 +82,7 @@ public:
 		return result;
 	}*/
 
-	com_error(HRESULT error) noexcept : error(error), errStr(std::make_shared<std::u8string>(wide_char_to_u8(_com_error(error).ErrorMessage()))) {}
+	com_error(HRESULT error) noexcept : error(error), errStr(std::make_shared<std::u8string>(fromTString(_com_error(error).ErrorMessage()))) {}
 
 	virtual const char* what() const noexcept override {
 		return reinterpret_cast<const char*>(errStr->c_str());

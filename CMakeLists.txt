@@ -1,42 +1,42 @@
-# Created by and for Qt Creator This file was created for editing the project sources only.
-# You may attempt to use it for building too, by modifying this file here.
-
 cmake_minimum_required(VERSION 3.5)
-project(dse)
+project(dse VERSION 1.0)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_definitions(-DUNICODE -D_WIN32_WINNT=0x0A00)
 
-set(DSE_GNU_FLAGS_DEBUG -g3 -pedantic -Wall -Wextra -Wconversion)
-set(DSE_GNU_FLAGS_RELEASE)
-set(DSE_GNU_LINK_FLAGS_DEBUG)
-set(DSE_GNU_LINK_FLAGS_RELEASE -mwindows)
+set(DSE_CXX_GNU $<COMPILE_LANG_AND_ID:CXX,GNU>)
+set(DSE_CXX_MSVC $<COMPILE_LANG_AND_ID:CXX,MSVC>)
+set(DSE_CXX_FLAGS
+    $<$<BOOL:${DSE_CXX_GNU}>:-pedantic;-Wall;-Wextra;-Wconversion>
+    $<$<BOOL:${DSE_CXX_MSVC}>:-W3>
+)
+set(DSE_MSVC_FLAGS -W3)
+set(DSE_FLAGS_SUBSYSTEM_WINDOWS
+    $<$<CXX_COMPILER_ID:GNU>:-mwindows>
+    $<$<CXX_COMPILER_ID:MSVC>:-entry:mainCRTStartup;-subsystem:windows>
+)
 
-set(DSE_MSVC_FLAGS_DEBUG)
-set(DSE_MSVC_FLAGS_RELEASE)
-set(DSE_MSVC_LINK_FLAGS_DEBUG)
-set(DSE_MSVC_LINK_FLAGS_RELEASE -entry:mainCRTStartup -subsystem:windows)
-
-if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    set(DSE_FLAGS_DEBUG ${DSE_GNU_FLAGS_DEBUG})
-    set(DSE_FLAGS_RELEASE ${DSE_GNU_FLAGS_RELEASE})
-    set(DSE_LINK_FLAGS_DEBUG ${DSE_GNU_LINK_FLAGS_DEBUG})
-    set(DSE_LINK_FLAGS_RELEASE ${DSE_GNU_LINK_FLAGS_RELEASE})
-elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-    set(DSE_FLAGS_DEBUG ${DSE_MSVC_FLAGS_DEBUG})
-    set(DSE_FLAGS_RELEASE ${DSE_MSVC_FLAGS_RELEASE})
-    set(DSE_LINK_FLAGS_DEBUG ${DSE_MSVC_LINK_FLAGS_DEBUG})
-    set(DSE_LINK_FLAGS_RELEASE ${DSE_MSVC_LINK_FLAGS_RELEASE})
-else()
-    message(FATAL_ERROR "No support for compiller")
-endif()
+set(DSE_WIN32_SRCS
+    rc_win32/icon.ico
+    rc_win32/manifest.xml
+    rc_win32/res.rc
+    src/os/io/File_win32.cpp
+    src/os/io/File_win32.h
+    src/os/io/IOCP_win32.cpp
+    src/os/io/IOCP_win32.h
+    src/os/PaintEventData_win32.h
+    src/os/win32.h
+    src/os/Window_win32.cpp
+    src/os/Window_win32.h
+    src/os/WindowData_win32.h
+    src/os/WindowEventData_win32.h
+    src/threadutils/ThreadPool_win32.cpp
+    src/threadutils/ThreadPool_win32.h
+)
 
 set (SRCS
-    res/icon.ico
-    res/manifest.xml
-    res/res.rc
     src/math/constants.h
     src/math/mat.h
     src/math/qmath.h
@@ -46,25 +46,13 @@ set (SRCS
     src/notifier/notifier.h
     src/os/io/File.cpp
     src/os/io/File.h
-    src/os/io/File_win32.cpp
-    src/os/io/File_win32.h
-    src/os/io/IOCP_win32.cpp
-    src/os/io/IOCP_win32.h
     src/os/KeyboardKeyState.h
     src/os/loop.cpp
     src/os/loop.h
     src/os/mcursor.cpp
     src/os/mcursor.h
-    src/os/PaintEventData_win32.h
-    src/os/win32.h
-    src/os/win32_helpers.cpp
-    src/os/win32_helpers.h
     src/os/Window.cpp
     src/os/Window.h
-    src/os/Window_win32.cpp
-    src/os/Window_win32.h
-    src/os/WindowData_win32.h
-    src/os/WindowEventData_win32.h
     src/os/WindowShowCommand.h
     src/scn/Camera.cpp
     src/scn/Camera.h
@@ -111,8 +99,6 @@ set (SRCS
     src/threadutils/TaskState.h
     src/threadutils/ThreadPool.cpp
     src/threadutils/ThreadPool.h
-    src/threadutils/ThreadPool_win32.cpp
-    src/threadutils/ThreadPool_win32.h
     src/threadutils/unlock_guard.h
     src/util/Access.h
     src/util/enum_bitwise.h
@@ -133,15 +119,25 @@ set (SRCS
     swal/include/swal/zero_or_resource.h
 )
 
+set(DSE_MULTISAMPLE "" CACHE STRING "Enable multisampling with specified level")
+if (${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
+    option(DSE_SUBSYSTEM_WINDOWS "Use windows subsystem while linking executable binary" ON)
+endif()
 
-add_executable(${CMAKE_PROJECT_NAME} ${SRCS})
+configure_file(config/dse_config.h.in config/dse_config.h)
+
+add_executable(${CMAKE_PROJECT_NAME}
+    ${SRCS}
+    $<$<PLATFORM_ID:Windows>:${DSE_WIN32_SRCS}>)
 
 target_include_directories(dse PRIVATE
     src
     swal/include
     include_gl
+    ${PROJECT_BINARY_DIR}/config
 )
-target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE $<$<CONFIG:Debug>:${DSE_FLAGS_DEBUG}> $<$<CONFIG:Release>:${DSE_FLAGS_RELEASE}>)
-target_link_options(${CMAKE_PROJECT_NAME} PRIVATE $<$<CONFIG:Debug>:${DSE_LINK_FLAGS_DEBUG}> $<$<CONFIG:Release>:${DSE_LINK_FLAGS_RELEASE}>)
+target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE ${DSE_CXX_FLAGS})
+target_link_options(${CMAKE_PROJECT_NAME} PRIVATE
+    $<$<BOOL:${DSE_SUBSYSTEM_WINDOWS}>:${DSE_FLAGS_SUBSYSTEM_WINDOWS}>
+)
 target_link_libraries(${CMAKE_PROJECT_NAME} opengl32 dwmapi)
-

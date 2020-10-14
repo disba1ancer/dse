@@ -1,6 +1,8 @@
 /*
 !src
 !swal
+!config
+!rc_win32
 
 !CMakeLists.txt
 !LICENSE

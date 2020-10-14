@@ -24,8 +24,7 @@
 #include "gl/FrameBuffer.h"
 #include "gl/Texture.h"
 #include "gl/RenderBuffer.h"
-
-//#define DSE_MULTISAMPLE 4
+#include "dse_config.h"
 
 namespace dse {
 namespace subsys {

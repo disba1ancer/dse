@@ -1,0 +1,33 @@
+#include "winresrc.h"
+#include "dse_config.h"
+
+1 VERSIONINFO
+FILEVERSION DSE_VERSION_MAJOR,DSE_VERSION_MINOR,0,0
+PRODUCTVERSION DSE_VERSION_MAJOR,DSE_VERSION_MINOR,0,0
+FILEFLAGSMASK 0
+FILEFLAGS 0
+FILEOS VOS_NT
+FILETYPE VFT_APP
+FILESUBTYPE VFT2_UNKNOWN
+BEGIN
+  BLOCK "StringFileInfo"
+  BEGIN
+    BLOCK "000004e4"
+    BEGIN
+      VALUE "CompanyName", "disba1ancer"
+      VALUE "FileDescription", "DSE Demo"
+	  VALUE "FileVersion", DSE_VERSION_STRING
+      VALUE "InternalName", "dse"
+      VALUE "LegalCopyright", "Copyright (C) disba1ancer 2020"
+      VALUE "OriginalFilename", "dse.exe"
+      VALUE "ProductName", "DSE Demo"
+	  VALUE "ProductVersion", DSE_VERSION_STRING
+    END
+  END
+  BLOCK "VarFileInfo"
+  BEGIN
+	VALUE "Translation", 0x0, 1200
+  END
+END
+100 ICON "icon.ico"
+1 MANIFEST "manifest.xml"
