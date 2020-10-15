@@ -33,7 +33,7 @@ class ThreadPoolTask {
 public:
 	TaskState state = TaskState::End;
 	std::function<TaskState()> taskHandler;
-	std::vector<void()> finals;
+	std::vector<std::function<void()>> finals;
 };
 
 class ThreadPool {

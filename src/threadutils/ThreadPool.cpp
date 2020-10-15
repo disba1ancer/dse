@@ -94,6 +94,7 @@ int ThreadPool::join(ThreadType type) {
 		}
 	}
 	--refs;
+	return 0;
 }
 
 void ThreadPool::stop(bool wait) {
