@@ -165,7 +165,7 @@ threadutils::TaskState RenderOpenGL31_impl::renderTask() {
 	InvalidateRect(hWnd, nullptr, FALSE);
 	//UpdateWindow(hWnd);
 #endif
-	return threadutils::TaskState::YIELD;
+	return threadutils::TaskState::Yield;
 }
 
 void RenderOpenGL31_impl::setScene(dse::scn::Scene &scene) {

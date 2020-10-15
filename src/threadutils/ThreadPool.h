@@ -10,6 +10,7 @@
 
 #include <list>
 #include <functional>
+#include <vector>
 #include <deque>
 #include <condition_variable>
 #include <mutex>
@@ -24,25 +25,39 @@ typedef class ThreadPool_win32 ThreadPool_impl;
 #endif
 
 enum class ThreadType {
-	NORMAL,
+	Normal,
 	UI
 };
 
 class ThreadPoolTask {
 public:
-private:
+	TaskState state = TaskState::End;
+	std::function<TaskState()> taskHandler;
+	std::vector<void()> finals;
 };
 
 class ThreadPool {
 public:
 	ThreadPool();
 	~ThreadPool();
-	ThreadPoolTask& add(std::function<TaskState()> task);
-	int join(ThreadType type);
+	std::size_t add(std::function<TaskState()>&& task, TaskState state = TaskState::Ready);
+	void cancel(std::size_t taskId);
+	void resume(std::size_t taskId);
+	void then(std::size_t taskId, std::function<void()>&& then);
+	int join(ThreadType type = ThreadType::Normal);
+	void stop(bool wait = true);
 private:
-	typedef std::list<ThreadPoolTask> TaskList;
-	TaskList tasks;
-	std::deque<TaskList::iterator> tasksQueue;
+	ThreadPoolTask& allocTask(std::size_t& taskId);
+	void schedule(std::size_t taskId);
+	void remove(std::size_t taskId);
+
+	std::vector<std::unique_ptr<ThreadPoolTask>> tasks;
+	std::vector<std::size_t> freeTaskIds;
+	std::deque<std::size_t> scheduledTasks;
+	std::mutex mtx;
+	std::condition_variable condvar;
+	bool running = false;
+	int refs;
 };
 
 } /* namespace threadutils */

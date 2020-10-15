@@ -46,14 +46,14 @@ public:
 		while (PeekMessage(&msg, 0, 0, 0, PM_REMOVE)) {
 			if (msg.message == WM_QUIT) {
 				ExecutionThread::getCurrentThread().exit(msg.wParam);
-				return TaskState::END;
+				return TaskState::End;
 			}
 			if (!(msg.message == WM_TIMER && msg.wParam == timID)) {
 				TranslateMessage(&msg);
 				DispatchMessage(&msg);
 			}
 		}
-		return TaskState::YIELD;
+		return TaskState::Yield;
 	}
 };
 }

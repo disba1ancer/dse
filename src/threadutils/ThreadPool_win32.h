@@ -23,8 +23,8 @@ private:
 class ThreadPool_win32 {
 public:
 	ThreadPool_win32();
-	int join(ThreadType type = ThreadType::NORMAL);
-	void spawnThreads(int count, ThreadType type = ThreadType::NORMAL);
+	int join(ThreadType type = ThreadType::Normal);
+	void spawnThreads(int count, ThreadType type = ThreadType::Normal);
 	Task_win32 addTask(std::function<void()>&& taskFunc);
 private:
 	std::list<Task_win32> tasks;

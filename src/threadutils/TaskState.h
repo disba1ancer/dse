@@ -12,9 +12,11 @@ namespace dse {
 namespace threadutils {
 
 enum class TaskState {
-	END,
-	AWAIT,
-	YIELD
+	End,
+	Await,
+	Yield,
+	Ready = Yield,
+	Canceled
 };
 
 } /* namespace threadutils */

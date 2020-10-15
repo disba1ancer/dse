@@ -24,13 +24,13 @@ void ExecutionThread::threadEntry() {
 				state = (*task.taskid)();
 			}
 			switch (state) {
-			case TaskState::YIELD:
+			case TaskState::Yield:
 				if (!isExit) queuedTasks.emplace_back(std::move(task));
 				break;
-			case TaskState::END:
+			case TaskState::End:
 				tasks.erase(task.taskid);
 				break;
-			case TaskState::AWAIT:
+			case TaskState::Await:
 				break;
 			}
 		} else {
@@ -112,13 +112,13 @@ void ExecutionThread::yieldTasks() {
 				state = (*task.taskid)();
 			}
 			switch (state) {
-			case TaskState::YIELD:
+			case TaskState::Yield:
 				if (!isExit) queuedTasks.emplace_back(std::move(task));
 				break;
-			case TaskState::END:
+			case TaskState::End:
 				tasks.erase(task.taskid);
 				break;
-			case TaskState::AWAIT:
+			case TaskState::Await:
 				break;
 			}
 		}

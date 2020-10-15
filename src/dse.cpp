@@ -125,7 +125,7 @@ int main(int , char* []) {
 		cube1->setQRot(rslt);
 		//cube2->setQRot(rslt);
 		if (spd != 0.f || sdspd != 0.f) cam.setPos(cam.getPos() + vecrotquat(norm(vec3{0.f, 0.f, -1.f} * spd + vec3{1.f, 0.f, 0.f} * sdspd), cam.getRot()) );
-		return TaskState::YIELD;
+		return TaskState::Yield;
 	});
 	return mainThread.runOnCurent();
 }
