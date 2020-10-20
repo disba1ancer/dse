@@ -16,6 +16,9 @@ namespace threadutils {
 class spinlock {
 	std::atomic_flag isLock;
 public:
+	spinlock() {
+		isLock.clear(std::memory_order_relaxed);
+	}
 	void lock() {
 		while (isLock.test_and_set(std::memory_order_acquire));
 	}

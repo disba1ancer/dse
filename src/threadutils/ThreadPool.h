@@ -16,6 +16,7 @@
 #include <mutex>
 #include <memory>
 #include "TaskState.h"
+#include "spinlock.h"
 
 namespace dse {
 namespace threadutils {
@@ -26,38 +27,36 @@ typedef class ThreadPool_win32 ThreadPool_impl;
 
 enum class ThreadType {
 	Normal,
-	UI
-};
-
-class ThreadPoolTask {
-public:
-	TaskState state = TaskState::End;
-	std::function<TaskState()> taskHandler;
-	std::vector<std::function<void()>> finals;
+	Main,
+	UI = Main
 };
 
 class ThreadPool {
 public:
+	typedef std::size_t TaskId;
+	typedef std::function<TaskState()> TaskHandler;
+	typedef std::function<void()> FinishHandler;
+
+	class Task {
+	public:
+		friend ThreadPool_impl;
+		Task(TaskHandler&& taskHandler);
+		void cancel();
+		void then(FinishHandler&& fHandler);
+	private:
+		TaskHandler taskHandler;
+		FinishHandler fHandler;
+		TaskState state = TaskState::Ready;
+		spinlock mtx;
+	};
+public:
 	ThreadPool();
 	~ThreadPool();
-	std::size_t add(std::function<TaskState()>&& task, TaskState state = TaskState::Ready);
-	void cancel(std::size_t taskId);
-	void resume(std::size_t taskId);
-	void then(std::size_t taskId, std::function<void()>&& then);
+	void schedule(Task& task);
 	int join(ThreadType type = ThreadType::Normal);
 	void stop(bool wait = true);
 private:
-	ThreadPoolTask& allocTask(std::size_t& taskId);
-	void schedule(std::size_t taskId);
-	void remove(std::size_t taskId);
-
-	std::vector<std::unique_ptr<ThreadPoolTask>> tasks;
-	std::vector<std::size_t> freeTaskIds;
-	std::deque<std::size_t> scheduledTasks;
-	std::mutex mtx;
-	std::condition_variable condvar;
-	bool running = false;
-	int refs;
+	std::unique_ptr<ThreadPool_impl> impl;
 };
 
 } /* namespace threadutils */

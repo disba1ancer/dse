@@ -23,6 +23,8 @@
 #include "scn/Material.h"
 #include <functional>
 #include <algorithm>
+#include "threadutils/ThreadPool.h"
+#include <thread>
 
 using dse::threadutils::ExecutionThread;
 using dse::os::Window;
@@ -39,8 +41,11 @@ using dse::scn::Camera;
 using dse::os::setMouseCursorPosWndRel;
 using dse::threadutils::TaskState;
 using dse::scn::Material;
+using dse::threadutils::ThreadPool;
+using dse::threadutils::ThreadType;
 
-ExecutionThread mainThread;
+//ExecutionThread mainThread;
+ThreadPool thrPool;
 
 int main(int , char* []) {
 	Window window;
@@ -67,7 +72,7 @@ int main(int , char* []) {
 	cam.setFar(1024.f);
 	render.setCamera(cam);
 	auto closeCon = window.subscribeCloseEvent([](WndEvtDt){
-		mainThread.exit(0);
+		thrPool.stop(false);
 	});
 	float pitch = dse::math::PI * 0.5, yaw = 0.f;
 	float spd = 0.f, sdspd = 0.f;
@@ -91,7 +96,7 @@ int main(int , char* []) {
 			if (cmd == KeyboardKeyState::UP) sdspd -= speed;
 			break;
 		case 27:
-			mainThread.exit(0);
+			thrPool.stop(false);
 			break;
 //		default:
 //			std::printf("%i %i\n", static_cast<int>(cmd), key);
@@ -111,12 +116,12 @@ int main(int , char* []) {
 		cam.setRot(camrot);
 		setMouseCursorPosWndRel(center, window);
 	});
-	auto sizeCon = window.subscribeResizeEvent([](WndEvtDt, int, int, WindowShowCommand) {
+	/*auto sizeCon = window.subscribeResizeEvent([](WndEvtDt, int, int, WindowShowCommand) {
 		mainThread.yieldTasks();
 	});
-	mainThread.addTask(dse::os::nonLockLoop());
-	mainThread.addTask(make_handler<&RenderOpenGL31::renderTask>(render));
-	mainThread.addTask([&cube1, &cube2, &cam, &spd, &sdspd, &render] {
+	mainThread.addTask(dse::os::nonLockLoop());*/
+	ThreadPool::Task renderTask{make_handler<&RenderOpenGL31::renderTask>(render)};
+	ThreadPool::Task stepTask{[&cube1, &cube2, &cam, &spd, &sdspd, &render] {
 		using namespace dse::math;
 		auto angle = 1.f;
 		auto axe1 = norm(-vec3{1.f, 1.f, 1.f}) * std::sin(PI * angle / 360.f);
@@ -126,6 +131,13 @@ int main(int , char* []) {
 		//cube2->setQRot(rslt);
 		if (spd != 0.f || sdspd != 0.f) cam.setPos(cam.getPos() + vecrotquat(norm(vec3{0.f, 0.f, -1.f} * spd + vec3{1.f, 0.f, 0.f} * sdspd), cam.getRot()) );
 		return TaskState::Yield;
+	}};
+	thrPool.schedule(renderTask);
+	thrPool.schedule(stepTask);
+	std::thread worker1([]{
+		thrPool.join();
 	});
-	return mainThread.runOnCurent();
+	auto result = thrPool.join(ThreadType::Main);
+	worker1.join();
+	return result;
 }

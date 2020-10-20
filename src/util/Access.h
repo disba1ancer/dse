@@ -15,7 +15,7 @@ namespace util {
 
 template <typename lockable, typename value>
 value access(lockable& l, const value& val) {
-	std::lock_guard lck(l);
+	std::scoped_lock lck(l);
 	return val;
 }
 /*class Access {

@@ -9,6 +9,8 @@
 #define THREADUTILS_THREADPOOL_WIN32_H_
 
 #include <list>
+#include "os/win32.h"
+#include <swal/error.h>
 #include "ThreadPool.h"
 
 namespace dse {
@@ -22,12 +24,28 @@ private:
 
 class ThreadPool_win32 {
 public:
-	ThreadPool_win32();
-	int join(ThreadType type = ThreadType::Normal);
-	void spawnThreads(int count, ThreadType type = ThreadType::Normal);
-	Task_win32 addTask(std::function<void()>&& taskFunc);
+	typedef ThreadPool::Task Task;
+	typedef ThreadPool::TaskId TaskId;
+	typedef ThreadPool::TaskHandler TaskHandler;
+	typedef ThreadPool::FinishHandler FinishHandler;
 private:
-	std::list<Task_win32> tasks;
+	static constexpr auto WakeupMessage = WM_USER + 10;
+public:
+	ThreadPool_win32();
+	~ThreadPool_win32();
+	void schedule(Task& task);
+	int join(ThreadType type);
+	void stop(bool wait);
+private:
+	bool pop(Task*& task, ThreadType type);
+
+	std::deque<Task*> scheduledTasks;
+	spinlock mtx;
+	std::mutex cvmtx;
+	std::condition_variable condvar;
+	bool running = false;
+	int refs = 0;
+	DWORD mainThread = 0;
 };
 
 } /* namespace threadutils */
