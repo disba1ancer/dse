@@ -42,7 +42,7 @@ using dse::os::setMouseCursorPosWndRel;
 using dse::threadutils::TaskState;
 using dse::scn::Material;
 using dse::threadutils::ThreadPool;
-using dse::threadutils::ThreadType;
+using dse::threadutils::PoolCaps;
 
 //ExecutionThread mainThread;
 ThreadPool thrPool;
@@ -72,7 +72,7 @@ int main(int , char* []) {
 	cam.setFar(1024.f);
 	render.setCamera(cam);
 	auto closeCon = window.subscribeCloseEvent([](WndEvtDt){
-		thrPool.stop(false);
+		thrPool.stop();
 	});
 	float pitch = dse::math::PI * 0.5, yaw = 0.f;
 	float spd = 0.f, sdspd = 0.f;
@@ -96,11 +96,11 @@ int main(int , char* []) {
 			if (cmd == KeyboardKeyState::UP) sdspd -= speed;
 			break;
 		case 27:
-			thrPool.stop(false);
+			thrPool.stop();
 			break;
-//		default:
-//			std::printf("%i %i\n", static_cast<int>(cmd), key);
-//			std::fflush(stdout);
+		default:
+			std::printf("%i %i\n", static_cast<int>(cmd), key);
+			std::fflush(stdout);
 		}
 	});
 	auto mmoveCon = window.subscribeMouseMoveEvent([&window, &pitch, &yaw, &cam](WndEvtDt, int x, int y) {
@@ -120,8 +120,8 @@ int main(int , char* []) {
 		mainThread.yieldTasks();
 	});
 	mainThread.addTask(dse::os::nonLockLoop());*/
-	ThreadPool::Task renderTask{make_handler<&RenderOpenGL31::renderTask>(render)};
-	ThreadPool::Task stepTask{[&cube1, &cube2, &cam, &spd, &sdspd, &render] {
+	ThreadPool::Task renderTask(nullptr);
+	ThreadPool::Task stepTask{[&cube1, &renderTask, &cam, &spd, &sdspd, &render, &stepTask] {
 		using namespace dse::math;
 		auto angle = 1.f;
 		auto axe1 = norm(-vec3{1.f, 1.f, 1.f}) * std::sin(PI * angle / 360.f);
@@ -130,14 +130,12 @@ int main(int , char* []) {
 		cube1->setQRot(rslt);
 		//cube2->setQRot(rslt);
 		if (spd != 0.f || sdspd != 0.f) cam.setPos(cam.getPos() + vecrotquat(norm(vec3{0.f, 0.f, -1.f} * spd + vec3{1.f, 0.f, 0.f} * sdspd), cam.getRot()) );
-		return TaskState::Yield;
+		renderTask.reset(make_handler<&RenderOpenGL31::renderTask>(render));
+		renderTask.then([&stepTask]{ thrPool.schedule(stepTask); });
+		thrPool.schedule(renderTask);
+		return TaskState::Await;
 	}};
-	thrPool.schedule(renderTask);
+	//thrPool.schedule(renderTask);
 	thrPool.schedule(stepTask);
-	std::thread worker1([]{
-		thrPool.join();
-	});
-	auto result = thrPool.join(ThreadType::Main);
-	worker1.join();
-	return result;
+	return thrPool.run(PoolCaps::UI);
 }

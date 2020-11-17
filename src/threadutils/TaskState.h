@@ -16,7 +16,7 @@ enum class TaskState {
 	Await,
 	Yield,
 	Ready = Yield,
-	Canceled
+//	Canceled
 };
 
 } /* namespace threadutils */

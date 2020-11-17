@@ -103,6 +103,7 @@ set (SRCS
     src/util/Access.h
     src/util/enum_bitwise.h
     src/util/FinalStep.h
+    src/util/pimpl.h
     src/util/PoolAllocator.h
     src/util/ProxyContainer.h
     src/util/ProxyIterator.h

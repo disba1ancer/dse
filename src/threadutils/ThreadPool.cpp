@@ -13,40 +13,65 @@
 #include "ThreadPool_win32.h"
 #endif
 
-namespace dse {
-namespace threadutils {
+namespace dse::threadutils {
 
-ThreadPool::ThreadPool() : impl(std::make_unique<ThreadPool_impl>()) {
+ThreadPool::ThreadPool() : pimpl(std::make_shared<ThreadPool_impl>()) {
 }
 
-ThreadPool::~ThreadPool() {
+ThreadPool::ThreadPool(const std::weak_ptr<ThreadPool_impl> &ptr) : pimpl(ptr) {
 }
+
+ThreadPool::ThreadPool(std::nullptr_t) noexcept : pimpl() {
+}
+
+/*ThreadPool::~ThreadPool() {
+}*/
 
 void ThreadPool::schedule(Task &task) {
-	impl->schedule(task);
+	get_impl()->schedule(task);
 }
 
-int ThreadPool::join(ThreadType type) {
-	return impl->join(type);
+int ThreadPool::run(PoolCaps caps) {
+	return get_impl()->run(caps);
 }
 
-void ThreadPool::stop(bool wait) {
-	impl->stop(wait);
+void  ThreadPool::join() {
+	get_impl()->join();
+}
+
+void ThreadPool::stop() {
+	get_impl()->stop();
+}
+
+ThreadPool::Task *ThreadPool::getCurrentTask()
+{
+	return ThreadPool_impl::getCurrentTask();
+}
+
+ThreadPool ThreadPool::getCurrentPool()
+{
+	return ThreadPool_impl::getCurrentPool();
 }
 
 ThreadPool::Task::Task(TaskHandler&& taskHandler) :
 	taskHandler(std::move(taskHandler))
 {}
 
-void ThreadPool::Task::cancel() {
+/*void ThreadPool::Task::cancel() {
 	std::scoped_lock lck(mtx);
 	state = TaskState::Canceled;
-}
+}*/
 
 void ThreadPool::Task::then(FinishHandler &&fHandler) {
 	std::scoped_lock lck(mtx);
 	this->fHandler = std::move(fHandler);
 }
 
-} /* namespace threadutils */
-} /* namespace dse */
+void ThreadPool::Task::reset(ThreadPool::TaskHandler &&taskHandler)
+{
+	fHandler = nullptr;
+	state = TaskState::Ready;
+	this->taskHandler = std::move(taskHandler);
+}
+
+} /* namespace dse::threadutils */

@@ -8,47 +8,56 @@
 #ifndef THREADUTILS_THREADPOOL_WIN32_H_
 #define THREADUTILS_THREADPOOL_WIN32_H_
 
-#include <list>
+#include <deque>
+#include <vector>
 #include "os/win32.h"
 #include <swal/error.h>
 #include "ThreadPool.h"
 
-namespace dse {
-namespace threadutils {
+namespace dse::threadutils {
 
-class Task_win32 {
-public:
-private:
-	std::function<void()> taskFunc;
-};
-
-class ThreadPool_win32 {
+class ThreadPool_win32 : public std::enable_shared_from_this<ThreadPool_win32> {
 public:
 	typedef ThreadPool::Task Task;
 	typedef ThreadPool::TaskId TaskId;
 	typedef ThreadPool::TaskHandler TaskHandler;
 	typedef ThreadPool::FinishHandler FinishHandler;
 private:
-	static constexpr auto WakeupMessage = WM_USER + 10;
+	static constexpr auto WakeupMessage = WM_USER + 0x10;
+	//static thread_local std::weak_ptr<ThreadPool_win32> currentPool;
+	//static thread_local Task* currentTask;
+	static thread_local struct ThreadData {
+		std::thread thr;
+		ThreadPool_win32* currentPool;
+		Task* currentTask;
+		spinlock mtx;
+		std::deque<Task*> taskQueue;
+	} *thrDataPtr;
+
 public:
-	ThreadPool_win32();
+	ThreadPool_win32(unsigned int concurrency = std::thread::hardware_concurrency());
 	~ThreadPool_win32();
 	void schedule(Task& task);
-	int join(ThreadType type);
-	void stop(bool wait);
+	int run(PoolCaps caps);
+	void join();
+	void stop();
+	static Task* getCurrentTask();
+	static std::weak_ptr<ThreadPool_win32> getCurrentPool();
 private:
-	bool pop(Task*& task, ThreadType type);
+	void join(bool isMain);
+	bool pop(ThreadData& thrData, bool isMain);
+	void thrEntry(std::size_t dataIdx);
 
-	std::deque<Task*> scheduledTasks;
-	spinlock mtx;
+	//std::deque<Task*> scheduledTasks;
 	std::mutex cvmtx;
 	std::condition_variable condvar;
-	bool running = false;
-	int refs = 0;
+	std::atomic_bool running = false;
+	std::atomic_int refs = 0;
+	PoolCaps caps;
 	DWORD mainThread = 0;
+	std::vector<ThreadData> threadsData;
 };
 
-} /* namespace threadutils */
-} /* namespace dse */
+} /* namespace dse::threadutils */
 
 #endif /* THREADUTILS_THREADPOOL_WIN32_H_ */

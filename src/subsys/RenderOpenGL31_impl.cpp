@@ -104,6 +104,9 @@ void RenderOpenGL31_impl::onPaint(os::WndEvtDt) {
 	glDepthFunc(GL_LESS);
 	context.SwapBuffers();
 	swal::Wnd(wnd->getSysData().hWnd).ValidateRect();
+	if (pool) {
+		pool.schedule(*task);
+	}
 }
 
 RenderOpenGL31_impl::RenderOpenGL31_impl(os::Window& wnd) : wnd(&wnd),
@@ -160,12 +163,19 @@ void RenderOpenGL31_impl::onResize(os::WndEvtDt, int width, int height,
 }
 
 threadutils::TaskState RenderOpenGL31_impl::renderTask() {
+	if (!pool) {
+		auto ptr = threadutils::ThreadPool::getCurrentPool();
+		pool = ptr;
+		task = threadutils::ThreadPool::getCurrentTask();
 #ifdef _WIN32
-	auto hWnd = wnd->getSysData().hWnd;
-	InvalidateRect(hWnd, nullptr, FALSE);
-	//UpdateWindow(hWnd);
+		auto hWnd = wnd->getSysData().hWnd;
+		InvalidateRect(hWnd, nullptr, FALSE);
+		//UpdateWindow(hWnd);
 #endif
-	return threadutils::TaskState::Yield;
+		return threadutils::TaskState::Await;
+	}
+	pool = nullptr;
+	return threadutils::TaskState::End;
 }
 
 void RenderOpenGL31_impl::setScene(dse::scn::Scene &scene) {

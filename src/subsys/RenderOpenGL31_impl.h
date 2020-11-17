@@ -25,6 +25,7 @@
 #include "gl/Texture.h"
 #include "gl/RenderBuffer.h"
 #include "dse_config.h"
+#include "threadutils/ThreadPool.h"
 
 namespace dse {
 namespace subsys {
@@ -63,6 +64,8 @@ class RenderOpenGL31_impl {
 	gl::FrameBuffer renderFBO = 0;
 	gl::TextureRectangle colorBuffer = 0;
 	gl::TextureRectangle depthBuffer = 0;
+	threadutils::ThreadPool pool = nullptr;
+	threadutils::ThreadPool::Task* task;
 
 	void onPaint(os::WndEvtDt);
 	void onResize(os::WndEvtDt, int width, int height, os::WindowShowCommand);

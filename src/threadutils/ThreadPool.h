@@ -15,11 +15,12 @@
 #include <condition_variable>
 #include <mutex>
 #include <memory>
+#include <variant>
 #include "TaskState.h"
 #include "spinlock.h"
+#include "util/pimpl.h"
 
-namespace dse {
-namespace threadutils {
+namespace dse::threadutils {
 
 #ifdef _WIN32
 typedef class ThreadPool_win32 ThreadPool_impl;
@@ -31,7 +32,13 @@ enum class ThreadType {
 	UI = Main
 };
 
-class ThreadPool {
+enum class PoolCaps {
+	OnlyWorkers = 0,
+	IO = 1,
+	UI = 2,
+};
+
+class ThreadPool : public util::pimpl<ThreadPool, ThreadPool_impl> {
 public:
 	typedef std::size_t TaskId;
 	typedef std::function<TaskState()> TaskHandler;
@@ -41,8 +48,9 @@ public:
 	public:
 		friend ThreadPool_impl;
 		Task(TaskHandler&& taskHandler);
-		void cancel();
+//		void cancel();
 		void then(FinishHandler&& fHandler);
+		void reset(TaskHandler&& taskHandler);
 	private:
 		TaskHandler taskHandler;
 		FinishHandler fHandler;
@@ -51,15 +59,19 @@ public:
 	};
 public:
 	ThreadPool();
-	~ThreadPool();
-	void schedule(Task& task);
-	int join(ThreadType type = ThreadType::Normal);
-	void stop(bool wait = true);
 private:
-	std::unique_ptr<ThreadPool_impl> impl;
+	ThreadPool(const std::weak_ptr<ThreadPool_impl>& ptr);
+public:
+	ThreadPool(std::nullptr_t) noexcept;
+	void schedule(Task& task);
+	int run(PoolCaps caps);
+	[[deprecated]]
+	void join();
+	void stop();
+	static Task* getCurrentTask();
+	static ThreadPool getCurrentPool();
 };
 
-} /* namespace threadutils */
-} /* namespace dse */
+} /* namespace dse::threadutils */
 
 #endif /* THREADPOOL_H_ */
