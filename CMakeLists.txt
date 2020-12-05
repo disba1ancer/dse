@@ -9,8 +9,8 @@ add_definitions(-DUNICODE -D_WIN32_WINNT=0x0A00)
 set(DSE_CXX_GNU $<COMPILE_LANG_AND_ID:CXX,GNU>)
 set(DSE_CXX_MSVC $<COMPILE_LANG_AND_ID:CXX,MSVC>)
 set(DSE_CXX_FLAGS
-    $<$<BOOL:${DSE_CXX_GNU}>:-pedantic;-Wall;-Wextra;-Wconversion>
-    $<$<BOOL:${DSE_CXX_MSVC}>:-W3>
+    $<$<BOOL:${DSE_CXX_GNU}>:-pedantic;-Wall;-Wextra;-Wconversion;-fcoroutines>
+    $<$<BOOL:${DSE_CXX_MSVC}>:-W3;-await>
 )
 set(DSE_MSVC_FLAGS -W3)
 set(DSE_FLAGS_SUBSYSTEM_WINDOWS
@@ -121,6 +121,7 @@ set (SRCS
 )
 
 set(DSE_MULTISAMPLE "" CACHE STRING "Enable multisampling with specified level")
+set(DSE_THREADPOOL_TASKS_PER_IO "16" CACHE STRING "Task count per IO and UI handling")
 if (${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
     option(DSE_SUBSYSTEM_WINDOWS "Use windows subsystem while linking executable binary" ON)
 endif()

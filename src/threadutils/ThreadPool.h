@@ -38,29 +38,29 @@ enum class PoolCaps {
 	UI = 2,
 };
 
+class IAsyncIO;
+
 class ThreadPool : public util::pimpl<ThreadPool, ThreadPool_impl> {
 public:
 	typedef std::size_t TaskId;
 	typedef std::function<TaskState()> TaskHandler;
 	typedef std::function<void()> FinishHandler;
+	friend IAsyncIO;
 
 	class Task {
 	public:
 		friend ThreadPool_impl;
 		Task(TaskHandler&& taskHandler);
-//		void cancel();
 		void then(FinishHandler&& fHandler);
 		void reset(TaskHandler&& taskHandler);
 	private:
 		TaskHandler taskHandler;
 		FinishHandler fHandler;
-		TaskState state = TaskState::Ready;
-		spinlock mtx;
 	};
 public:
-	ThreadPool();
+	ThreadPool(unsigned int concurrency = std::thread::hardware_concurrency());
 private:
-	ThreadPool(const std::weak_ptr<ThreadPool_impl>& ptr);
+	ThreadPool(const std::shared_ptr<ThreadPool_impl>& ptr);
 public:
 	ThreadPool(std::nullptr_t) noexcept;
 	void schedule(Task& task);

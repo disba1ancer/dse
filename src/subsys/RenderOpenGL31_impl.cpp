@@ -104,8 +104,9 @@ void RenderOpenGL31_impl::onPaint(os::WndEvtDt) {
 	glDepthFunc(GL_LESS);
 	context.SwapBuffers();
 	swal::Wnd(wnd->getSysData().hWnd).ValidateRect();
-	if (pool) {
-		pool.schedule(*task);
+	threadutils::ThreadPool::Task* t;
+	if ((t = task.exchange(nullptr, std::memory_order_acquire))) {
+		pool.schedule(*t);
 	}
 }
 
@@ -130,7 +131,7 @@ RenderOpenGL31_impl::RenderOpenGL31_impl(os::Window& wnd) : wnd(&wnd),
 		throw std::runtime_error("Required extensions is not available");
 	}
 
-	context.enableVSync(1);
+	context.enableVSync(0);
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_CULL_FACE);
 #ifdef DSE_MULTISAMPLE
@@ -163,10 +164,11 @@ void RenderOpenGL31_impl::onResize(os::WndEvtDt, int width, int height,
 }
 
 threadutils::TaskState RenderOpenGL31_impl::renderTask() {
-	if (!pool) {
+	if (renderingTaskStage == 0) {
 		auto ptr = threadutils::ThreadPool::getCurrentPool();
 		pool = ptr;
-		task = threadutils::ThreadPool::getCurrentTask();
+		renderingTaskStage = 1;
+		task.store(threadutils::ThreadPool::getCurrentTask(), std::memory_order_release);
 #ifdef _WIN32
 		auto hWnd = wnd->getSysData().hWnd;
 		InvalidateRect(hWnd, nullptr, FALSE);
@@ -174,7 +176,7 @@ threadutils::TaskState RenderOpenGL31_impl::renderTask() {
 #endif
 		return threadutils::TaskState::Await;
 	}
-	pool = nullptr;
+	renderingTaskStage = 0;
 	return threadutils::TaskState::End;
 }
 

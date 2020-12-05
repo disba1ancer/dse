@@ -64,8 +64,9 @@ class RenderOpenGL31_impl {
 	gl::FrameBuffer renderFBO = 0;
 	gl::TextureRectangle colorBuffer = 0;
 	gl::TextureRectangle depthBuffer = 0;
+	int renderingTaskStage = 0;
 	threadutils::ThreadPool pool = nullptr;
-	threadutils::ThreadPool::Task* task;
+	std::atomic<threadutils::ThreadPool::Task*> task = nullptr;
 
 	void onPaint(os::WndEvtDt);
 	void onResize(os::WndEvtDt, int width, int height, os::WindowShowCommand);

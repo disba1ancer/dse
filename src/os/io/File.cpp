@@ -18,7 +18,7 @@ namespace io {
 File::File() : impl(new IOTarget_impl()) {
 }
 
-File::File(std::u8string_view filepath, OpenMode mode) : impl(new IOTarget_impl(filepath, mode)) {
+File::File(threadutils::ThreadPool& pool, std::u8string_view filepath, OpenMode mode) : impl(new IOTarget_impl(pool, filepath, mode)) {
 }
 
 bool File::isValid() const {

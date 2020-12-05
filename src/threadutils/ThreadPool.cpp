@@ -15,10 +15,10 @@
 
 namespace dse::threadutils {
 
-ThreadPool::ThreadPool() : pimpl(std::make_shared<ThreadPool_impl>()) {
+ThreadPool::ThreadPool(unsigned int concurrency) : pimpl(std::make_shared<ThreadPool_impl>(concurrency)) {
 }
 
-ThreadPool::ThreadPool(const std::weak_ptr<ThreadPool_impl> &ptr) : pimpl(ptr) {
+ThreadPool::ThreadPool(const std::shared_ptr<ThreadPool_impl> &ptr) : pimpl(ptr) {
 }
 
 ThreadPool::ThreadPool(std::nullptr_t) noexcept : pimpl() {
@@ -63,14 +63,12 @@ ThreadPool::Task::Task(TaskHandler&& taskHandler) :
 }*/
 
 void ThreadPool::Task::then(FinishHandler &&fHandler) {
-	std::scoped_lock lck(mtx);
 	this->fHandler = std::move(fHandler);
 }
 
 void ThreadPool::Task::reset(ThreadPool::TaskHandler &&taskHandler)
 {
 	fHandler = nullptr;
-	state = TaskState::Ready;
 	this->taskHandler = std::move(taskHandler);
 }
 

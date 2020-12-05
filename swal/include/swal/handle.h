@@ -190,10 +190,9 @@ public:
 		CompletionStatusResult result;
 		result.error = ERROR_SUCCESS;
 		if (!::GetQueuedCompletionStatus(handle(), &result.bytesTransfered, &result.key, &result.ovl, timeout)) {
-			if (!result.ovl) {
-				error::throw_last_error();
-			} else {
-				result.error = GetLastError();
+			result.error = GetLastError();
+			if (result.ovl == nullptr && result.error != WAIT_TIMEOUT) {
+				throw error(result.error);
 			}
 		}
 		return result;

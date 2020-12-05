@@ -13,6 +13,7 @@
 #include <string>
 #include <functional>
 #include "util/enum_bitwise.h"
+#include "threadutils/ThreadPool.h"
 
 namespace dse {
 namespace os {
@@ -59,7 +60,7 @@ class File {
 	std::unique_ptr<IOTarget_impl, IOTargetDelete> impl;
 public:
 	File();
-	File(std::u8string_view filepath, OpenMode mode);
+	File(threadutils::ThreadPool& pool, std::u8string_view filepath, OpenMode mode);
 	~File() noexcept; // may cause undefined behavior if called while async operation
 	File(const File &other) = default;
 	File(File &&other);

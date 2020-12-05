@@ -12,6 +12,7 @@
 #include <mutex>
 #include <swal/handle.h>
 #include "File.h"
+#include "threadutils/ThreadPool_win32.h"
 
 namespace dse {
 namespace os {
@@ -38,8 +39,8 @@ struct ExtendedOverlapped {
 	File_win32* target;
 };
 
-class File_win32 {
-	ExtendedOverlapped ovl = {};
+class File_win32 final : private threadutils::IAsyncIO {
+//	ExtendedOverlapped ovl = {};
 	DWORD lastError = ERROR_SUCCESS;
 	swal::File handle;
 	swal::Event event {true, true};
@@ -52,7 +53,7 @@ class File_win32 {
 	mutable std::mutex dataMtx;
 public:
 	File_win32();
-	File_win32(std::u8string_view filepath, OpenMode mode);
+	File_win32(threadutils::ThreadPool& pool, std::u8string_view filepath, OpenMode mode);
 	~File_win32();
 	File_win32(const File_win32 &other) = delete;
 	File_win32(File_win32 &&other) = default;
@@ -77,7 +78,7 @@ public:
 	void release();
 	friend class IOCP_win32;
 private:
-	void complete(DWORD transfered, DWORD error);
+	virtual void complete(DWORD transfered, DWORD error) override;
 	void incPtr(DWORD transfered);
 	void incRefs();
 };

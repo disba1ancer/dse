@@ -28,7 +28,7 @@ class IOCP_win32 {
 	IOCP_win32();
 	~IOCP_win32();
 public:
-	static IOCP_win32 instance;
+//	static IOCP_win32 instance;
 	void attach(File_win32* target);
 	void preventCallback(File_win32* target);
 };

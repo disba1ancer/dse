@@ -65,13 +65,14 @@ namespace io {
 File_win32::File_win32() : handle() {
 }
 
-File_win32::File_win32(std::u8string_view filepath, OpenMode mode) :
+File_win32::File_win32(threadutils::ThreadPool& pool, std::u8string_view filepath, OpenMode mode) :
 	handle()
 {
 	try {
 		handle = open(filepath, mode);
 		lastError = GetLastError();
-		IOCP_win32::instance.attach(this);
+		getImplFromPool(pool)->iocpAttach(handle);
+//		IOCP_win32::instance.attach(this);
 	} catch (swal::error& err) {
 		error = true;
 		lastError = err.get();
@@ -97,13 +98,12 @@ bool File_win32::isValid() const {
 
 void File_win32::read(std::byte buf[], std::size_t size) {
 	std::lock_guard lck(dataMtx);
-	ovl.ovl.hEvent = reinterpret_cast<HANDLE>(reinterpret_cast<ULONG_PTR>(HANDLE(event)) | 1);
-	ovl.ovl.Offset = pos;
-	ovl.ovl.OffsetHigh = pos >> (sizeof(ovl.ovl.Offset) * CHAR_BIT);
-	ovl.target = this;
+	OVERLAPPED::hEvent = reinterpret_cast<HANDLE>(reinterpret_cast<ULONG_PTR>(HANDLE(event)) | 1);
+	OVERLAPPED::Offset = pos;
+	OVERLAPPED::OffsetHigh = pos >> (sizeof(OVERLAPPED::Offset) * CHAR_BIT);
 	lastTransfered = 0;
 	try {
-		handle.Read(buf, size, ovl.ovl);
+		handle.Read(buf, size, *this);
 		error = false;
 		lastError = ERROR_SUCCESS;
 	} catch (swal::error& err) {
@@ -112,7 +112,7 @@ void File_win32::read(std::byte buf[], std::size_t size) {
 	}
 	if (!error || lastError == ERROR_IO_PENDING) {
 		try {
-			lastTransfered = handle.GetOverlappedResult(ovl.ovl, true);
+			lastTransfered = handle.GetOverlappedResult(*this, true);
 			error = false;
 			lastError = ERROR_SUCCESS;
 			incPtr(lastTransfered);
@@ -143,13 +143,12 @@ void File_win32::read(std::byte buf[], std::size_t size) {
 
 void File_win32::write(std::byte buf[], std::size_t size) {
 	std::lock_guard lck(dataMtx);
-	ovl.ovl.hEvent = reinterpret_cast<HANDLE>(reinterpret_cast<ULONG_PTR>(event.operator HANDLE()) | 1);
-	ovl.ovl.Offset = pos;
-	ovl.ovl.OffsetHigh = pos >> (sizeof(ovl.ovl.Offset) * CHAR_BIT);
-	ovl.target = this;
+	OVERLAPPED::hEvent = reinterpret_cast<HANDLE>(reinterpret_cast<ULONG_PTR>(event.operator HANDLE()) | 1);
+	OVERLAPPED::Offset = pos;
+	OVERLAPPED::OffsetHigh = pos >> (sizeof(OVERLAPPED::Offset) * CHAR_BIT);
 	lastTransfered = 0;
 	try {
-		handle.Write(buf, size, ovl.ovl);
+		handle.Write(buf, size, *this);
 		error = false;
 		lastError = ERROR_SUCCESS;
 	} catch (swal::error& err) {
@@ -158,7 +157,7 @@ void File_win32::write(std::byte buf[], std::size_t size) {
 	}
 	if (!error || lastError == ERROR_IO_PENDING) {
 		try {
-			lastTransfered = handle.GetOverlappedResult(ovl.ovl, true);
+			lastTransfered = handle.GetOverlappedResult(*this, true);
 			error = false;
 			lastError = ERROR_SUCCESS;
 			incPtr(lastTransfered);
@@ -225,13 +224,12 @@ void File_win32::resize() {
 
 void File_win32::read_async(std::byte buf[], std::size_t size, std::function<void()>&& onFinish) {
 	std::lock_guard lck(dataMtx);
-	ovl.ovl.hEvent = event;
-	ovl.ovl.Offset = pos;
-	ovl.ovl.OffsetHigh = pos >> (sizeof(ovl.ovl.Offset) * CHAR_BIT);
-	ovl.target = this;
+	OVERLAPPED::hEvent = event;
+	OVERLAPPED::Offset = pos;
+	OVERLAPPED::OffsetHigh = pos >> (sizeof(OVERLAPPED::Offset) * CHAR_BIT);
 	callback = std::move(onFinish);
 	try {
-		handle.Read(buf, size, ovl.ovl);
+		handle.Read(buf, size, *this);
 		error = false;
 		lastError = ERROR_SUCCESS;
 	} catch (swal::error& err) {
@@ -255,13 +253,12 @@ void File_win32::read_async(std::byte buf[], std::size_t size, std::function<voi
 
 void File_win32::write_async(std::byte buf[], std::size_t size, std::function<void()>&& onFinish) {
 	std::lock_guard lck(dataMtx);
-	ovl.ovl.hEvent = event;
-	ovl.ovl.Offset = pos;
-	ovl.ovl.OffsetHigh = pos >> (sizeof(ovl.ovl.Offset) * CHAR_BIT);
-	ovl.target = this;
+	OVERLAPPED::hEvent = event;
+	OVERLAPPED::Offset = pos;
+	OVERLAPPED::OffsetHigh = pos >> (sizeof(OVERLAPPED::Offset) * CHAR_BIT);
 	callback = std::move(onFinish);
 	try {
-		handle.Write(buf, size, ovl.ovl);
+		handle.Write(buf, size, *this);
 		error = false;
 		error = ERROR_SUCCESS;
 	} catch (swal::error& err) {
@@ -272,11 +269,11 @@ void File_win32::write_async(std::byte buf[], std::size_t size, std::function<vo
 			return;
 		}
 	}
-	auto result = WriteFile(handle, buf, size, nullptr, &ovl.ovl);
-	lastError = GetLastError();
-	error = (!result && lastError != ERROR_IO_PENDING);
-	references += !error;
-	lastTransfered *= (!error);
+//	auto result = WriteFile(handle, buf, size, nullptr, this);
+//	lastError = GetLastError();
+//	error = (!result && lastError != ERROR_IO_PENDING);
+//	references += !error;
+//	lastTransfered *= (!error);
 }
 
 bool File_win32::isBusy() {
@@ -296,7 +293,7 @@ void File_win32::cancel() {
 }
 
 File_win32::~File_win32() {
-	IOCP_win32::instance.preventCallback(this);
+//	IOCP_win32::instance.preventCallback(this);
 	event.WaitFor(INFINITE);
 }
 

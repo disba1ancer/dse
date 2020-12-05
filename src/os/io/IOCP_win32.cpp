@@ -41,7 +41,7 @@ void IOCP_win32::iocpThrFunc() noexcept {
 	}
 }
 
-IOCP_win32 IOCP_win32::instance;
+//IOCP_win32 IOCP_win32::instance;
 
 void IOCP_win32::attach(File_win32* target) {
 	//CreateIoCompletionPort(target->handle, iocp, reinterpret_cast<ULONG_PTR>(HANDLE(target->handle)), 0);

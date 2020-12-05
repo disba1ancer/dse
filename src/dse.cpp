@@ -24,7 +24,7 @@
 #include <functional>
 #include <algorithm>
 #include "threadutils/ThreadPool.h"
-#include <thread>
+#include "os/io/File.h"
 
 using dse::threadutils::ExecutionThread;
 using dse::os::Window;
@@ -43,11 +43,23 @@ using dse::threadutils::TaskState;
 using dse::scn::Material;
 using dse::threadutils::ThreadPool;
 using dse::threadutils::PoolCaps;
+using dse::os::io::File;
+using dse::os::io::OpenMode;
 
 //ExecutionThread mainThread;
 ThreadPool thrPool;
 
 int main(int , char* []) {
+	File file(thrPool, u8"test.txt", OpenMode::READ);
+	std::byte buf[4096];
+	if (file.isValid()) {
+		file.read_async(buf, 4096, [&buf, &file]{
+			std::printf("%.*s", int(file.getTransfered()), reinterpret_cast<char*>(buf));
+		});
+	} else {
+		std::printf("%s", reinterpret_cast<const char*>(file.getResultString().c_str()));
+	}
+
 	Window window;
 	RenderOpenGL31 render(window);
 
