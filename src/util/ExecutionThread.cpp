@@ -6,10 +6,9 @@
  */
 
 #include "ExecutionThread.h"
-#include "unlock_guard.h"
+#include "util/unlock_guard.h"
 
-namespace dse {
-namespace threadutils {
+namespace dse::util {
 
 void ExecutionThread::threadEntry() {
 	std::unique_lock lock(mtx);
@@ -135,5 +134,4 @@ bool ExecutionThread::resumeTask(const TaskID& taskID) {
 	return false;
 }
 
-} /* namespace threadutils */
-} /* namespace dse */
+} // namespace dse::util

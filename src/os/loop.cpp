@@ -9,13 +9,13 @@
 #include "win32.h"
 #endif
 
-#include "threadutils/ExecutionThread.h"
+#include "util/ExecutionThread.h"
 #include <iostream>
 #include "loop.h"
 #include <utility>
 
-using dse::threadutils::ExecutionThread;
-using dse::threadutils::TaskState;
+using dse::util::ExecutionThread;
+using dse::util::TaskState;
 
 namespace {
 class NonLockLoopTask {

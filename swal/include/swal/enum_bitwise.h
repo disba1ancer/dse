@@ -5,8 +5,8 @@
  *      Author: disba1ancer
  */
 
-#ifndef SWAL_ENUM_BITWISE_H_
-#define SWAL_ENUM_BITWISE_H_
+#ifndef SWAL_ENUM_BITWISE_H
+#define SWAL_ENUM_BITWISE_H
 
 #include <algorithm>
 #include <type_traits>
@@ -45,4 +45,4 @@ typename std::enable_if<swal::enable_enum_bitwise<Enum>::value, Enum&>::type ope
 
 }
 
-#endif /* SWAL_ENUM_BITWISE_H_ */
+#endif /* SWAL_ENUM_BITWISE_H */

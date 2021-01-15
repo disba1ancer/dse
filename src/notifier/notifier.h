@@ -10,7 +10,7 @@
 
 #include <list>
 #include <functional>
-#include "threadutils/emptylock.h"
+#include "util/emptylock.h"
 #include <mutex>
 
 namespace dse {

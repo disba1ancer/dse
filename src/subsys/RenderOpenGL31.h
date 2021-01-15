@@ -12,7 +12,7 @@
 #include "os/Window.h"
 #include "scn/Scene.h"
 #include "scn/Camera.h"
-#include "threadutils/TaskState.h"
+#include "util/future.h"
 
 namespace dse {
 namespace subsys {
@@ -26,9 +26,9 @@ public:
 	~RenderOpenGL31();
 	RenderOpenGL31(const RenderOpenGL31&) = delete;
 	RenderOpenGL31(RenderOpenGL31&&) = delete;
-	RenderOpenGL31& operator=(const RenderOpenGL31&) = delete;
-	RenderOpenGL31& operator=(RenderOpenGL31&&) = delete;
-	threadutils::TaskState renderTask();
+	auto operator=(const RenderOpenGL31&) -> RenderOpenGL31& = delete;
+	auto operator=(RenderOpenGL31&&) -> RenderOpenGL31& = delete;
+	auto render() -> util::future<void>;
 	void setScene(dse::scn::Scene& scene);
 	void setCamera(dse::scn::Camera& camera);
 };

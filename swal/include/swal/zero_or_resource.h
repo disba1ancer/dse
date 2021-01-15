@@ -5,8 +5,8 @@
  *      Author: disba1ancer
  */
 
-#ifndef SWAL_ZERO_OR_RESOURCE_H_
-#define SWAL_ZERO_OR_RESOURCE_H_
+#ifndef SWAL_ZERO_OR_RESOURCE_H
+#define SWAL_ZERO_OR_RESOURCE_H
 
 #include <utility>
 
@@ -38,4 +38,4 @@ protected:
 
 }
 
-#endif /* SWAL_ZERO_OR_RESOURCE_H_ */
+#endif /* SWAL_ZERO_OR_RESOURCE_H */

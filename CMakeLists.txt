@@ -1,5 +1,9 @@
 cmake_minimum_required(VERSION 3.5)
-project(dse VERSION 1.0)
+project(dse
+    LANGUAGES CXX
+    VERSION 1.0
+    DESCRIPTION "DSE Engine"
+)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -10,30 +14,40 @@ set(DSE_CXX_GNU $<COMPILE_LANG_AND_ID:CXX,GNU>)
 set(DSE_CXX_MSVC $<COMPILE_LANG_AND_ID:CXX,MSVC>)
 set(DSE_CXX_FLAGS
     $<$<BOOL:${DSE_CXX_GNU}>:-pedantic;-Wall;-Wextra;-Wconversion;-fcoroutines>
-    $<$<BOOL:${DSE_CXX_MSVC}>:-W3;-await>
+#    $<$<BOOL:${DSE_CXX_MSVC}>:/W3>
 )
-set(DSE_MSVC_FLAGS -W3)
-set(DSE_FLAGS_SUBSYSTEM_WINDOWS
+set(DSE_SUBSYSTEM_WINDOWS_LINK_OPTIONS
     $<$<CXX_COMPILER_ID:GNU>:-mwindows>
-    $<$<CXX_COMPILER_ID:MSVC>:-entry:mainCRTStartup;-subsystem:windows>
+    $<$<CXX_COMPILER_ID:MSVC>:/entry:mainCRTStartup;/subsystem:windows>
 )
 
 set(DSE_WIN32_SRCS
     rc_win32/icon.ico
     rc_win32/manifest.xml
     rc_win32/res.rc
-    src/os/io/File_win32.cpp
-    src/os/io/File_win32.h
-    src/os/io/IOCP_win32.cpp
-    src/os/io/IOCP_win32.h
+    src/core/File_win32.cpp
+    src/core/File_win32.h
+#    src/os/io/IOCP_win32.cpp
+#    src/os/io/IOCP_win32.h
     src/os/PaintEventData_win32.h
     src/os/win32.h
     src/os/Window_win32.cpp
     src/os/Window_win32.h
     src/os/WindowData_win32.h
     src/os/WindowEventData_win32.h
-    src/threadutils/ThreadPool_win32.cpp
-    src/threadutils/ThreadPool_win32.h
+    src/core/ThreadPool_win32.cpp
+    src/core/ThreadPool_win32.h
+    src/core/errors_win32.cpp
+    src/core/errors_win32.h
+    swal/include/swal/com.h
+    swal/include/swal/enum_bitwise.h
+    swal/include/swal/error.h
+    swal/include/swal/gdi.h
+    swal/include/swal/handle.h
+    swal/include/swal/strconv.h
+    swal/include/swal/window.h
+    swal/include/swal/zero_or_resource.h
+    swal/include/swal/win_headers.h
 )
 
 set (SRCS
@@ -42,10 +56,9 @@ set (SRCS
     src/math/qmath.h
     src/math/vec.h
     src/math/vmath.h
-    src/notifier/make_handler.h
     src/notifier/notifier.h
-    src/os/io/File.cpp
-    src/os/io/File.h
+    src/core/File.cpp
+    src/core/File.h
     src/os/KeyboardKeyState.h
     src/os/loop.cpp
     src/os/loop.h
@@ -92,32 +105,28 @@ set (SRCS
     src/subsys/RenderOpenGL31.h
     src/subsys/RenderOpenGL31_impl.cpp
     src/subsys/RenderOpenGL31_impl.h
-    src/threadutils/emptylock.h
-    src/threadutils/ExecutionThread.cpp
-    src/threadutils/ExecutionThread.h
-    src/threadutils/spinlock.h
-    src/threadutils/TaskState.h
-    src/threadutils/ThreadPool.cpp
-    src/threadutils/ThreadPool.h
-    src/threadutils/unlock_guard.h
-    src/util/Access.h
+    src/util/emptylock.h
+    src/util/ExecutionThread.cpp
+    src/util/ExecutionThread.h
+    src/util/spinlock.h
+    src/util/TaskState.h
+    src/core/ThreadPool.cpp
+    src/core/ThreadPool.h
+    src/core/errors.cpp
+    src/core/errors.h
+    src/util/unlock_guard.h
+    src/util/access.h
     src/util/enum_bitwise.h
-    src/util/FinalStep.h
+    src/util/scope_exit.h
     src/util/pimpl.h
     src/util/PoolAllocator.h
     src/util/ProxyContainer.h
     src/util/ProxyIterator.h
+    src/util/functional.h
+    src/util/future.h
     src/CustomPainter.cpp
     src/CustomPainter.h
     src/dse.cpp
-    swal/include/swal/com.h
-    swal/include/swal/enum_bitwise.h
-    swal/include/swal/error.h
-    swal/include/swal/gdi.h
-    swal/include/swal/handle.h
-    swal/include/swal/strconv.h
-    swal/include/swal/window.h
-    swal/include/swal/zero_or_resource.h
 )
 
 set(DSE_MULTISAMPLE "" CACHE STRING "Enable multisampling with specified level")
@@ -128,11 +137,15 @@ endif()
 
 configure_file(config/dse_config.h.in config/dse_config.h)
 
+find_package(Threads REQUIRED)
+find_package(OpenGL REQUIRED)
+
 add_executable(${CMAKE_PROJECT_NAME}
     ${SRCS}
-    $<$<PLATFORM_ID:Windows>:${DSE_WIN32_SRCS}>)
+    $<$<PLATFORM_ID:Windows>:${DSE_WIN32_SRCS}>
+)
 
-target_include_directories(dse PRIVATE
+target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     src
     swal/include
     include_gl
@@ -140,6 +153,6 @@ target_include_directories(dse PRIVATE
 )
 target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE ${DSE_CXX_FLAGS})
 target_link_options(${CMAKE_PROJECT_NAME} PRIVATE
-    $<$<BOOL:${DSE_SUBSYSTEM_WINDOWS}>:${DSE_FLAGS_SUBSYSTEM_WINDOWS}>
+    $<$<BOOL:${DSE_SUBSYSTEM_WINDOWS}>:${DSE_SUBSYSTEM_WINDOWS_LINK_OPTIONS}>
 )
-target_link_libraries(${CMAKE_PROJECT_NAME} opengl32 dwmapi)
+target_link_libraries(${CMAKE_PROJECT_NAME} OpenGL::GL Threads::Threads dwmapi)

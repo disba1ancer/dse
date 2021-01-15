@@ -8,13 +8,7 @@
 #ifndef OS_WIN32_H_
 #define OS_WIN32_H_
 
-#define _WIN32_WINNT 0x0A00
-#include <sdkddkver.h>
-#define WIN32_LEAN_AND_MEAN
-#ifndef NOMINMAX
-#define NOMINMAX 1
-#endif
-#include <windows.h>
-#include <windowsx.h>
+#include <swal/win_headers.h>
+#include <swal/window.h>
 
 #endif /* OS_WIN32_H_ */

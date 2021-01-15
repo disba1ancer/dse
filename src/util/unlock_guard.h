@@ -5,11 +5,10 @@
  *      Author: disba1ancer
  */
 
-#ifndef UNLOCK_GUARD_H_
-#define UNLOCK_GUARD_H_
+#ifndef UTIL_UNLOCK_GUARD_H
+#define UTIL_UNLOCK_GUARD_H
 
-namespace dse {
-namespace threadutils {
+namespace dse::util {
 
 template <typename Mutex>
 struct unlock_guard {
@@ -26,7 +25,6 @@ private:
 	mutex_type& m_mtx;
 };
 
-}
-}
+} // namespace dse::util
 
-#endif /* UNLOCK_GUARD_H_ */
+#endif /* UTIL_UNLOCK_GUARD_H */

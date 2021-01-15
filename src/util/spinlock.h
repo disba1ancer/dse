@@ -5,13 +5,12 @@
  *      Author: disba1ancer
  */
 
-#ifndef THREADUTILS_SPINLOCK_H_
-#define THREADUTILS_SPINLOCK_H_
+#ifndef UTIL_SPINLOCK_H
+#define UTIL_SPINLOCK_H
 
 #include <atomic>
 
-namespace dse {
-namespace threadutils {
+namespace dse::util {
 
 class spinlock {
 	std::atomic_flag isLock;
@@ -27,7 +26,6 @@ public:
 	}
 };
 
-} // namespace threadutils
-} // namespace dse
+} // namespace dse::util
 
-#endif /* THREADUTILS_SPINLOCK_H_ */
+#endif /* UTIL_SPINLOCK_H */

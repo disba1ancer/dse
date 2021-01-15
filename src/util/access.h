@@ -5,13 +5,12 @@
  *      Author: disba1ancer
  */
 
-#ifndef UTIL_ACCESS_H_
-#define UTIL_ACCESS_H_
+#ifndef UTIL_ACCESS_H
+#define UTIL_ACCESS_H
 
 #include <mutex>
 
-namespace dse {
-namespace util {
+namespace dse::util {
 
 template <typename lockable, typename value>
 value access(lockable& l, const value& val) {
@@ -26,7 +25,6 @@ public:
 	operator value() { std::lock_guard lck(l); return val; }
 };*/
 
-} // namespace util
-} // namespace dse
+} // namespace dse::util
 
-#endif /* UTIL_ACCESS_H_ */
+#endif /* UTIL_ACCESS_H */

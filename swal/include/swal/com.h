@@ -5,10 +5,10 @@
  *      Author: disba1ancer
  */
 
-#ifndef WIN32_COM_H_
-#define WIN32_COM_H_
+#ifndef SWAL_COM_H
+#define SWAL_COM_H
 
-#include <windows.h>
+#include "win_headers.h"
 
 namespace swal {
 
@@ -18,4 +18,4 @@ struct com_deleter {
 
 }
 
-#endif /* WIN32_COM_H_ */
+#endif /* SWAL_COM_H */

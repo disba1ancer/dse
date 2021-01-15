@@ -5,10 +5,10 @@
  *      Author: disba1ancer
  */
 
-#ifndef WIN32_STRCONV_H_
-#define WIN32_STRCONV_H_
+#ifndef SWAL_STRCONV_H
+#define SWAL_STRCONV_H
 
-#include <windows.h>
+#include "win_headers.h"
 #include <string>
 
 namespace swal {
@@ -35,7 +35,7 @@ inline std::wstring u8_to_wide_char(std::u8string_view str) {
 	return result;
 }
 
-inline std::u8string fromTString(tstring_view str) {
+inline std::u8string u8fromTString(tstring_view str) {
 #ifdef UNICODE
 	return wide_char_to_u8(str);
 #else
@@ -43,6 +43,33 @@ inline std::u8string fromTString(tstring_view str) {
 #endif
 }
 
+inline std::string fromTString(tstring_view str) {
+#ifdef UNICODE
+	std::string result;
+	result.resize(
+		WideCharToMultiByte(
+			CP_UTF8, 0,
+			str.data(),
+			int(str.size()),
+			nullptr,
+			0,
+			nullptr, nullptr
+		)
+	);
+	WideCharToMultiByte(
+		CP_UTF8, 0,
+		str.data(),
+		int(str.size()),
+		result.data(),
+		int(result.size()),
+		nullptr, nullptr
+	);
+	return result;
+#else
+	return str;
+#endif
 }
 
-#endif /* WIN32_STRCONV_H_ */
+}
+
+#endif /* SWAL_STRCONV_H */

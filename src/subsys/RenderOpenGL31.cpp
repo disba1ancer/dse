@@ -16,8 +16,8 @@ RenderOpenGL31::RenderOpenGL31(os::Window& wnd) : impl(new RenderOpenGL31_impl(w
 
 RenderOpenGL31::~RenderOpenGL31() = default;
 
-threadutils::TaskState RenderOpenGL31::renderTask() {
-	return impl->renderTask();
+auto RenderOpenGL31::render() -> util::future<void> {
+	return impl->render();
 }
 
 void RenderOpenGL31::setScene(dse::scn::Scene &scene) {

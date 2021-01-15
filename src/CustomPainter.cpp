@@ -9,10 +9,10 @@
 #include <swal/gdi.h>
 #include "os/WindowEventData_win32.h"
 #include "os/WindowData_win32.h"
-#include "notifier/make_handler.h"
+#include "util/functional.h"
 #include "CustomPainter.h"
 
-using dse::notifier::make_handler;
+using dse::util::from_method;
 
 void CustomPainter::paint(dse::os::WndEvtDt data) {
 	auto dc = swal::PaintDC::BeginPaint(data.hWnd);
@@ -25,7 +25,7 @@ void CustomPainter::paint(dse::os::WndEvtDt data) {
 }
 
 CustomPainter::CustomPainter(dse::os::Window &wnd) : wnd(&wnd),
-		paintCon(wnd.subscribePaintEvent(make_handler<&CustomPainter::paint>(this))) {
+	paintCon(wnd.subscribePaintEvent(from_method<&CustomPainter::paint>(*this))) {
 }
 
 void CustomPainter::invalidate() {

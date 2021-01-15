@@ -5,10 +5,10 @@
  *      Author: disba1ancer
  */
 
-#ifndef WIN32_WINDOW_H_
-#define WIN32_WINDOW_H_
+#ifndef SWAL_WINDOW_H
+#define SWAL_WINDOW_H
 
-#include <windows.h>
+#include "win_headers.h"
 #include <string>
 #include "error.h"
 #include "enum_bitwise.h"
@@ -141,4 +141,4 @@ LRESULT CALLBACK ClsWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
 
 }
 
-#endif /* WIN32_WINDOW_H_ */
+#endif /* SWAL_WINDOW_H */

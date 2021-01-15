@@ -5,10 +5,10 @@
  *      Author: disba1ancer
  */
 
-#ifndef WIN32_HANDLE_H_
-#define WIN32_HANDLE_H_
+#ifndef SWAL_HANDLE_H
+#define SWAL_HANDLE_H
 
-#include <windows.h>
+#include "win_headers.h"
 #include <string>
 #include "enum_bitwise.h"
 #include "error.h"
@@ -45,6 +45,7 @@ class EventHandle {
 	void Reset() const { error::throw_or_result(ResetEvent(static_cast<const T&>(*this))); }
 };
 
+#if _WIN32_WINNT >= 0x0600
 enum class EventFlags {
 	InitialSet = CREATE_EVENT_INITIAL_SET,
 	ManualReset = CREATE_EVENT_MANUAL_RESET
@@ -54,6 +55,7 @@ template <>
 struct enable_enum_bitwise<enum EventFlags> {
 	static constexpr bool value = true;
 };
+#endif
 
 class Event : public Handle, public OwnableHandle<Event>, public EventHandle<Event>, public WaitableHandle<Event> {
 public:
@@ -66,6 +68,7 @@ public:
 		: Event(&sattrs, manualReset, initialState, tstring_view()) {}
 	Event(SECURITY_ATTRIBUTES& sattrs, bool manualReset, bool initialState, tstring_view name)
 		: Event(&sattrs, manualReset, initialState, name.data()) {}
+#if _WIN32_WINNT >= 0x0600
 	Event(SECURITY_ATTRIBUTES* sattrs, tstring_view name, EventFlags flags, DWORD access)
 		: Handle(swal::error::throw_or_result(CreateEventEx(sattrs, name.data(), static_cast<DWORD>(flags), access))) {}
 	Event(EventFlags flags, DWORD access)
@@ -76,6 +79,7 @@ public:
 		: Event(nullptr, name.data(), flags, access) {}
 	Event(SECURITY_ATTRIBUTES& sattrs, tstring_view name, EventFlags flags, DWORD access)
 		: Event(&sattrs, name.data(), flags, access) {}
+#endif
 };
 
 enum class SetPointerModes {
@@ -120,12 +124,17 @@ public:
 	void SetEndOfFile() const {
 		error::throw_or_result(::SetEndOfFile(handle()));
 	}
+	void CancelIo() const {
+		error::throw_or_result(::CancelIo(handle()), CancelIoEx_error_check);
+	}
+#if _WIN32_WINNT >= 0x0600
 	void CancelIoEx() const {
 		error::throw_or_result(::CancelIoEx(handle(), nullptr), CancelIoEx_error_check);
 	}
 	void CancelIoEx(OVERLAPPED& ovl) const {
 		error::throw_or_result(::CancelIoEx(handle(), &ovl), CancelIoEx_error_check);
 	}
+#endif
 	LARGE_INTEGER GetSizeEx() const {
 		LARGE_INTEGER result;
 		error::throw_or_result(GetFileSizeEx(handle(), &result));
@@ -212,4 +221,4 @@ public:
 
 }
 
-#endif /* WIN32_HANDLE_H_ */
+#endif /* SWAL_HANDLE_H */

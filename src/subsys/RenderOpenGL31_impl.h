@@ -10,10 +10,10 @@
 
 #include "RenderOpenGL31.h"
 #include "notifier/notifier.h"
-#include "notifier/make_handler.h"
+#include "util/functional.h"
 #include "gl/Context31.h"
 #include "gl/VAO.h"
-#include "threadutils/ExecutionThread.h"
+#include "util/ExecutionThread.h"
 #include <vector>
 #include <list>
 #include "gl31_impl/MeshInstance.h"
@@ -25,7 +25,7 @@
 #include "gl/Texture.h"
 #include "gl/RenderBuffer.h"
 #include "dse_config.h"
-#include "threadutils/ThreadPool.h"
+#include "core/ThreadPool.h"
 
 namespace dse {
 namespace subsys {
@@ -64,14 +64,14 @@ class RenderOpenGL31_impl {
 	gl::FrameBuffer renderFBO = 0;
 	gl::TextureRectangle colorBuffer = 0;
 	gl::TextureRectangle depthBuffer = 0;
-	int renderingTaskStage = 0;
-	threadutils::ThreadPool pool = nullptr;
-	std::atomic<threadutils::ThreadPool::Task*> task = nullptr;
+	util::promise<void> pr;
+	std::atomic_bool requested = false;
 
 	void onPaint(os::WndEvtDt);
 	void onResize(os::WndEvtDt, int width, int height, os::WindowShowCommand);
 	void rebuildSrgbFrameBuffer();
 	void prepareShaders();
+	void resumeRenderCaller();
 public:
 	RenderOpenGL31_impl(os::Window& wnd);
 	~RenderOpenGL31_impl() = default;
@@ -79,7 +79,7 @@ public:
 	RenderOpenGL31_impl(RenderOpenGL31_impl &&other) = delete;
 	RenderOpenGL31_impl& operator=(const RenderOpenGL31_impl &other) = delete;
 	RenderOpenGL31_impl& operator=(RenderOpenGL31_impl &&other) = delete;
-	threadutils::TaskState renderTask();
+	auto render() -> util::future<void>;
 	void setScene(dse::scn::Scene& scene);
 	void setCamera(dse::scn::Camera& camera);
 };

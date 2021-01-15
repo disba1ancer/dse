@@ -6,7 +6,6 @@
  */
 
 #include "os/win32.h"
-#include <swal/window.h>
 #include "os/WindowData_win32.h"
 #include "RenderOpenGL31_impl.h"
 #include "gl/gl.h"
@@ -25,7 +24,7 @@ auto reqGLExts = std::to_array<ReqGLExt, 2>({
 	{"GL_ARB_draw_elements_base_vertex", false},
 	{"GL_ARB_instanced_arrays", false},
 });
-using dse::threadutils::ExecutionThread;
+using dse::util::ExecutionThread;
 using dse::subsys::gl31_impl::InputParams;
 using dse::subsys::gl31_impl::OutputParams;
 dse::math::vec3 fullscreenPrimitive[] = { {-1.f, -1.f, -1.f}, {3.f, -1.f, -1.f}, {-1.f, 3.f, -1.f} };
@@ -104,15 +103,19 @@ void RenderOpenGL31_impl::onPaint(os::WndEvtDt) {
 	glDepthFunc(GL_LESS);
 	context.SwapBuffers();
 	swal::Wnd(wnd->getSysData().hWnd).ValidateRect();
-	threadutils::ThreadPool::Task* t;
-	if ((t = task.exchange(nullptr, std::memory_order_acquire))) {
-		pool.schedule(*t);
+	if (requested.exchange(false, std::memory_order_relaxed)) {
+		auto pool = core::ThreadPool::getCurrentPool();
+		pool.schedule(
+			util::from_method<
+				&RenderOpenGL31_impl::resumeRenderCaller
+			>(*this)
+		);
 	}
 }
 
 RenderOpenGL31_impl::RenderOpenGL31_impl(os::Window& wnd) : wnd(&wnd),
-		paintCon(wnd.subscribePaintEvent(notifier::make_handler<&RenderOpenGL31_impl::onPaint>(this))),
-		sizeCon(wnd.subscribeResizeEvent(notifier::make_handler<&RenderOpenGL31_impl::onResize>(this))),
+		paintCon(wnd.subscribePaintEvent(util::from_method<&RenderOpenGL31_impl::onPaint>(*this))),
+		sizeCon(wnd.subscribeResizeEvent(util::from_method<&RenderOpenGL31_impl::onResize>(*this))),
 		context(wnd)
 {
 	GLint numExts;
@@ -131,7 +134,7 @@ RenderOpenGL31_impl::RenderOpenGL31_impl(os::Window& wnd) : wnd(&wnd),
 		throw std::runtime_error("Required extensions is not available");
 	}
 
-	context.enableVSync(0);
+	context.enableVSync(1);
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_CULL_FACE);
 #ifdef DSE_MULTISAMPLE
@@ -163,21 +166,15 @@ void RenderOpenGL31_impl::onResize(os::WndEvtDt, int width, int height,
 	rebuildSrgbFrameBuffer();
 }
 
-threadutils::TaskState RenderOpenGL31_impl::renderTask() {
-	if (renderingTaskStage == 0) {
-		auto ptr = threadutils::ThreadPool::getCurrentPool();
-		pool = ptr;
-		renderingTaskStage = 1;
-		task.store(threadutils::ThreadPool::getCurrentTask(), std::memory_order_release);
+auto RenderOpenGL31_impl::render() -> util::future<void> {
+	pr = util::promise<void>();
+	requested.store(true, std::memory_order_relaxed);
 #ifdef _WIN32
-		auto hWnd = wnd->getSysData().hWnd;
-		InvalidateRect(hWnd, nullptr, FALSE);
-		//UpdateWindow(hWnd);
+	auto hWnd = wnd->getSysData().hWnd;
+	InvalidateRect(hWnd, nullptr, FALSE);
+	//UpdateWindow(hWnd);
 #endif
-		return threadutils::TaskState::Await;
-	}
-	renderingTaskStage = 0;
-	return threadutils::TaskState::End;
+	return pr.get_future();
 }
 
 void RenderOpenGL31_impl::setScene(dse::scn::Scene &scene) {
@@ -230,6 +227,10 @@ void RenderOpenGL31_impl::prepareShaders() {
 	glUseProgram(drawProg);
 	glUniform2f(drawWindowSizeUniform, 0, 0);
 	glUniform1f(invAspRatioUniform, 1.f);
+}
+
+void RenderOpenGL31_impl::resumeRenderCaller() {
+	pr.set_value();
 }
 
 void RenderOpenGL31_impl::rebuildSrgbFrameBuffer() {

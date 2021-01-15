@@ -6,20 +6,22 @@
  */
 
 #include "ThreadPool_win32.h"
-#include "unlock_guard.h"
-#include "spinlock.h"
-#include "util/Access.h"
-#include "util/FinalStep.h"
+#include "util/unlock_guard.h"
+#include "util/access.h"
+#include "util/scope_exit.h"
 #include <iostream>
 #include "dse_config.h"
 
-namespace dse::threadutils {
+namespace dse::core {
 
 //thread_local std::weak_ptr<ThreadPool_win32> ThreadPool_win32::currentPool;
 //thread_local ThreadPool::Task* ThreadPool_win32::currentTask;
 thread_local ThreadPool_win32::ThreadData* ThreadPool_win32::thrDataPtr;
 
-ThreadPool_win32::ThreadPool_win32(unsigned int concurrency) : threadsData(concurrency) {
+ThreadPool_win32::ThreadPool_win32(unsigned int concurrency) /*: threadsData(concurrency)*/ {
+	for (std::size_t i = 0; i < concurrency; ++i) {
+		threadsData.emplace_back(ThreadData{});
+	}
 	if (!concurrency) {
 		throw std::runtime_error("Unexpected concurrency value");
 	}
@@ -34,12 +36,12 @@ ThreadPool_win32::~ThreadPool_win32() {
 	}
 }
 
-void ThreadPool_win32::schedule(Task &task) {
+void ThreadPool_win32::schedule(Task task) {
 	std::size_t taskCount;
 	ThreadData& thrData = (thrDataPtr ? *thrDataPtr : threadsData[0]);
 	{
 		std::scoped_lock lck(thrData.mtx);
-		thrData.taskQueue.push_back(&task);
+		thrData.taskQueue.push_back(task);
 		taskCount = thrData.taskQueue.size();
 	}
 	//condvar.notify_all();
@@ -51,7 +53,7 @@ void ThreadPool_win32::schedule(Task &task) {
 
 int ThreadPool_win32::run(PoolCaps caps) {
 	this->caps = caps;
-	util::FinalStep f([this]{
+	util::scope_exit f([this]{
 		thrDataPtr = nullptr;
 		for (std::size_t i = 1; i < threadsData.size(); ++i) {
 			threadsData[i].thr.join();
@@ -60,6 +62,7 @@ int ThreadPool_win32::run(PoolCaps caps) {
 	});
 
 	running.store(true, std::memory_order_relaxed);
+	mainThread = GetCurrentThreadId();
 	for (std::size_t i = 1; i < threadsData.size(); ++i) {
 		threadsData[i].thr = std::thread(&ThreadPool_win32::thrEntry, this, i);
 	}
@@ -102,8 +105,8 @@ void ThreadPool_win32::join(bool isMain) {
 					&& (thrData.currentTask = pop(thrData));
 				++i
 			) {
-				if (thrData.currentTask->taskHandler() == TaskState::End) {
-					thrData.currentTask->fHandler();
+				if (thrData.currentTask) {
+					thrData.currentTask();
 				}
 			}
 			waitForWork(thrData);
@@ -111,7 +114,7 @@ void ThreadPool_win32::join(bool isMain) {
 	}
 }
 
-auto ThreadPool_win32::getCurrentTask() -> Task* {
+auto ThreadPool_win32::getCurrentTask() -> const Task& {
 	return thrDataPtr->currentTask;
 }
 
@@ -157,7 +160,7 @@ void ThreadPool_win32::trySteal(ThreadData& thrData) {
 			}
 		}
 		if (lckQueues) {
-			unlock_guard lck(thrData.mtx);
+			util::unlock_guard lck(thrData.mtx);
 			handleSystem(thrData);
 			lckQueues = false;
 		} else {
@@ -166,13 +169,13 @@ void ThreadPool_win32::trySteal(ThreadData& thrData) {
 	}
 }
 
-auto ThreadPool_win32::pop(ThreadData &thrData) -> Task* {
+auto ThreadPool_win32::pop(ThreadData &thrData) -> Task {
 	std::scoped_lock lck(thrData.mtx);
 	if (thrData.taskQueue.empty()) {
 		trySteal(thrData);
 	}
 	if (!thrData.taskQueue.empty()){
-		auto task = thrData.taskQueue.front();
+		auto task = std::move(thrData.taskQueue.front());
 		thrData.taskQueue.pop_front();
 		return task;
 	}
@@ -183,28 +186,26 @@ void ThreadPool_win32::wakeupThreads() {
 	for (std::size_t i = 0; i < threadsData.size(); ++i) {
 		iocp.PostQueuedCompletionStatus(0, WakeupMessage, nullptr);
 	}
-	if (mainThread) PostThreadMessage(mainThread, WakeupMessage, 0, 0);
+	if (mainThread) swal::error::throw_or_result(PostThreadMessage(mainThread, WakeupMessage, 0, 0));
 }
 
 void ThreadPool_win32::handleIO(ThreadPool_win32::ThreadData &thrData) {
 	auto& ioCompletion = thrData.ioCompletion;
-	do {
-		if (
-			ioCompletion.ovl != nullptr ||
-			ioCompletion.error != WAIT_TIMEOUT
-		) ioCompletion = iocp.GetQueuedCompletionStatus(0);
+	for(;;) {
 		if (ioCompletion.ovl != nullptr) {
 			auto asyncHandle = static_cast<IAsyncIO*>(ioCompletion.ovl);
 			asyncHandle->complete(ioCompletion.bytesTransfered, ioCompletion.error);
 		}
-	} while (
-		ioCompletion.ovl != nullptr ||
-		ioCompletion.error != WAIT_TIMEOUT
-	);
+		if (
+			ioCompletion.ovl == nullptr &&
+			ioCompletion.error == WAIT_TIMEOUT
+		) break;
+		ioCompletion = iocp.GetQueuedCompletionStatus(0);
+	}
 }
 
 void ThreadPool_win32::waitForWork(ThreadData &thrData) {
-	if (getTasksCount(thrData) == 0) {
+	if (getTasksCount(thrData) == 0 && running.load(std::memory_order_relaxed)) {
 		slpThrds.store(true, std::memory_order_relaxed);
 		if (thrData.isMain) {
 			swal::error::throw_or_result(WaitMessage());
@@ -228,4 +229,4 @@ std::shared_ptr<ThreadPool_win32> IAsyncIO::getImplFromPool(ThreadPool& pool) {
 	return pool.get_impl();
 }
 
-} /* namespace dse::threadutils */
+} // namespace dse::core

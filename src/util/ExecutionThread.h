@@ -17,8 +17,7 @@
 #include <list>
 #include <optional>
 
-namespace dse {
-namespace threadutils {
+namespace dse::util {
 
 class ExecutionThread {
 public:
@@ -58,7 +57,6 @@ public:
 	TaskID getCurrentTask();
 };
 
-} /* namespace threadutils */
-} /* namespace dse */
+} // namespace dse::util
 
 #endif /* EXECUTIONTHREAD_H_ */

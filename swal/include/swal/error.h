@@ -5,16 +5,17 @@
  *      Author: disba1ancer
  */
 
-#ifndef WIN32_ERROR_H_
-#define WIN32_ERROR_H_
+#ifndef SWAL_ERROR_H
+#define SWAL_ERROR_H
 
-#include <windows.h>
+#include "win_headers.h"
 #include <wchar.h>
 #include <comdef.h>
 #include <exception>
 #include <string>
 #include <memory>
 #include <type_traits>
+#include <system_error>
 #include "strconv.h"
 
 namespace swal {
@@ -54,7 +55,7 @@ public:
 		return tstring(wStr, wSize);
 	}
 
-	error(DWORD error) noexcept : m_error(error), errStr(std::make_shared<std::u8string>(fromTString(get_error_string(error)))) {}
+	error(DWORD error) noexcept : m_error(error), errStr(std::make_shared<std::u8string>(u8fromTString(get_error_string(error)))) {}
 
 	virtual const char* what() const noexcept override {
 		return reinterpret_cast<const char*>(errStr->c_str());
@@ -82,7 +83,7 @@ public:
 		return result;
 	}*/
 
-	com_error(HRESULT error) noexcept : error(error), errStr(std::make_shared<std::u8string>(fromTString(_com_error(error).ErrorMessage()))) {}
+	com_error(HRESULT error) noexcept : error(error), errStr(std::make_shared<std::u8string>(u8fromTString(_com_error(error).ErrorMessage()))) {}
 
 	virtual const char* what() const noexcept override {
 		return reinterpret_cast<const char*>(errStr->c_str());
@@ -145,4 +146,4 @@ inline DWORD CreateFile_error_check(HANDLE result) {
 
 }
 
-#endif /* WIN32_ERROR_H_ */
+#endif /* SWAL_ERROR_H */

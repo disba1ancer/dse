@@ -8,8 +8,7 @@
 #ifndef THREADUTILS_TASKSTATE_H_
 #define THREADUTILS_TASKSTATE_H_
 
-namespace dse {
-namespace threadutils {
+namespace dse::util {
 
 enum class TaskState {
 	End,
@@ -19,7 +18,6 @@ enum class TaskState {
 //	Canceled
 };
 
-} /* namespace threadutils */
-} /* namespace dse */
+} // namespace dse::util
 
 #endif /* THREADUTILS_TASKSTATE_H_ */

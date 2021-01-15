@@ -5,10 +5,10 @@
  *      Author: disba1ancer
  */
 
-#ifndef WIN32_GDI_H_
-#define WIN32_GDI_H_
+#ifndef SWAL_GDI_H
+#define SWAL_GDI_H
 
-#include <windows.h>
+#include "win_headers.h"
 #include "error.h"
 #include "zero_or_resource.h"
 
@@ -78,4 +78,4 @@ private:
 
 }
 
-#endif /* WIN32_GDI_H_ */
+#endif /* SWAL_GDI_H */
