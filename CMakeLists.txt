@@ -21,10 +21,7 @@ set(DSE_SUBSYSTEM_WINDOWS_LINK_OPTIONS
     $<$<CXX_COMPILER_ID:MSVC>:/entry:mainCRTStartup;/subsystem:windows>
 )
 
-set(DSE_WIN32_SRCS
-    rc_win32/icon.ico
-    rc_win32/manifest.xml
-    rc_win32/res.rc
+set(DSE_CORE_WIN32_SRCS
     src/core/File_win32.cpp
     src/core/File_win32.h
 #    src/os/io/IOCP_win32.cpp
@@ -39,18 +36,9 @@ set(DSE_WIN32_SRCS
     src/core/ThreadPool_win32.h
     src/core/errors_win32.cpp
     src/core/errors_win32.h
-    swal/include/swal/com.h
-    swal/include/swal/enum_bitwise.h
-    swal/include/swal/error.h
-    swal/include/swal/gdi.h
-    swal/include/swal/handle.h
-    swal/include/swal/strconv.h
-    swal/include/swal/window.h
-    swal/include/swal/zero_or_resource.h
-    swal/include/swal/win_headers.h
 )
 
-set (SRCS
+set (DSE_CORE_SRCS
     src/math/constants.h
     src/math/mat.h
     src/math/qmath.h
@@ -124,9 +112,18 @@ set (SRCS
     src/util/ProxyIterator.h
     src/util/functional.h
     src/util/future.h
-    src/CustomPainter.cpp
-    src/CustomPainter.h
+)
+
+set(DSE_DEMO_WIN32_SRCS
+    rc_win32/icon.ico
+    rc_win32/manifest.xml
+    rc_win32/res.rc
+)
+
+set (DSE_DEMO_SRCS
     src/dse.cpp
+#    src/CustomPainter.cpp
+#    src/CustomPainter.h
 )
 
 set(DSE_MULTISAMPLE "" CACHE STRING "Enable multisampling with specified level")
@@ -140,19 +137,51 @@ configure_file(config/dse_config.h.in config/dse_config.h)
 find_package(Threads REQUIRED)
 find_package(OpenGL REQUIRED)
 
-add_executable(${CMAKE_PROJECT_NAME}
-    ${SRCS}
-    $<$<PLATFORM_ID:Windows>:${DSE_WIN32_SRCS}>
+# Target  swal
+add_library(swal INTERFACE
+    swal/include/swal/com.h
+    swal/include/swal/enum_bitwise.h
+    swal/include/swal/error.h
+    swal/include/swal/gdi.h
+    swal/include/swal/handle.h
+    swal/include/swal/strconv.h
+    swal/include/swal/window.h
+    swal/include/swal/zero_or_resource.h
+    swal/include/swal/win_headers.h
+)
+target_include_directories(swal INTERFACE
+    swal/include
 )
 
-target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
-    src
-    swal/include
+# Target  core
+add_library(core OBJECT
+    ${DSE_CORE_SRCS}
+    $<$<PLATFORM_ID:Windows>:${DSE_CORE_WIN32_SRCS}>
+)
+target_include_directories(core PRIVATE
     include_gl
     ${PROJECT_BINARY_DIR}/config
 )
-target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE ${DSE_CXX_FLAGS})
-target_link_options(${CMAKE_PROJECT_NAME} PRIVATE
+target_include_directories(core PUBLIC
+    src
+)
+target_compile_options(core PRIVATE ${DSE_CXX_FLAGS})
+target_link_libraries(core OpenGL::GL Threads::Threads)
+if (${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
+    target_link_libraries(core dwmapi swal)
+endif()
+
+# Target  demo
+add_executable(demo
+#    $<TARGET_OBJECTS:core>
+    ${DSE_DEMO_SRCS}
+    $<$<PLATFORM_ID:Windows>:${DSE_DEMO_WIN32_SRCS}>
+)
+target_include_directories(demo PRIVATE
+    ${PROJECT_BINARY_DIR}/config
+)
+target_compile_options(demo PRIVATE ${DSE_CXX_FLAGS})
+target_link_options(demo PRIVATE
     $<$<BOOL:${DSE_SUBSYSTEM_WINDOWS}>:${DSE_SUBSYSTEM_WINDOWS_LINK_OPTIONS}>
 )
-target_link_libraries(${CMAKE_PROJECT_NAME} OpenGL::GL Threads::Threads dwmapi)
+target_link_libraries(demo core)

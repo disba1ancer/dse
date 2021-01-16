@@ -42,7 +42,7 @@ private:
 			slmover(const slmover&) = delete;
 			slmover(slmover&&) noexcept {}
 			slmover& operator=(const slmover&) = delete;
-			slmover& operator=(slmover&&) noexcept {}
+			slmover& operator=(slmover&&) noexcept { return *this; }
 		} mtx;
 		std::deque<Task> taskQueue;
 		swal::CompletionStatusResult ioCompletion = {};
