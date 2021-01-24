@@ -6,10 +6,12 @@ namespace  {
 	class dse_category : public std::error_category {
 	public:
 		virtual const char* name() const noexcept override {
-			return (const char*)(u8"DSE error");
+			return "DSE error";
 		}
 		virtual std::string message([[maybe_unused]] int err) const override {
 			switch (err) {
+				case int(errc::generic):
+					return "End of file";
 				default:
 					return "unknown error";
 			}

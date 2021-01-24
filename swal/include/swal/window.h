@@ -13,6 +13,7 @@
 #include "error.h"
 #include "enum_bitwise.h"
 #include "zero_or_resource.h"
+#include "gdi.h"
 
 namespace swal {
 
@@ -34,10 +35,7 @@ enum class SetPosFlags {
 	AsyncWindowPos = SWP_ASYNCWINDOWPOS,
 };
 
-template <>
-struct enable_enum_bitwise<SetPosFlags> {
-	static constexpr bool value = true;
-};
+template <> struct enable_enum_bitwise<SetPosFlags> : std::true_type {};
 
 enum class ShowCmd {
 	Hide = SW_HIDE,
@@ -61,49 +59,61 @@ public:
 	Wnd(HWND hWnd) : zero_or_resource(hWnd) {}
 	LONG_PTR GetLongPtr(int index) const {
 		SetLastError(ERROR_SUCCESS);
-		return error::throw_or_result(GetWindowLongPtr(*this, index), GetWindowLongPtr_error_check);
+		return winapi_call(GetWindowLongPtr(*this, index), GetWindowLongPtr_error_check);
 	}
 	LONG_PTR SetLongPtr(int index, LONG_PTR value) const {
 		SetLastError(ERROR_SUCCESS);
-		return error::throw_or_result(SetWindowLongPtr(*this, index, value), GetWindowLongPtr_error_check);
+		return winapi_call(SetWindowLongPtr(*this, index, value), GetWindowLongPtr_error_check);
 	}
 	void SetPos(const Wnd& wndAfter, int x, int y, int cx, int cy, SetPosFlags flags) const {
-		error::throw_or_result(SetWindowPos(*this, wndAfter, x, y, cx, cy, static_cast<UINT>(flags)));
+		winapi_call(SetWindowPos(*this, wndAfter, x, y, cx, cy, static_cast<UINT>(flags)));
 	}
 	RECT GetRect() const {
 		RECT rc;
-		error::throw_or_result(GetWindowRect(*this, &rc));
+		winapi_call(GetWindowRect(*this, &rc));
 		return rc;
 	}
 	RECT GetClientRect() const {
 		RECT rc;
-		error::throw_or_result(::GetClientRect(*this, &rc));
+		winapi_call(::GetClientRect(*this, &rc));
 		return rc;
 	}
 	bool Show(ShowCmd cmd) const {
 		return ShowWindow(*this, static_cast<int>(cmd));
 	}
 	void InvalidateRect(bool erase = true) const {
-		error::throw_or_result(::InvalidateRect(*this, nullptr, erase));
+		winapi_call(::InvalidateRect(*this, nullptr, erase));
 	}
 	void InvalidateRect(const RECT& rect, bool erase = true) const {
-		error::throw_or_result(::InvalidateRect(*this, &rect, erase));
+		winapi_call(::InvalidateRect(*this, &rect, erase));
 	}
 	void ValidateRect() const {
-		error::throw_or_result(::ValidateRect(*this, nullptr));
+		winapi_call(::ValidateRect(*this, nullptr));
 	}
 	void ValidateRect(const RECT& rect) const {
-		error::throw_or_result(::ValidateRect(*this, &rect));
+		winapi_call(::ValidateRect(*this, &rect));
 	}
 	bool IsVisible() const {
 		return IsWindowVisible(*this);
+	}
+	PaintDC BeginPaint() const {
+		return { *this };
+	}
+	WindowDC GetDC() const {
+		return { *this };
+	}
+	WindowDC GetDC(HRGN clip, DWORD flags) const {
+		return { *this, clip, flags };
+	}
+	void UpdateWindow() const {
+		winapi_call(::UpdateWindow(*this));
 	}
 };
 
 class Window : public Wnd {
 public:
 	Window(DWORD exStyle, ATOM cls, tstring_view wndName, DWORD style, int x, int y, int width, int height, const Wnd& parent, HMENU menu, HINSTANCE hInstance, void* param) :
-		Wnd(swal::error::throw_or_result(CreateWindowEx(exStyle, reinterpret_cast<LPCTSTR>(cls), wndName.data(), style, x, y, width, height, parent, menu, hInstance, param)))
+		Wnd(winapi_call(CreateWindowEx(exStyle, reinterpret_cast<LPCTSTR>(cls), wndName.data(), style, x, y, width, height, parent, menu, hInstance, param)))
 	{}
 	Window(DWORD exStyle, ATOM cls, DWORD style, int x, int y, int width, int height, const Wnd& parent, HMENU menu, HINSTANCE hInstance, void* param) :
 		Window(exStyle, cls, tstring_view(), style, x, y, width, height, parent, menu, hInstance, param)

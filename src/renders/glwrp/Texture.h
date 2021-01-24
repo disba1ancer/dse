@@ -11,9 +11,7 @@
 #include "gl.h"
 #include "TrvMvOnlyRes.h"
 
-namespace dse {
-namespace subsys {
-namespace gl {
+namespace dse::renders::glwrp {
 
 class Texture : TrvMvOnlyRes<GLuint, true> {
 protected:
@@ -51,8 +49,6 @@ public:
 typedef TargetTexture<GL_TEXTURE_2D> Texture2D;
 typedef TargetTexture<GL_TEXTURE_RECTANGLE> TextureRectangle;
 
-} /* namespace gl */
-} /* namespace subsys */
-} /* namespace dse */
+} /* dse::renders::glwrp */
 
 #endif /* SUBSYS_GL_BUFFER_H_ */

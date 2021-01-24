@@ -84,7 +84,7 @@ ATOM Window_win32::makeWindowClsID() {
 		wcex.lpszClassName = TEXT("dse.os.Window");
 		wcex.hIconSm = LoadIcon(hInst, MAKEINTRESOURCE(100));
 
-		return swal::error::throw_or_result(RegisterClassEx(&wcex));
+		return swal::winapi_call(RegisterClassEx(&wcex));
 	}();
 	return clsID;
 }
@@ -102,23 +102,23 @@ void Window_win32::show(WindowShowCommand command) {
 
 	auto showCmd = ShowCmd::Show;
 	switch (command) {
-	case WindowShowCommand::HIDE:
-		showCmd = ShowCmd::Hide;
-		break;
-	case WindowShowCommand::SHOW:
-		break;
-	case WindowShowCommand::SHOW_MINIMIZED:
-		showCmd = ShowCmd::ShowMinimized;
-		break;
-	case (WindowShowCommand::SHOW_RESTORED):
-		showCmd = ShowCmd::ShowNormal;
-		break;
-	case WindowShowCommand::SHOW_MAXIMIZED:
-		showCmd = ShowCmd::ShowMaximized;
-		break;
-	case WindowShowCommand::SHOW_FULL_SCREEN:
-		showCmd = ShowCmd::ShowMaximized;
-		break;
+		case WindowShowCommand::HIDE:
+			showCmd = ShowCmd::Hide;
+			break;
+		case WindowShowCommand::SHOW:
+			break;
+		case WindowShowCommand::SHOW_MINIMIZED:
+			showCmd = ShowCmd::ShowMinimized;
+			break;
+		case (WindowShowCommand::SHOW_RESTORED):
+			showCmd = ShowCmd::ShowNormal;
+			break;
+		case WindowShowCommand::SHOW_MAXIMIZED:
+			showCmd = ShowCmd::ShowMaximized;
+			break;
+		case WindowShowCommand::SHOW_FULL_SCREEN:
+			showCmd = ShowCmd::ShowMaximized;
+			break;
 	}
 	auto style = wnd.GetLongPtr(GWL_STYLE);
 	if (command == WindowShowCommand::SHOW_FULL_SCREEN && !(style & WS_POPUP)) {

@@ -11,9 +11,7 @@
 #include "gl.h"
 #include "TrvMvOnlyRes.h"
 
-namespace dse {
-namespace subsys {
-namespace gl {
+namespace dse::renders::glwrp {
 
 class RenderBuffer : TrvMvOnlyRes<GLuint, true> {
 public:
@@ -34,8 +32,6 @@ public:
 	}
 };
 
-} // gl
-} // subsys
-} // dse
+} // dse::renders::glwrp
 
 #endif /* SUBSYS_GL_RENDERBUFFER_H_ */

@@ -11,9 +11,7 @@
 #include "gl.h"
 #include "TrvMvOnlyRes.h"
 
-namespace dse {
-namespace subsys {
-namespace gl {
+namespace dse::renders::glwrp {
 
 class VAO : TrvMvOnlyRes<GLuint, true> {
 public:
@@ -35,8 +33,6 @@ public:
 	}
 };
 
-} /* namespace gl31_impl */
-} /* namespace subsys */
-} /* namespace dse */
+} /* dse::renders::glwrp */
 
 #endif /* SUBSYS_GL_VAO_H_ */

@@ -10,7 +10,7 @@
 #include "os/Window.h"
 #include <cstdio>
 #include <cstdint>
-#include "subsys/RenderOpenGL31.h"
+#include "renders/RenderOpenGL31.h"
 #include "util/functional.h"
 #include "scn/Scene.h"
 #include "scn/Cube.h"
@@ -26,13 +26,17 @@
 #include "core/ThreadPool.h"
 #include "core/File.h"
 
+#include <swal/error.h>
+#include <string>
+
+using namespace std::string_literals;
 using dse::util::ExecutionThread;
 using dse::os::Window;
 using dse::os::WindowShowCommand;
 using dse::os::KeyboardKeyState;
 using dse::os::WndEvtDt;
 using dse::os::PntEvtDt;
-using dse::subsys::RenderOpenGL31;
+using dse::renders::RenderOpenGL31;
 using dse::util::from_method;
 using dse::scn::Cube;
 using dse::scn::Scene;
@@ -51,8 +55,8 @@ ThreadPool thrPool;
 
 int main(int argc, char* argv[]) {
 	Window window;
-	auto root = [&window, argc, argv]([[maybe_unused]] ThreadPool& pool) -> dse::core::pool_task {
-		RenderOpenGL31 render(window);
+	RenderOpenGL31 render(window);
+	auto root = [&window, &render, argc, argv]([[maybe_unused]] ThreadPool& pool) -> dse::core::pool_task {
 		File file(thrPool, u8"test.txt", OpenMode::READ);
 		std::byte buf[4096];
 		if (file.isValid()) {

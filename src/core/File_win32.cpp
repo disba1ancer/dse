@@ -69,11 +69,11 @@ File_win32::File_win32(ThreadPool& pool, std::u8string_view filepath, OpenMode m
 {
 	try {
 		handle = open(filepath, mode);
-		lastError = GetLastError();
+		lastError = win32_errc(swal::last_error().value());
 		getImplFromPool(pool)->iocpAttach(handle);
 //		IOCP_win32::instance.attach(this);
-	} catch (swal::error& err) {
-		lastError = err.get();
+	} catch (std::system_error& err) {
+		setLastError(err);
 	}
 }
 
@@ -102,21 +102,24 @@ auto File_win32::read(std::byte buf[], std::size_t size) -> Result {
 	DWORD lastTransfered = 0;
 	try {
 		handle.Read(buf, size, *this);
-		lastError = ERROR_SUCCESS;
-	} catch (swal::error& err) {
-		lastError = err.get();
+		lastError = win32_errc(ERROR_SUCCESS);
+	} catch (std::system_error& err) {
+		setLastError(err);
 	}
-	if (lastError == ERROR_SUCCESS || lastError == ERROR_IO_PENDING) {
+	if (
+		lastError == win32_errc(ERROR_SUCCESS) ||
+		lastError == win32_errc(ERROR_IO_PENDING)
+	) {
 		try {
 			lastTransfered = handle.GetOverlappedResult(*this, true);
-			lastError = ERROR_SUCCESS;
+			lastError = win32_errc(ERROR_SUCCESS);
 			incPtr(lastTransfered);
-		} catch (swal::error& err) {
-			lastError = err.get();
+		} catch (std::system_error& err) {
+			setLastError(err);
 		}
 	}
-	eof = (lastError == ERROR_HANDLE_EOF);
-	return { lastTransfered, std::error_code(lastError, win32_category::instance()) };
+	eof = (lastError == win32_errc(ERROR_HANDLE_EOF));
+	return { lastTransfered, lastError };
 	/*error = !ReadFile(handle, buf, size, nullptr, &ovl.ovl);
 	lastError = GetLastError();
 	if (error && lastError != ERROR_IO_PENDING) {
@@ -143,20 +146,23 @@ auto File_win32::write(std::byte buf[], std::size_t size) -> Result {
 	DWORD lastTransfered = 0;
 	try {
 		handle.Write(buf, size, *this);
-		lastError = ERROR_SUCCESS;
-	} catch (swal::error& err) {
-		lastError = err.get();
+		lastError = win32_errc(ERROR_SUCCESS);
+	} catch (std::system_error& err) {
+		setLastError(err);
 	}
-	if (lastError == ERROR_SUCCESS || lastError == ERROR_IO_PENDING) {
+	if (
+		lastError == win32_errc(ERROR_SUCCESS) ||
+		lastError == win32_errc(ERROR_IO_PENDING)
+	) {
 		try {
 			lastTransfered = handle.GetOverlappedResult(*this, true);
-			lastError = ERROR_SUCCESS;
+			lastError = win32_errc(ERROR_SUCCESS);
 			incPtr(lastTransfered);
-		} catch (swal::error& err) {
-			lastError = err.get();
+		} catch (std::system_error& err) {
+			setLastError(err);
 		}
 	}
-	return { lastTransfered, std::error_code(lastError, win32_category::instance()) };
+	return { lastTransfered, lastError };
 	/*error = !WriteFile(handle, buf, size, nullptr, &ovl.ovl);
 	lastError = GetLastError();
 	if (error && lastError != ERROR_IO_PENDING) {
@@ -173,12 +179,12 @@ auto File_win32::write(std::byte buf[], std::size_t size) -> Result {
 void File_win32::complete(DWORD transfered, DWORD error) {
 	{
 		std::lock_guard lck(dataMtx);
-		lastError = error;
+		lastError = win32_errc(error);
 		DWORD lastTransfered = transfered;
 		if (error == ERROR_SUCCESS) {
 			incPtr(lastTransfered);
 		} else {
-			if (lastError == ERROR_HANDLE_EOF) {
+			if (error == ERROR_HANDLE_EOF) {
 				eof = true;
 			}
 		}
@@ -195,11 +201,11 @@ auto File_win32::resize() -> std::error_code {
 	try {
 		handle.SetPointerEx(li, swal::SetPointerModes::Begin);
 		handle.SetEndOfFile();
-		lastError = ERROR_SUCCESS;
-	} catch (swal::error& err) {
-		lastError = err.get();
+		lastError = win32_errc(ERROR_SUCCESS);
+	} catch (std::system_error& err) {
+		setLastError(err);
 	}
-	return { int(lastError), win32_category::instance() };
+	return lastError;
 	/*if (!((error = !SetFilePointerEx(handle, li, nullptr, FILE_BEGIN)) && (lastError = GetLastError()))) {
 		if (!((error = !SetEndOfFile(handle)) && (lastError = GetLastError()))) {
 			lastError = ERROR_SUCCESS;
@@ -215,14 +221,14 @@ auto File_win32::readAsync(std::byte buf[], std::size_t size) -> util::future<Re
 	pr = util::promise<Result>();
 	try {
 		handle.Read(buf, size, *this);
-		lastError = ERROR_SUCCESS;
-	} catch (swal::error& err) {
-		lastError = err.get();
-		if (lastError == ERROR_IO_PENDING) {
+		lastError = win32_errc(ERROR_SUCCESS);
+	} catch (std::system_error& err) {
+		setLastError(err);
+		if (lastError == win32_errc(ERROR_IO_PENDING)) {
 			++references;
 		}
 	}
-	eof = lastError == ERROR_HANDLE_EOF;
+	eof = lastError == win32_errc(ERROR_HANDLE_EOF);
 	return pr.get_future();
 	/*auto result = ReadFile(handle, buf, size, nullptr, &ovl.ovl);
 	lastError = GetLastError();
@@ -241,10 +247,10 @@ auto File_win32::writeAsync(std::byte buf[], std::size_t size) -> util::future<R
 	pr = util::promise<Result>();
 	try {
 		handle.Write(buf, size, *this);
-		lastError = ERROR_SUCCESS;
-	} catch (swal::error& err) {
-		lastError = err.get();
-		if (lastError == ERROR_IO_PENDING) {
+		lastError = win32_errc(ERROR_SUCCESS);
+	} catch (std::system_error& err) {
+		setLastError(err);
+		if (lastError == win32_errc(ERROR_IO_PENDING)) {
 			++references;
 		}
 	}
@@ -264,15 +270,15 @@ auto File_win32::cancel() -> std::error_code {
 	std::lock_guard lck(dataMtx);
 	try {
 		handle.CancelIoEx();
-		lastError = ERROR_SUCCESS;
-	} catch (swal::error& err) {
-		lastError = err.get();
+		lastError = win32_errc(ERROR_SUCCESS);
+	} catch (std::system_error& err) {
+		setLastError(err);
 	}
-	return { int(lastError), win32_category::instance() };
+	return lastError;
 }
 
 auto File_win32::status() const -> std::error_code {
-	return { int(lastError), win32_category::instance() };
+	return lastError;
 }
 
 File_win32::~File_win32() {
@@ -336,6 +342,15 @@ bool File_win32::isEOF() const {
 
 void File_win32::incRefs() {
 	++references;
+}
+
+void File_win32::setLastError(std::system_error &err) {
+	auto ecode = err.code();
+	if (ecode.category() == swal::win32_category::instance()) {
+		lastError = win32_errc(ecode.value());
+	} else {
+		throw;
+	}
 }
 
 } // namespace dse::core

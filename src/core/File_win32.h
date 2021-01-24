@@ -10,6 +10,7 @@
 
 #include <mutex>
 #include <swal/handle.h>
+#include <system_error>
 #include "File.h"
 #include "ThreadPool_win32.h"
 
@@ -40,7 +41,7 @@ public:
 	using FilePos = File::FilePos;
 	using FileOff = File::FileOff;
 private:
-	DWORD lastError = ERROR_SUCCESS;
+	std::error_code lastError;
 	swal::File handle;
 	swal::Event event {true, true};
 	FilePos pos = 0; // be careful with positions and file sizes more than max value for FileOff (unreal large files)
@@ -74,6 +75,7 @@ private:
 	virtual void complete(DWORD transfered, DWORD error) override;
 	void incPtr(DWORD transfered);
 	void incRefs();
+	void setLastError(std::system_error& err);
 };
 
 } // namespace dse::core

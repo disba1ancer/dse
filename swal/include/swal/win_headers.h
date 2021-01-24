@@ -11,5 +11,7 @@
 #endif
 #include <windows.h>
 #include <windowsx.h>
+#include <objbase.h>
+#include <comdef.h>
 
 #endif // WIN_HEADERS_H

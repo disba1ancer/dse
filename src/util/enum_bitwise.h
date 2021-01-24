@@ -19,8 +19,7 @@ struct enable_enum_bitwise {
 	static constexpr bool value = false;
 };
 
-}
-}
+namespace enum_bitwise {
 
 template <typename Enum>
 typename std::enable_if<dse::util::enable_enum_bitwise<Enum>::value, Enum>::type operator|(Enum enum1, Enum enum2) {
@@ -40,6 +39,10 @@ typename std::enable_if<dse::util::enable_enum_bitwise<Enum>::value, Enum&>::typ
 template <typename Enum>
 typename std::enable_if<dse::util::enable_enum_bitwise<Enum>::value, Enum&>::type operator&=(Enum& enum1, Enum enum2) {
 	return enum1 = enum1 & enum2;
+}
+
+}
+}
 }
 
 #endif /* UTIL_ENUM_BITWISE_H_ */

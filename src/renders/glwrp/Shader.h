@@ -13,9 +13,7 @@
 #include <exception>
 #include "TrvMvOnlyRes.h"
 
-namespace dse {
-namespace subsys {
-namespace gl {
+namespace dse::renders::glwrp {
 
 class Shader : TrvMvOnlyRes<GLuint, true> {
 protected:
@@ -61,8 +59,6 @@ public:
 typedef ConcreteShader<GL_VERTEX_SHADER> VertexShader;
 typedef ConcreteShader<GL_FRAGMENT_SHADER> FragmentShader;
 
-} /* namespace gl */
-} /* namespace subsys */
-} /* namespace dse */
+} /* dse::renders::glwrp */
 
 #endif /* SUBSYS_GL_SHADER_H_ */

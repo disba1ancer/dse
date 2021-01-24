@@ -8,8 +8,7 @@
 #include "RenderOpenGL31_impl.h"
 #include "RenderOpenGL31.h"
 
-namespace dse {
-namespace subsys {
+namespace dse::renders {
 
 RenderOpenGL31::RenderOpenGL31(os::Window& wnd) : impl(new RenderOpenGL31_impl(wnd)) {
 }
@@ -28,5 +27,4 @@ void RenderOpenGL31::setCamera(dse::scn::Camera &camera) {
 	impl->setCamera(camera);
 }
 
-} /* namespace subsys */
-} /* namespace dse */
+} /* namespace dse::renders */

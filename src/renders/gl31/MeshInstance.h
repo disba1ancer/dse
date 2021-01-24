@@ -10,21 +10,19 @@
 
 #include "scn/IMesh.h"
 #include <functional>
-#include "subsys/gl/VAO.h"
-#include "subsys/gl/Buffer.h"
+#include "renders/glwrp/VAO.h"
+#include "renders/glwrp/Buffer.h"
 #include <vector>
 
-namespace dse {
-namespace subsys {
-namespace gl31_impl {
+namespace dse::renders::gl31 {
 
 class MeshInstance {
 	scn::IMesh* mesh;
 	unsigned lastVersion;
 	std::vector<scn::IMesh::submesh_range> submeshRanges;
-	gl::VAO vao;
-	gl::VertexBuffer vbo;
-	gl::ElementBuffer ibo;
+	glwrp::VAO vao;
+	glwrp::VertexBuffer vbo;
+	glwrp::ElementBuffer ibo;
 public:
 	MeshInstance(scn::IMesh* mesh);
 	~MeshInstance() = default;
@@ -34,9 +32,9 @@ public:
 	MeshInstance& operator=(MeshInstance &&other) = default;
 	scn::IMesh* getMesh() const;
 	bool isReady();
-	gl::VAO& getVAO();
-	gl::VertexBuffer& getVBO();
-	gl::ElementBuffer& getIBO();
+	glwrp::VAO& getVAO();
+	glwrp::VertexBuffer& getVBO();
+	glwrp::ElementBuffer& getIBO();
 	std::size_t getSubmeshCount();
 	scn::IMesh::submesh_range getSubmeshRange(size_t n);
 	class Comparator : std::less<scn::IMesh*> {
@@ -45,8 +43,6 @@ public:
 	};
 };
 
-} /* namespace gl31_impl */
-} /* namespace subsys */
-} /* namespace dse */
+} /* namespace dse::renders::gl31 */
 
 #endif /* SUBSYS_GL31_IMPL_MESHINSTANCE_H_ */

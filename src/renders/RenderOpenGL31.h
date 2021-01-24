@@ -14,8 +14,7 @@
 #include "scn/Camera.h"
 #include "util/future.h"
 
-namespace dse {
-namespace subsys {
+namespace dse::renders {
 
 class RenderOpenGL31_impl;
 
@@ -33,7 +32,6 @@ public:
 	void setCamera(dse::scn::Camera& camera);
 };
 
-} /* namespace subsys */
-} /* namespace dse */
+} /* namespace dse::renders */
 
 #endif /* SUBSYS_RENDEROPENGL_H_ */

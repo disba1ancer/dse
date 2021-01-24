@@ -11,6 +11,7 @@
 #include "win_headers.h"
 #include "error.h"
 #include "zero_or_resource.h"
+#include "enum_bitwise.h"
 
 namespace swal {
 
@@ -36,43 +37,73 @@ enum class PenStyle {
 	InsideFrame = PS_INSIDEFRAME
 };
 
-COLORREF Rgb(int r, int g, int b) { return RGB(r, g, b); }
+inline constexpr COLORREF Rgb(int r, int g, int b) { return RGB(r, g, b); }
 
 class Pen : public GdiObj {
 public:
-	Pen(COLORREF color, PenStyle style = PenStyle::Solid, int width = 1) : GdiObj(error::throw_or_result(CreatePen(static_cast<int>(style), width, color))) {}
+	Pen(COLORREF color, PenStyle style = PenStyle::Solid, int width = 1) : GdiObj(winapi_call(CreatePen(static_cast<int>(style), width, color))) {}
 };
 
 class DC {
 public:
 	DC(HDC hdc) : hdc(hdc) {}
 	operator HDC() const { return hdc; }
-	HGDIOBJ SelectObject(HGDIOBJ obj) const { return error::throw_or_result(::SelectObject(hdc, obj)); }
-	void MoveTo(int x, int y) const { error::throw_or_result(::MoveToEx(hdc, x, y, nullptr)); }
+	HGDIOBJ SelectObject(HGDIOBJ obj) const { return winapi_call(::SelectObject(hdc, obj)); }
+	void MoveTo(int x, int y) const { winapi_call(::MoveToEx(hdc, x, y, nullptr)); }
 	POINT MoveToEx(int x, int y) const {
 		POINT pt;
-		error::throw_or_result(::MoveToEx(hdc, x, y, &pt));
+		winapi_call(::MoveToEx(hdc, x, y, &pt));
 		return pt;
 	}
-	void LineTo(int x, int y) const { error::throw_or_result(::LineTo(hdc, x, y)); }
-	COLORREF SetPenColor(COLORREF color) const { return error::throw_or_result(::SetDCPenColor(*this, color), invalid_color_error_check); }
-	COLORREF SetPixel(int x, int y, COLORREF color) const { return error::throw_or_result(::SetPixel(*this, x, y, color), invalid_color_error_check); }
-	void FillRect(RECT& rc, HBRUSH brush) const { error::throw_or_result(::FillRect(*this, &rc, brush)); }
+	void LineTo(int x, int y) const { winapi_call(::LineTo(hdc, x, y)); }
+	COLORREF SetPenColor(COLORREF color) const { return winapi_call(::SetDCPenColor(*this, color), invalid_color_error_check); }
+	COLORREF SetPixel(int x, int y, COLORREF color) const { return winapi_call(::SetPixel(*this, x, y, color), invalid_color_error_check); }
+	void FillRect(RECT& rc, HBRUSH brush) const { winapi_call(::FillRect(*this, &rc, brush)); }
 private:
 	HDC hdc;
 };
 
 class PaintDC : private PAINTSTRUCT, public DC {
 public:
+	PaintDC(HWND hWnd) : DC(winapi_call(::BeginPaint(hWnd, this))), hWnd(hWnd) {}
 	~PaintDC() { EndPaint(hWnd, this); }
 	PaintDC(const PaintDC&) = delete;
 	PaintDC& operator=(const PaintDC&) = delete;
 	PaintDC(PaintDC&&) = default;
 	PaintDC& operator=(PaintDC&&) = default;
 	const PAINTSTRUCT* operator ->() const { return this; }
-	static PaintDC BeginPaint(HWND hWnd) { return PaintDC(hWnd); }
+	//static PaintDC BeginPaint(HWND hWnd) { return PaintDC(hWnd); }
 private:
-	PaintDC(HWND hWnd) : DC(error::throw_or_result(::BeginPaint(hWnd, this))), hWnd(hWnd) {}
+	HWND hWnd;
+};
+
+enum class GetDCExFlags {
+	Window = DCX_WINDOW,
+	Cache = DCX_CACHE,
+	NoResetAttrs = DCX_NORESETATTRS,
+	ClipChildren = DCX_CLIPCHILDREN,
+	ClipSiblings = DCX_CLIPSIBLINGS,
+	ParentClip = DCX_PARENTCLIP,
+	ExcludeRGN = DCX_EXCLUDERGN,
+	IntersectRGN = DCX_INTERSECTRGN,
+	ExcludeUpdate = DCX_EXCLUDEUPDATE,
+	IntersectUpdate = DCX_INTERSECTUPDATE,
+	LockUindowUpdate = DCX_LOCKWINDOWUPDATE
+};
+
+template <> struct enable_enum_bitwise<GetDCExFlags> : std::true_type {};
+
+class WindowDC : public DC {
+public:
+	WindowDC(HWND hWnd) : DC(winapi_call(GetDC(hWnd))) {}
+	WindowDC(HWND hWnd, HRGN clip, DWORD flags) : DC(winapi_call(GetDCEx(hWnd, clip, flags))) {}
+	WindowDC(HWND hWnd, HRGN clip, GetDCExFlags flags) : WindowDC(hWnd, clip, DWORD(flags)) {}
+	~WindowDC() { ReleaseDC(hWnd, *this); }
+	WindowDC(const WindowDC&) = delete;
+	WindowDC& operator=(const WindowDC&) = delete;
+	WindowDC(WindowDC&&) = default;
+	WindowDC& operator=(WindowDC&&) = default;
+private:
 	HWND hWnd;
 };
 

@@ -6,6 +6,8 @@
 
 namespace dse::core {
 
+enum class win32_errc : DWORD {};
+
 class win32_category : public std::error_category {
 	win32_category() = default;
 public:
@@ -15,6 +17,10 @@ public:
 	static win32_category& instance();
 };
 
+std::error_code make_error_code(win32_errc err);
+
 } // namespace dse::core
+
+template <> struct std::is_error_code_enum<dse::core::win32_errc> : true_type {};
 
 #endif // ERRORS_WIN32_H

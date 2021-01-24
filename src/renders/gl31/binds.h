@@ -8,9 +8,7 @@
 #ifndef SUBSYS_GL31_IMPL_BINDS_H_
 #define SUBSYS_GL31_IMPL_BINDS_H_
 
-namespace dse {
-namespace subsys {
-namespace gl31_impl {
+namespace dse::renders::gl31 {
 
 enum InputParams {
 	Position, Normal, Tangent, UV
@@ -20,8 +18,6 @@ enum OutputParams {
 	FragmentColor
 };
 
-} /* namespace gl31_impl */
-} /* namespace subsys */
-} /* namespace dse */
+} /* namespace dse::renders::gl31 */
 
 #endif /* SUBSYS_GL31_IMPL_BINDS_H_ */

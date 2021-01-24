@@ -10,9 +10,7 @@
 
 #include <utility>
 
-namespace dse {
-namespace subsys {
-namespace gl {
+namespace dse::renders::glwrp {
 
 template <typename Rs, bool inherit>
 class TrvMvOnlyRes;
@@ -53,8 +51,6 @@ public:
 	Rs resource;
 };
 
-} /* namespace gl */
-} /* namespace subsys */
-} /* namespace dse */
+} /* namespace dse::renders::glwrp */
 
 #endif /* SUBSYS_GL_TRVMVONLYRES_H_ */

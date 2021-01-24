@@ -186,7 +186,7 @@ void ThreadPool_win32::wakeupThreads() {
 	for (std::size_t i = 0; i < threadsData.size(); ++i) {
 		iocp.PostQueuedCompletionStatus(0, WakeupMessage, nullptr);
 	}
-	if (mainThread) swal::error::throw_or_result(PostThreadMessage(mainThread, WakeupMessage, 0, 0));
+	if (mainThread) swal::winapi_call(PostThreadMessage(mainThread, WakeupMessage, 0, 0));
 }
 
 void ThreadPool_win32::handleIO(ThreadPool_win32::ThreadData &thrData) {
@@ -208,7 +208,7 @@ void ThreadPool_win32::waitForWork(ThreadData &thrData) {
 	if (getTasksCount(thrData) == 0 && running.load(std::memory_order_relaxed)) {
 		slpThrds.store(true, std::memory_order_relaxed);
 		if (thrData.isMain) {
-			swal::error::throw_or_result(WaitMessage());
+			swal::winapi_call(WaitMessage());
 		} else {
 			thrData.ioCompletion = iocp.GetQueuedCompletionStatus(INFINITE);
 		}

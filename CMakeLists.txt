@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.19)
 project(dse
     LANGUAGES CXX
     VERSION 1.0
@@ -14,7 +14,7 @@ set(DSE_CXX_GNU $<COMPILE_LANG_AND_ID:CXX,GNU>)
 set(DSE_CXX_MSVC $<COMPILE_LANG_AND_ID:CXX,MSVC>)
 set(DSE_CXX_FLAGS
     $<$<BOOL:${DSE_CXX_GNU}>:-pedantic;-Wall;-Wextra;-Wconversion;-fcoroutines>
-#    $<$<BOOL:${DSE_CXX_MSVC}>:/W3>
+    $<$<BOOL:${DSE_CXX_MSVC}>:/W3>
 )
 set(DSE_SUBSYSTEM_WINDOWS_LINK_OPTIONS
     $<$<CXX_COMPILER_ID:GNU>:-mwindows>
@@ -67,32 +67,32 @@ set (DSE_CORE_SRCS
     src/scn/Object.h
     src/scn/Scene.cpp
     src/scn/Scene.h
-    src/subsys/gl/Buffer.h
-    src/subsys/gl/Context31.cpp
-    src/subsys/gl/Context31.h
-    src/subsys/gl/FrameBuffer.h
-    src/subsys/gl/gl.cpp
-    src/subsys/gl/gl.h
-    src/subsys/gl/ImportedFunction.h
-    src/subsys/gl/Program.h
-    src/subsys/gl/RenderBuffer.h
-    src/subsys/gl/Shader.h
-    src/subsys/gl/Texture.h
-    src/subsys/gl/TrvMvOnlyRes.h
-    src/subsys/gl/VAO.h
-    src/subsys/gl31_impl/binds.h
-    src/subsys/gl31_impl/MeshInstance.cpp
-    src/subsys/gl31_impl/MeshInstance.h
-    src/subsys/gl31_impl/ObjectInstance.cpp
-    src/subsys/gl31_impl/ObjectInstance.h
-    src/subsys/gl31_impl/Scene.cpp
-    src/subsys/gl31_impl/Scene.h
-    src/subsys/gl31_impl/shaders.cpp
-    src/subsys/gl31_impl/shaders.h
-    src/subsys/RenderOpenGL31.cpp
-    src/subsys/RenderOpenGL31.h
-    src/subsys/RenderOpenGL31_impl.cpp
-    src/subsys/RenderOpenGL31_impl.h
+    src/renders/glwrp/Buffer.h
+    src/renders/glwrp/Context.cpp
+    src/renders/glwrp/Context.h
+    src/renders/glwrp/FrameBuffer.h
+    src/renders/glwrp/gl.cpp
+    src/renders/glwrp/gl.h
+    src/renders/glwrp/ImportedFunction.h
+    src/renders/glwrp/Program.h
+    src/renders/glwrp/RenderBuffer.h
+    src/renders/glwrp/Shader.h
+    src/renders/glwrp/Texture.h
+    src/renders/glwrp/TrvMvOnlyRes.h
+    src/renders/glwrp/VAO.h
+    src/renders/gl31/binds.h
+    src/renders/gl31/MeshInstance.cpp
+    src/renders/gl31/MeshInstance.h
+    src/renders/gl31/ObjectInstance.cpp
+    src/renders/gl31/ObjectInstance.h
+    src/renders/gl31/Scene.cpp
+    src/renders/gl31/Scene.h
+    src/renders/gl31/shaders.cpp
+    src/renders/gl31/shaders.h
+    src/renders/RenderOpenGL31.cpp
+    src/renders/RenderOpenGL31.h
+    src/renders/RenderOpenGL31_impl.cpp
+    src/renders/RenderOpenGL31_impl.h
     src/util/emptylock.h
     src/util/ExecutionThread.cpp
     src/util/ExecutionThread.h
@@ -122,8 +122,8 @@ set(DSE_DEMO_WIN32_SRCS
 
 set (DSE_DEMO_SRCS
     src/dse.cpp
-#    src/CustomPainter.cpp
-#    src/CustomPainter.h
+    src/CustomPainter.cpp
+    src/CustomPainter.h
 )
 
 set(DSE_MULTISAMPLE "" CACHE STRING "Enable multisampling with specified level")
@@ -136,22 +136,7 @@ configure_file(config/dse_config.h.in config/dse_config.h)
 
 find_package(Threads REQUIRED)
 find_package(OpenGL REQUIRED)
-
-# Target  swal
-add_library(swal INTERFACE
-    swal/include/swal/com.h
-    swal/include/swal/enum_bitwise.h
-    swal/include/swal/error.h
-    swal/include/swal/gdi.h
-    swal/include/swal/handle.h
-    swal/include/swal/strconv.h
-    swal/include/swal/window.h
-    swal/include/swal/zero_or_resource.h
-    swal/include/swal/win_headers.h
-)
-target_include_directories(swal INTERFACE
-    swal/include
-)
+add_subdirectory(swal)
 
 # Target  core
 add_library(core OBJECT
@@ -168,12 +153,11 @@ target_include_directories(core PUBLIC
 target_compile_options(core PRIVATE ${DSE_CXX_FLAGS})
 target_link_libraries(core OpenGL::GL Threads::Threads)
 if (${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
-    target_link_libraries(core dwmapi swal)
+    target_link_libraries(core dwmapi swal::swal)
 endif()
 
 # Target  demo
 add_executable(demo
-#    $<TARGET_OBJECTS:core>
     ${DSE_DEMO_SRCS}
     $<$<PLATFORM_ID:Windows>:${DSE_DEMO_WIN32_SRCS}>
 )

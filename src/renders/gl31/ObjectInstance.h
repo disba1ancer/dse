@@ -10,9 +10,7 @@
 
 #include "scn/Object.h"
 
-namespace dse {
-namespace subsys {
-namespace gl31_impl {
+namespace dse::renders::gl31 {
 
 class ObjectInstance {
 	scn::Object* object;
@@ -26,8 +24,6 @@ public:
 	ObjectInstance& operator=(ObjectInstance &&other) = default;
 };
 
-} /* namespace gl31_impl */
-} /* namespace subsys */
-} /* namespace dse */
+} /* namespace dse::renders::gl31 */
 
 #endif /* SUBSYS_GL31_IMPL_OBJECTINSTANCE_H_ */

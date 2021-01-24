@@ -9,8 +9,7 @@
 #define SWAL_ERROR_H
 
 #include "win_headers.h"
-#include <wchar.h>
-#include <comdef.h>
+//#include <wchar.h>
 #include <exception>
 #include <string>
 #include <memory>
@@ -19,83 +18,105 @@
 #include "strconv.h"
 
 namespace swal {
+enum class win32_errc : DWORD {};
+enum class com_errc : HRESULT {};
+}
+namespace std {
+template <> struct is_error_code_enum<swal::win32_errc> : true_type {};
+template <> struct is_error_code_enum<swal::com_errc> : true_type {};
+}
 
-class error : public std::exception {
+namespace swal {
+
+inline tstring get_error_string(DWORD error) {
+	constexpr std::size_t resultStringMaxSize = 512;
+	TCHAR wStr[resultStringMaxSize];
+	auto wSize = FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_MAX_WIDTH_MASK, nullptr, error, 0, wStr, resultStringMaxSize, nullptr);
+	return tstring(wStr, wSize);
+}
+
+class win32_category : public std::error_category {
+	win32_category() = default;
 public:
-
-	template <typename T>
-	static T throw_or_result(T result) {
-		if (!result) throw error(GetLastError());
-		return result;
+	const char* name() const noexcept override {
+		return "Win32 error";
 	}
-
-	template <typename T, typename F>
-	static typename std::remove_reference<F>::type throw_or_result(T result, DWORD(*chk)(F)) {
-		DWORD err = chk(result);
-		if (err != ERROR_SUCCESS) throw error(err);
-		return result;
+	std::string message(int condition) const override {
+		return swal::fromTString(get_error_string(DWORD(condition)));
 	}
-
-	template <typename T, typename F>
-	static T throw_or_result(T result, const F& chk) {
-		DWORD err = chk(result);
-		if (err != ERROR_SUCCESS) throw error(err);
-		return result;
+	static const win32_category& instance() {
+		static win32_category instance;
+		return instance;
 	}
+};
 
-	static void throw_last_error() {
+class com_category : public std::error_category {
+	com_category() = default;
+public:
+	const char* name() const noexcept override {
+		return "COM error";
+	}
+	std::string message(int condition) const override {
+		return swal::fromTString(_com_error(HRESULT(condition)).ErrorMessage());
+	}
+	static const com_category& instance() {
+		static com_category instance;
+		return instance;
+	}
+};
+
+inline std::error_code make_error_code(win32_errc err) {
+	return { int(DWORD(err)), win32_category::instance() };
+}
+
+inline std::error_code make_error_code(com_errc err) {
+	return { int(HRESULT(err)), com_category::instance() };
+}
+
+template <typename T>
+T winapi_call(T result) {
+	if (!result) {
 		auto err = GetLastError();
-		if (err != ERROR_SUCCESS) throw error(err);
+		throw std::system_error(win32_errc(err));
 	}
+	return result;
+}
 
-	static tstring get_error_string(DWORD error) {
-		constexpr std::size_t resultStringMaxSize = 512;
-		TCHAR wStr[resultStringMaxSize];
-		auto wSize = FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_MAX_WIDTH_MASK, nullptr, error, 0, wStr, resultStringMaxSize, nullptr);
-		return tstring(wStr, wSize);
+template <typename T, typename F>
+typename std::remove_reference<F>::type winapi_call(T result, DWORD(*chk)(F)) {
+	DWORD err = chk(result);
+	if (err != ERROR_SUCCESS) {
+		throw std::system_error(win32_errc(err));
 	}
+	return result;
+}
 
-	error(DWORD error) noexcept : m_error(error), errStr(std::make_shared<std::u8string>(u8fromTString(get_error_string(error)))) {}
-
-	virtual const char* what() const noexcept override {
-		return reinterpret_cast<const char*>(errStr->c_str());
+template <typename T, typename F>
+T winapi_call(T result, const F& chk) {
+	DWORD err = chk(result);
+	if (err != ERROR_SUCCESS) {
+		throw std::system_error(win32_errc(err));
 	}
+	return result;
+}
 
-	DWORD get() {
-		return m_error;
+inline HRESULT com_call(HRESULT result) {
+	if (FAILED(result)) {
+		throw std::system_error(com_errc(result));
 	}
-private:
-	DWORD m_error;
-	std::shared_ptr<std::u8string> errStr;
-};
+	return result;
+}
 
-class com_error : public std::exception {
-public:
+inline auto last_error() -> std::error_code {
+	return win32_errc(GetLastError());
+}
 
-	static HRESULT throw_or_result(HRESULT result) {
-		if (FAILED(result)) throw com_error(result);
-		return result;
+inline void throw_last_error() {
+	auto err = last_error();
+	if (err) {
+		throw err;
 	}
-
-	/*template <typename F>
-	static HRESULT throw_or_result(HRESULT result, const F& chk) {
-		if (!chk(result)) throw com_error(result);
-		return result;
-	}*/
-
-	com_error(HRESULT error) noexcept : error(error), errStr(std::make_shared<std::u8string>(u8fromTString(_com_error(error).ErrorMessage()))) {}
-
-	virtual const char* what() const noexcept override {
-		return reinterpret_cast<const char*>(errStr->c_str());
-	}
-
-	HRESULT get() {
-		return error;
-	}
-private:
-	HRESULT error;
-	std::shared_ptr<std::u8string> errStr;
-};
+}
 
 inline DWORD GetMessage_error_check(BOOL result) {
 	return ((result != -1) ? ERROR_SUCCESS : GetLastError());

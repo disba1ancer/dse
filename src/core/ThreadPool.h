@@ -134,7 +134,7 @@ public:
 		return { pool };
 	}
 	void return_void() {}
-	void unhandled_exception() {}
+	void unhandled_exception() { std::terminate(); }
 	std::suspend_always final_suspend() {
 		return {};
 	}

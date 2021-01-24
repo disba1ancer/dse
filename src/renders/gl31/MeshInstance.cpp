@@ -10,9 +10,7 @@
 #include "binds.h"
 #include <vector>
 
-namespace dse {
-namespace subsys {
-namespace gl31_impl {
+namespace dse::renders::gl31 {
 
 MeshInstance::MeshInstance(scn::IMesh* mesh) : mesh(mesh), lastVersion(0), vao(0), vbo(0), ibo(0) {
 	if (!mesh) {
@@ -42,9 +40,9 @@ bool MeshInstance::isReady() {
 				submeshRanges[i] = mesh->getSubmeshRange(i);
 			}
 		}
-		vao = gl::VAO();
-		vbo = gl::VertexBuffer();
-		ibo = gl::ElementBuffer();
+		vao = glwrp::VAO();
+		vbo = glwrp::VertexBuffer();
+		ibo = glwrp::ElementBuffer();
 		mesh->loadVerticesRange(vertexData.data(), 0, vertCount);
 		mesh->loadElementsRange(elementData.data(), 0, elemCount);
 		glBufferData(GL_ARRAY_BUFFER, vertCount * sizeof(scn::IMesh::vertex), vertexData.data(), GL_STATIC_DRAW);
@@ -62,15 +60,15 @@ bool MeshInstance::isReady() {
 	return true;
 }
 
-gl::VAO& MeshInstance::getVAO() {
+glwrp::VAO& MeshInstance::getVAO() {
 	return vao;
 }
 
-gl::VertexBuffer& MeshInstance::getVBO() {
+glwrp::VertexBuffer& MeshInstance::getVBO() {
 	return vbo;
 }
 
-gl::ElementBuffer& MeshInstance::getIBO() {
+glwrp::ElementBuffer& MeshInstance::getIBO() {
 	return ibo;
 }
 
@@ -82,6 +80,4 @@ scn::IMesh::submesh_range MeshInstance::getSubmeshRange(size_t n) {
 	return submeshRanges[n];
 }
 
-} /* namespace gl31_impl */
-} /* namespace subsys */
-} /* namespace dse */
+} /* namespace dse::renders::gl31 */

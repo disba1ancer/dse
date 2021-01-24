@@ -7,7 +7,7 @@ const char* win32_category::name() const noexcept {
 }
 
 std::string win32_category::message(int condition) const {
-	return swal::fromTString(swal::error::get_error_string(DWORD(condition)));
+	return swal::fromTString(swal::get_error_string(DWORD(condition)));
 }
 
 std::error_condition win32_category::default_error_condition([[maybe_unused]] int code) const noexcept {
@@ -26,6 +26,10 @@ std::error_condition win32_category::default_error_condition([[maybe_unused]] in
 win32_category& win32_category::instance() {
 	static win32_category instance;
 	return instance;
+}
+
+std::error_code make_error_code(win32_errc err) {
+	return { int(err), win32_category::instance() };
 }
 
 } // namespace dse::core

@@ -7,15 +7,11 @@
 
 #include "ObjectInstance.h"
 
-namespace dse {
-namespace subsys {
-namespace gl31_impl {
+namespace dse::renders::gl31 {
 
 ObjectInstance::ObjectInstance() {
 	// TODO Auto-generated constructor stub
 
 }
 
-} /* namespace gl31_impl */
-} /* namespace subsys */
-} /* namespace dse */
+} /* namespace dse::renders::gl31 */

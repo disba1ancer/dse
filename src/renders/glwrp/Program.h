@@ -10,9 +10,7 @@
 
 #include "Shader.h"
 
-namespace dse {
-namespace subsys {
-namespace gl {
+namespace dse::renders::glwrp {
 
 class Program : TrvMvOnlyRes<GLuint, true> {
 public:
@@ -44,8 +42,6 @@ public:
 	}
 };
 
-} /* namespace gl */
-} /* namespace subsys */
-} /* namespace dse */
+} /* namespace dse::renders::glwrp */
 
 #endif /* SUBSYS_GL_PROGRAM_H_ */

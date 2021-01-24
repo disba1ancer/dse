@@ -7,9 +7,7 @@
 
 #include "shaders.h"
 
-namespace dse {
-namespace subsys {
-namespace gl31_impl {
+namespace dse::renders::gl31 {
 
 const char fbVertexShader[] = R"glsl(
 in vec3 pos;
@@ -137,6 +135,4 @@ void main() {
 }
 )glsl";
 
-}
-}
-}
+} // dse::renders::gl31

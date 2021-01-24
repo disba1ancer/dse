@@ -14,32 +14,33 @@
 namespace swal {
 
 template <typename T>
-struct enable_enum_bitwise {
-	static constexpr bool value = false;
-};
+struct enable_enum_bitwise : std::false_type {};
+
+template <typename T>
+constexpr auto enable_enum_bitwise_v = enable_enum_bitwise<T>::value;
 
 template <typename Enum>
-typename std::enable_if<swal::enable_enum_bitwise<Enum>::value, Enum>::type operator|(Enum enum1, Enum enum2) {
+Enum operator|(Enum enum1, Enum enum2) requires swal::enable_enum_bitwise_v<Enum> {
 	return static_cast<Enum>(static_cast<typename std::underlying_type<Enum>::type>(enum1) | static_cast<typename std::underlying_type<Enum>::type>(enum2));
 }
 
 template <typename Enum>
-typename std::enable_if<swal::enable_enum_bitwise<Enum>::value, Enum>::type operator&(Enum enum1, Enum enum2) {
+Enum operator&(Enum enum1, Enum enum2) requires swal::enable_enum_bitwise_v<Enum> {
 	return static_cast<Enum>(static_cast<typename std::underlying_type<Enum>::type>(enum1) & static_cast<typename std::underlying_type<Enum>::type>(enum2));
 }
 
 template <typename Enum>
-typename std::enable_if<swal::enable_enum_bitwise<Enum>::value, Enum&>::type operator|=(Enum& enum1, Enum enum2) {
+Enum operator|=(Enum& enum1, Enum enum2) requires swal::enable_enum_bitwise_v<Enum> {
 	return enum1 = enum1 | enum2;
 }
 
 template <typename Enum>
-typename std::enable_if<swal::enable_enum_bitwise<Enum>::value, Enum&>::type operator&=(Enum& enum1, Enum enum2) {
+Enum operator&=(Enum& enum1, Enum enum2) requires swal::enable_enum_bitwise_v<Enum> {
 	return enum1 = enum1 & enum2;
 }
 
 template <typename Enum>
-typename std::enable_if<swal::enable_enum_bitwise<Enum>::value, Enum&>::type operator~(Enum& enum1) {
+Enum operator~(Enum& enum1) requires swal::enable_enum_bitwise_v<Enum> {
 	return static_cast<Enum>(~static_cast<typename std::underlying_type<Enum>::type>(enum1));
 }
 

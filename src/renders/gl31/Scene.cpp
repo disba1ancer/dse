@@ -7,13 +7,9 @@
 
 #include "Scene.h"
 
-namespace dse {
-namespace subsys {
-namespace gl31_impl {
+namespace dse::renders::gl31 {
 
 Scene::Scene(scn::Scene* scene) : scene(scene) {
 }
 
-} /* namespace gl31_impl */
-} /* namespace subsys */
-} /* namespace dse */
+} /* namespace dse::renders::gl31 */

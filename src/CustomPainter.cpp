@@ -12,10 +12,17 @@
 #include "util/functional.h"
 #include "CustomPainter.h"
 
+namespace {
+auto getWindowHandle(dse::os::Window* window) -> swal::Wnd {
+	return window->getSysData().hWnd;
+}
+}
+
 using dse::util::from_method;
 
 void CustomPainter::paint(dse::os::WndEvtDt data) {
-	auto dc = swal::PaintDC::BeginPaint(data.hWnd);
+	auto wnd = swal::Wnd(data.hWnd);
+	auto dc = wnd.BeginPaint();
 	RECT rc;
 	rc.top = 8;
 	rc.left = 8;
@@ -29,6 +36,7 @@ CustomPainter::CustomPainter(dse::os::Window &wnd) : wnd(&wnd),
 }
 
 void CustomPainter::invalidate() {
-	InvalidateRect(wnd->getSysData().hWnd, nullptr, FALSE);
-	UpdateWindow(wnd->getSysData().hWnd);
+	auto wnd = getWindowHandle(this->wnd);
+	wnd.InvalidateRect(false);
+	wnd.UpdateWindow();
 }

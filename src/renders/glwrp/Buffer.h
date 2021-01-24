@@ -11,9 +11,7 @@
 #include "gl.h"
 #include "TrvMvOnlyRes.h"
 
-namespace dse {
-namespace subsys {
-namespace gl {
+namespace dse::renders::glwrp {
 
 class Buffer : TrvMvOnlyRes<GLuint, true> {
 protected:
@@ -51,8 +49,6 @@ public:
 typedef TargetBuffer<GL_ELEMENT_ARRAY_BUFFER> ElementBuffer;
 typedef TargetBuffer<GL_ARRAY_BUFFER> VertexBuffer;
 
-} /* namespace gl */
-} /* namespace subsys */
-} /* namespace dse */
+} /* namespace dse::renders::glwrp */
 
 #endif /* SUBSYS_GL_BUFFER_H_ */

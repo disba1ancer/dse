@@ -10,9 +10,7 @@
 
 #include "scn/Scene.h"
 
-namespace dse {
-namespace subsys {
-namespace gl31_impl {
+namespace dse::renders::gl31 {
 
 class Scene {
 	scn::Scene* scene;
@@ -25,8 +23,6 @@ public:
 	Scene& operator=(Scene &&other) = default;
 };
 
-} /* namespace gl31_impl */
-} /* namespace subsys */
-} /* namespace dse */
+} /* namespace dse::renders::gl31 */
 
 #endif /* SUBSYS_GL31_IMPL_SCENE_H_ */
