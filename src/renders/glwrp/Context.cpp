@@ -23,10 +23,10 @@ namespace {
 #ifdef _WIN32
 const int pixelFormatAtributes[] =
 {
-	WGL_DRAW_TO_WINDOW_ARB, GL_TRUE,
-	WGL_SUPPORT_OPENGL_ARB, GL_TRUE,
+	WGL_DRAW_TO_WINDOW_ARB, TRUE,
+	WGL_SUPPORT_OPENGL_ARB, TRUE,
 	WGL_ACCELERATION_ARB, WGL_FULL_ACCELERATION_ARB,
-	WGL_DOUBLE_BUFFER_ARB, GL_TRUE,
+	WGL_DOUBLE_BUFFER_ARB, TRUE,
 	WGL_PIXEL_TYPE_ARB, WGL_TYPE_RGBA_ARB,
 	WGL_COLOR_BITS_ARB, 32,
 	WGL_DEPTH_BITS_ARB, 24,
@@ -77,6 +77,7 @@ Context::ContextOwner::ContextOwner(HGLRC glrc) noexcept : TrvMvOnlyRes(glrc) {}
 Context::ContextOwner::~ContextOwner() { wglDeleteContext(resource); }
 
 thread_local HGLRC Context::currentContext = 0;
+thread_local HDC Context::currentContextDC = 0;
 
 Context::Context(os::Window& wnd, ContextVersion ver, ContextFlags flags) : dc(swal::Wnd(wnd.getSysData().hWnd).GetDC()) {
 	if (ver == ContextVersion::legacy) {
@@ -95,10 +96,16 @@ Context::Context(os::Window& wnd, ContextVersion ver, ContextFlags flags) : dc(s
 		glrc = makeContext(dc, ver, flags);
 		MakeCurrent();
 	}
+	[[maybe_unused]] static bool init = [](){
+		glbinding::initialize(getProcAddress, false);
+		return true;
+	}();
 }
 
 Context::~Context() {
-	wglDeleteContext(glrc);
+	if (currentContext == glrc) {
+		MakeCurrentEmpty();
+	}
 }
 
 void Context::SwapBuffers() {
@@ -153,11 +160,23 @@ Context::ContextOwner Context::makeContext(swal::WindowDC &dc, ContextVersion ve
 
 void Context::MakeCurrent(os::Window &wnd) {
 	dc = swal::Wnd(wnd.getSysData().hWnd).GetDC();
-	wglMakeCurrent(dc, glrc);
+	MakeCurrent();
 }
 
 void Context::MakeCurrent() {
-	wglMakeCurrent(dc, glrc);
+	if (currentContext != glrc || currentContextDC != dc) {
+		swal::winapi_call(wglMakeCurrent(dc, glrc));
+		currentContext = glrc;
+		currentContextDC = dc;
+		glbinding::useContext(glbinding::ContextHandle(HGLRC(glrc)));
+	}
+}
+
+void Context::MakeCurrentEmpty() {
+	currentContext = 0;
+	currentContextDC = 0;
+	wglMakeCurrent(0, 0);
+	glbinding::useContext(0);
 }
 #endif
 

@@ -136,6 +136,7 @@ configure_file(config/dse_config.h.in config/dse_config.h)
 
 find_package(Threads REQUIRED)
 find_package(OpenGL REQUIRED)
+find_package(glbinding REQUIRED)
 add_subdirectory(swal)
 
 # Target  core
@@ -151,7 +152,7 @@ target_include_directories(core PUBLIC
     src
 )
 target_compile_options(core PRIVATE ${DSE_CXX_FLAGS})
-target_link_libraries(core OpenGL::GL Threads::Threads)
+target_link_libraries(core OpenGL::GL Threads::Threads glbinding::glbinding)
 if (${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
     target_link_libraries(core dwmapi swal::swal)
 endif()

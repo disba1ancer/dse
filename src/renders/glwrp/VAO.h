@@ -8,6 +8,7 @@
 #ifndef SUBSYS_GL_VAO_H_
 #define SUBSYS_GL_VAO_H_
 
+#include <glbinding/gl/functions.h>
 #include "gl.h"
 #include "TrvMvOnlyRes.h"
 

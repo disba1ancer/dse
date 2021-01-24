@@ -8,9 +8,11 @@
 #ifndef SUBSYS_GL_SHADER_H_
 #define SUBSYS_GL_SHADER_H_
 
-#include "gl.h"
 #include <string>
 #include <exception>
+#include <glbinding/gl/enum.h>
+#include <glbinding/gl/functions.h>
+#include "gl.h"
 #include "TrvMvOnlyRes.h"
 
 namespace dse::renders::glwrp {
@@ -50,7 +52,7 @@ public:
 	}
 };
 
-template <unsigned long type>
+template <gl::GLenum type>
 class ConcreteShader : public Shader {
 public:
 	ConcreteShader() noexcept : Shader(glCreateShader(type)) {}

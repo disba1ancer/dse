@@ -29,6 +29,8 @@
 
 namespace dse::renders {
 
+using namespace gl;
+
 class RenderOpenGL31_impl {
 	os::Window* wnd;
 	notifier::connection<os::Window::PaintHandler> paintCon;

@@ -56,6 +56,8 @@ ThreadPool thrPool;
 int main(int argc, char* argv[]) {
 	Window window;
 	RenderOpenGL31 render(window);
+	window.show();
+	setMouseCursorPosWndRel(window.size() / 2, window);
 	auto root = [&window, &render, argc, argv]([[maybe_unused]] ThreadPool& pool) -> dse::core::pool_task {
 		File file(thrPool, u8"test.txt", OpenMode::READ);
 		std::byte buf[4096];
@@ -67,8 +69,6 @@ int main(int argc, char* argv[]) {
 		}
 		std::fflush(stdout);
 
-		setMouseCursorPosWndRel(window.size() / 2, window);
-		window.show();
 		Camera cam;
 		Scene scene;
 		Cube cubeMesh;

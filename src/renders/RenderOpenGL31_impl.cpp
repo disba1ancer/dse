@@ -5,14 +5,15 @@
  *      Author: disba1ancer
  */
 
+#include <array>
+#include <cstdio>
+#include <glbinding/gl/gl.h>
+#include "RenderOpenGL31_impl.h"
 #include "os/win32.h"
 #include "os/WindowData_win32.h"
-#include "RenderOpenGL31_impl.h"
 #include "glwrp/gl.h"
 #include "gl31/shaders.h"
 #include "gl31/binds.h"
-#include <array>
-#include <cstdio>
 #include "scn/Material.h"
 
 namespace {

@@ -8,6 +8,8 @@
 #ifndef SUBSYS_GL_TEXTURE_H_
 #define SUBSYS_GL_TEXTURE_H_
 
+#include <glbinding/gl/enum.h>
+#include <glbinding/gl/functions.h>
 #include "gl.h"
 #include "TrvMvOnlyRes.h"
 
@@ -33,7 +35,7 @@ public:
 	}
 };
 
-template <GLenum target>
+template <gl::GLenum target>
 class TargetTexture: public Texture {
 public:
 	TargetTexture(bool nonempty = true) noexcept : Texture(nonempty) {

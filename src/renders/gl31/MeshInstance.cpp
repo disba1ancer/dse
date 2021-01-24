@@ -5,10 +5,13 @@
  *      Author: disba1ancer
  */
 
-#include "MeshInstance.h"
 #include <algorithm>
-#include "binds.h"
 #include <vector>
+#include <glbinding/gl/gl.h>
+#include "MeshInstance.h"
+#include "binds.h"
+
+using namespace gl;
 
 namespace dse::renders::gl31 {
 

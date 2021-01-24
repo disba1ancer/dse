@@ -8,6 +8,8 @@
 #ifndef SUBSYS_GL_PROGRAM_H_
 #define SUBSYS_GL_PROGRAM_H_
 
+#include <glbinding/gl/enum.h>
+#include <glbinding/gl/functions.h>
 #include "Shader.h"
 
 namespace dse::renders::glwrp {
