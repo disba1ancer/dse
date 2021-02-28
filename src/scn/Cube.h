@@ -8,12 +8,12 @@
 #ifndef SCN_CUBE_H_
 #define SCN_CUBE_H_
 
-#include "IMeshStore.h"
+#include "IMesh.h"
 
 namespace dse {
 namespace scn {
 
-class Cube final : public IMeshStore {
+class Cube final : public IMesh {
 public:
 	Cube() = default;
 	~Cube() = default;

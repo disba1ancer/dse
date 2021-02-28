@@ -60,7 +60,6 @@ set (DSE_CORE_SRCS
     src/scn/Cube.cpp
     src/scn/Cube.h
     src/scn/IMesh.h
-    src/scn/IMeshStore.h
     src/scn/Material.cpp
     src/scn/Material.h
     src/scn/Object.cpp
@@ -110,8 +109,8 @@ set (DSE_CORE_SRCS
     src/util/ProxyIterator.h
     src/util/functional.h
     src/util/future.h
-    generated/dse_shaders/gl31.cpp
-    generated/dse_shaders/gl31.h
+    ${PROJECT_BINARY_DIR}/generated/dse_shaders/gl31.cpp
+    ${PROJECT_BINARY_DIR}/generated/dse_shaders/gl31.h
 )
 
 set(DSE_BUILT_IN_SHADERS
@@ -124,19 +123,19 @@ set(DSE_BUILT_IN_SHADERS
 add_custom_command(OUTPUT
     generated/dse_shaders/gl31.cpp
 COMMAND
-    cmake
+    ${CMAKE_COMMAND}
     -DOUTPUT=${PROJECT_BINARY_DIR}/generated/dse_shaders/gl31
     -P src/renders/gl31/pack_shaders_to_cpp.cmake ${DSE_BUILT_IN_SHADERS}
 DEPENDS
-    ${DSE_BUILT_IN_SHADERS}
     src/renders/gl31/pack_shaders_to_cpp.cmake
+    ${DSE_BUILT_IN_SHADERS}
 BYPRODUCTS
     generated/dse_shaders/gl31.h
 WORKING_DIRECTORY
     ${PROJECT_SOURCE_DIR}
 )
 
-set(DSE_CORE_SRCS ${DSE_CORE_SRCS} ${DSE_BUILT_IN_SHADERS})
+add_custom_target(shaders SOURCES src/renders/gl31/pack_shaders_to_cpp.cmake ${DSE_BUILT_IN_SHADERS})
 
 set(DSE_DEMO_WIN32_SRCS
     rc_win32/icon.ico

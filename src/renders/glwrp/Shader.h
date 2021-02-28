@@ -29,7 +29,7 @@ public:
 	Shader& operator=(Shader&&) = default;
 	void loadSource(const char *source) noexcept {
 		const char *src[] = {
-				"#version 140",
+				"#version 140\n",
 				source
 		};
 		glShaderSource(resource, sizeof(src) / sizeof(src[0]), src, nullptr);

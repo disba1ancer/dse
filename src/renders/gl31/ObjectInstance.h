@@ -12,16 +12,12 @@
 
 namespace dse::renders::gl31 {
 
-class ObjectInstance {
+class MeshInstance;
+
+struct ObjectInstance {
 	scn::Object* object;
+	MeshInstance* mesh;
 	unsigned lastVersion;
-public:
-	ObjectInstance();
-	~ObjectInstance() = default;
-	ObjectInstance(const ObjectInstance &other) = default;
-	ObjectInstance(ObjectInstance &&other) = default;
-	ObjectInstance& operator=(const ObjectInstance &other) = default;
-	ObjectInstance& operator=(ObjectInstance &&other) = default;
 };
 
 } /* namespace dse::renders::gl31 */

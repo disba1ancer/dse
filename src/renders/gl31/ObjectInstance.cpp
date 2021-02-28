@@ -9,9 +9,9 @@
 
 namespace dse::renders::gl31 {
 
-ObjectInstance::ObjectInstance() {
-	// TODO Auto-generated constructor stub
+//ObjectInstance::ObjectInstance() {
+//	// TODO Auto-generated constructor stub
 
-}
+//}
 
 } /* namespace dse::renders::gl31 */

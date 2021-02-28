@@ -18,8 +18,8 @@ namespace dse {
 namespace scn {
 
 enum class SceneChangeEventType {
-	OBJECT_CREATE,
-	OBJECT_DESTROY
+	ObjectCreate,
+	ObjectDestroy
 };
 
 class Scene {
@@ -29,14 +29,9 @@ class Scene {
 public:
 	typedef util::ProxyIterator<decltype(m_objects), Scene> ObjectsIterator;
 	Scene();
-	~Scene() = default;
-	Scene(const Scene &other) = default;
-	Scene(Scene &&other) = default;
-	Scene& operator=(const Scene &other) = default;
-	Scene& operator=(Scene &&other) = default;
 	ObjectsIterator objectsBegin();
 	ObjectsIterator objectsEnd();
-	typedef util::ProxyContainer<&objectsBegin, &objectsEnd> Objects;
+	typedef util::ProxyContainer<&Scene::objectsBegin, &Scene::objectsEnd> Objects;
 	Objects objects();
 	ObjectsIterator createObject(Object &&object = Object());
 	ObjectsIterator createObject(const Object &object);

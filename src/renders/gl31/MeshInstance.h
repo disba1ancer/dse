@@ -25,11 +25,6 @@ class MeshInstance {
 	glwrp::ElementBuffer ibo;
 public:
 	MeshInstance(scn::IMesh* mesh);
-	~MeshInstance() = default;
-	MeshInstance(const MeshInstance &other) = default;
-	MeshInstance(MeshInstance &&other) = default;
-	MeshInstance& operator=(const MeshInstance &other) = default;
-	MeshInstance& operator=(MeshInstance &&other) = default;
 	scn::IMesh* getMesh() const;
 	bool isReady();
 	glwrp::VAO& getVAO();

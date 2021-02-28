@@ -14,8 +14,7 @@
 #include "glwrp/Context.h"
 #include "glwrp/VAO.h"
 #include "util/ExecutionThread.h"
-#include <vector>
-#include <list>
+#include <map>
 #include "gl31/MeshInstance.h"
 #include "gl31/ObjectInstance.h"
 #include "glwrp/Program.h"
@@ -37,8 +36,8 @@ class RenderOpenGL31_impl {
 	glwrp::VAO vao;
 	scn::Scene* scene = nullptr;
 	scn::Camera* camera = nullptr;
-	std::vector<gl31::ObjectInstance> objects;
-	std::list<gl31::MeshInstance> meshes;
+	std::map<scn::Object*, gl31::ObjectInstance> objects;
+	std::map<scn::IMesh*, gl31::MeshInstance> meshes;
 	glwrp::VertexBuffer vbo;
 	glwrp::Program fragmentProg;
 	glwrp::Program drawProg;
@@ -72,6 +71,10 @@ class RenderOpenGL31_impl {
 	void prepareShaders();
 	void resumeRenderCaller();
 	void rebuildViewport(int width, int height);
+	void setupCamera();
+	void drawPostprocess();
+	void fillInstances();
+	auto getMeshInstance(scn::IMesh* mesh) -> gl31::MeshInstance*;
 public:
 	RenderOpenGL31_impl(os::Window& wnd);
 	~RenderOpenGL31_impl() = default;

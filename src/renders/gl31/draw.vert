@@ -16,6 +16,7 @@ out vec3 fTang;
 out vec3 fBitang;
 out vec2 fUV;
 out vec3 fragPos;
+out vec3 lightDir;
 
 vec4 qmul(vec4 a, vec4 b) {
     return vec4(
@@ -41,6 +42,7 @@ void main() {
     pos = vecrotquat(pos, qRot);
     pos += iPos - camPos;
     pos = vecrotquat(pos, qinv(camQRot));
+    lightDir = vecrotquat(normalize(vec3(1.f, 1.f, -1.f)), qinv(camQRot));
     fragPos = pos;
     gl_Position = vec4(pos.x * invAspRatio, pos.y, pos.z * perspArgs.x + perspArgs.y, pos.z * perspArgs.z + perspArgs.w);
 }

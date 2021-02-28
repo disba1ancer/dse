@@ -33,58 +33,23 @@ dse::math::vec3 fullscreenPrimitive[] = { {-1.f, -1.f, -1.f}, {3.f, -1.f, -1.f},
 
 namespace dse::renders {
 
-void RenderOpenGL31_impl::onPaint(os::WndEvtDt) {
-#ifdef DSE_MULTISAMPLE
-	glBindFramebuffer(GL_FRAMEBUFFER, renderFBOMSAA);
-#else
-	glBindFramebuffer(GL_FRAMEBUFFER, renderFBO);
-#endif
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	glUseProgram(drawProg);
-	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-	if (camera) {
-		glUniform3fv(camPosUniform, 1, camera->getPos().elements);
-		glUniform4fv(camQRotUniform, 1, camera->getRot().elements);
-		auto zNear = camera->getNear(),
-				zFar = camera->getFar();
-		if (zNear == zFar) {
-			zNear = 1.f;
-			zFar = 131072.f;
-		}
-		float c = -1.f / camera->getFocalLength();
-		float a = c / (zFar - zNear);
-		float b = 2 * zFar * zNear * a;
-		a *= (zFar + zNear);
-		glUniform4f(perspArgsUniform, a, b, c, 0.f);
-		if (scene) {
-			for (scn::Object& object : (scene->objects())) {
-				if (object.getMesh()) {
-					auto mesh = reinterpret_cast<gl31::MeshInstance*>(object.getMesh()->getCustomValue(this));
-					if (!mesh) {
-						mesh = &*meshes.emplace(meshes.end(), object.getMesh());
-						mesh->getMesh()->storeCustomValue(this, mesh);
-					}
-					if (mesh->isReady()) {
-						glBindVertexArray(mesh->getVAO());
-						glUniform3fv(posUniform, 1, (object.getPos()).elements);
-						glUniform4fv(qRotUniform, 1, (object.getQRot()).elements);
-						glUniform3fv(scaleUniform, 1, (object.getScale()).elements);
-						auto subCount = mesh->getSubmeshCount();
-						for (std::size_t i = 0; i < subCount; ++i) {
-							auto [start, count] = mesh->getSubmeshRange(i);
-							auto material = object.getMaterial(i);
-							if (material) {
-								glUniform4fv(matColorUnifrom, 1, (material->getColor()).elements);
-							} else {
-								glUniform4f(matColorUnifrom, 1.f, 0.f, 1.f, 0.f);
-							}
-							glDrawElements(GL_TRIANGLES, count, GL_UNSIGNED_INT, reinterpret_cast<void*>(start));
-						}
-					}
-				}
-			}
-		}
+void RenderOpenGL31_impl::setupCamera() {
+	glUniform3fv(camPosUniform, 1, camera->getPos().elements);
+	glUniform4fv(camQRotUniform, 1, camera->getRot().elements);
+	auto zNear = camera->getNear(),
+			zFar = camera->getFar();
+	if (zNear == zFar) {
+		zNear = 1.f;
+		zFar = 131072.f;
 	}
+	float c = -1.f / camera->getFocalLength();
+	float a = c / (zFar - zNear);
+	float b = 2 * zFar * zNear * a;
+	a *= (zFar + zNear);
+	glUniform4f(perspArgsUniform, a, b, c, 0.f);
+}
+
+void dse::renders::RenderOpenGL31_impl::drawPostprocess() {
 #ifdef DSE_MULTISAMPLE
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, renderFBO);
 	glBlitFramebuffer(0, 0, width, height, 0, 0, width, height, GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT, GL_NEAREST);
@@ -101,6 +66,76 @@ void RenderOpenGL31_impl::onPaint(os::WndEvtDt) {
 	glBindVertexArray(vao);
 	glDrawArrays(GL_TRIANGLES, 0, 3);
 	glDepthFunc(GL_LESS);
+}
+
+void RenderOpenGL31_impl::fillInstances() {
+	for (auto& object : (scene->objects())) {
+		auto& objInst = objects[&object];
+		objInst.object = &object;
+		objInst.mesh = getMeshInstance(object.getMesh());
+		objInst.lastVersion = object.getVersion();
+	}
+}
+
+auto RenderOpenGL31_impl::getMeshInstance(scn::IMesh* mesh) -> gl31::MeshInstance* {
+	if (mesh) {
+		auto i = meshes.find(mesh);
+		if (i == meshes.end()) {
+			auto [i, r] = meshes.insert(std::make_pair(mesh, gl31::MeshInstance(mesh)));
+					if (!r) {
+				throw std::bad_alloc();
+			} else {
+				return &(i->second);
+			}
+		} else {
+			return &(i->second);
+		}
+	}
+	return nullptr;
+}
+
+void RenderOpenGL31_impl::onPaint(os::WndEvtDt) {
+#ifdef DSE_MULTISAMPLE
+	glBindFramebuffer(GL_FRAMEBUFFER, renderFBOMSAA);
+#else
+	glBindFramebuffer(GL_FRAMEBUFFER, renderFBO);
+#endif
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glUseProgram(drawProg);
+	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	if (camera) {
+		setupCamera();
+		if (scene) {
+			if (objects.empty()) {
+				fillInstances();
+			}
+			for (auto& [obj, inst] : objects) {
+				if (inst.mesh) {
+					auto& mesh = inst.mesh;
+					if (mesh) {
+						if (mesh->isReady()) {
+							glBindVertexArray(mesh->getVAO());
+							glUniform3fv(posUniform, 1, (obj->getPos()).elements);
+							glUniform4fv(qRotUniform, 1, (obj->getQRot()).elements);
+							glUniform3fv(scaleUniform, 1, (obj->getScale()).elements);
+							auto subCount = mesh->getSubmeshCount();
+							for (std::size_t i = 0; i < subCount; ++i) {
+								auto [start, count] = mesh->getSubmeshRange(i);
+								auto material = obj->getMaterial(i);
+								if (material) {
+									glUniform4fv(matColorUnifrom, 1, (material->getColor()).elements);
+								} else {
+									glUniform4f(matColorUnifrom, 1.f, 0.f, 1.f, 0.f);
+								}
+								glDrawElements(GL_TRIANGLES, count, GL_UNSIGNED_INT, reinterpret_cast<void*>(start));
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	drawPostprocess();
 	context.SwapBuffers();
 	swal::Wnd(wnd->getSysData().hWnd).ValidateRect();
 	if (requested.exchange(false, std::memory_order_relaxed)) {
@@ -187,6 +222,7 @@ auto RenderOpenGL31_impl::render() -> util::future<void> {
 
 void RenderOpenGL31_impl::setScene(dse::scn::Scene &scene) {
 	this->scene = &scene;
+	objects.clear();
 }
 
 void RenderOpenGL31_impl::prepareShaders() {

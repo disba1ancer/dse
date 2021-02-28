@@ -22,13 +22,13 @@ Scene::ObjectsIterator Scene::objectsEnd() {
 
 Scene::ObjectsIterator Scene::createObject(Object &&object) {
 	ObjectsIterator it(m_objects.emplace(m_objects.end(), std::move(object)));
-	changeSubscribers.notify(SceneChangeEventType::OBJECT_CREATE, &(*it));
+	changeSubscribers.notify(SceneChangeEventType::ObjectCreate, &(*it));
 	return it;
 }
 
 Scene::ObjectsIterator Scene::createObject(const Object &object) {
 	ObjectsIterator it(m_objects.emplace(m_objects.end(), object));
-	changeSubscribers.notify(SceneChangeEventType::OBJECT_CREATE, &(*it));
+	changeSubscribers.notify(SceneChangeEventType::ObjectCreate, &(*it));
 	return it;
 }
 
@@ -37,7 +37,7 @@ Scene::Objects Scene::objects() {
 }
 
 void Scene::destroyObject(ObjectsIterator it) {
-	changeSubscribers.notify(SceneChangeEventType::OBJECT_DESTROY, &(*it));
+	changeSubscribers.notify(SceneChangeEventType::ObjectDestroy, &(*it));
 	m_objects.erase(it.it);
 }
 

@@ -37,8 +37,6 @@ public:
 	virtual void loadElementsRange(std::uint32_t* elementBuffer, std::uint32_t startElement, std::uint32_t elementCount) = 0;
 	virtual submesh_range getSubmeshRange(std::uint32_t submeshIndex) = 0;
 	virtual unsigned getVersion() = 0;
-	virtual void storeCustomValue(void *owner, void *value) = 0;
-	virtual void * getCustomValue(void *owner) = 0;
 protected:
 	~IMesh() = default;
 };
