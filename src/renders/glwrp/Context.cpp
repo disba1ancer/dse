@@ -29,6 +29,7 @@ const int pixelFormatAtributes[] =
 	WGL_DOUBLE_BUFFER_ARB, TRUE,
 	WGL_PIXEL_TYPE_ARB, WGL_TYPE_RGBA_ARB,
 	WGL_COLOR_BITS_ARB, 32,
+	WGL_ALPHA_BITS_ARB, 8,
 	WGL_DEPTH_BITS_ARB, 24,
 	WGL_STENCIL_BITS_ARB, 8,
 	0, 0
@@ -119,7 +120,12 @@ void Context::enableVSync(int val) {
 }
 
 auto Context::getProcAddress(const char *name) -> void(*)() {
-	return reinterpret_cast<void(*)()>(wglGetProcAddress(name));
+	auto f = reinterpret_cast<void(*)()>(wglGetProcAddress(name));
+	if (!f) {
+		auto glh = swal::winapi_call(GetModuleHandle(TEXT("opengl32.dll")));
+		f = reinterpret_cast<void(*)()>(swal::winapi_call(GetProcAddress(glh, name)));
+	}
+	return f;
 }
 
 Context::ContextOwner Context::makeLegacyContext(swal::WindowDC& dc) {
@@ -129,6 +135,7 @@ Context::ContextOwner Context::makeLegacyContext(swal::WindowDC& dc) {
 	pfd.dwFlags = PFD_DOUBLEBUFFER | PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL;
 	pfd.iPixelType = PFD_TYPE_RGBA;
 	pfd.cColorBits = 32;
+	pfd.cAlphaBits = 8;
 	pfd.cDepthBits = 24;
 	pfd.cStencilBits = 8;
 	pfd.iLayerType = PFD_MAIN_PLANE;

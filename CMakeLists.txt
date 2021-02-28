@@ -87,8 +87,6 @@ set (DSE_CORE_SRCS
     src/renders/gl31/ObjectInstance.h
     src/renders/gl31/Scene.cpp
     src/renders/gl31/Scene.h
-    src/renders/gl31/shaders.cpp
-    src/renders/gl31/shaders.h
     src/renders/RenderOpenGL31.cpp
     src/renders/RenderOpenGL31.h
     src/renders/RenderOpenGL31_impl.cpp
@@ -112,7 +110,33 @@ set (DSE_CORE_SRCS
     src/util/ProxyIterator.h
     src/util/functional.h
     src/util/future.h
+    generated/dse_shaders/gl31.cpp
+    generated/dse_shaders/gl31.h
 )
+
+set(DSE_BUILT_IN_SHADERS
+    src/renders/gl31/draw.frag
+    src/renders/gl31/draw.vert
+    src/renders/gl31/post.frag
+    src/renders/gl31/post.vert
+)
+
+add_custom_command(OUTPUT
+    generated/dse_shaders/gl31.cpp
+COMMAND
+    cmake
+    -DOUTPUT=${PROJECT_BINARY_DIR}/generated/dse_shaders/gl31
+    -P src/renders/gl31/pack_shaders_to_cpp.cmake ${DSE_BUILT_IN_SHADERS}
+DEPENDS
+    ${DSE_BUILT_IN_SHADERS}
+    src/renders/gl31/pack_shaders_to_cpp.cmake
+BYPRODUCTS
+    generated/dse_shaders/gl31.h
+WORKING_DIRECTORY
+    ${PROJECT_SOURCE_DIR}
+)
+
+set(DSE_CORE_SRCS ${DSE_CORE_SRCS} ${DSE_BUILT_IN_SHADERS})
 
 set(DSE_DEMO_WIN32_SRCS
     rc_win32/icon.ico
@@ -132,7 +156,7 @@ if (${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
     option(DSE_SUBSYSTEM_WINDOWS "Use windows subsystem while linking executable binary" ON)
 endif()
 
-configure_file(config/dse_config.h.in config/dse_config.h)
+configure_file(config/dse_config.h.in generated/dse_config.h)
 
 find_package(Threads REQUIRED)
 find_package(OpenGL REQUIRED)
@@ -146,7 +170,7 @@ add_library(core OBJECT
 )
 target_include_directories(core PRIVATE
     include_gl
-    ${PROJECT_BINARY_DIR}/config
+    ${PROJECT_BINARY_DIR}/generated
 )
 target_include_directories(core PUBLIC
     src
@@ -163,7 +187,7 @@ add_executable(demo
     $<$<PLATFORM_ID:Windows>:${DSE_DEMO_WIN32_SRCS}>
 )
 target_include_directories(demo PRIVATE
-    ${PROJECT_BINARY_DIR}/config
+    ${PROJECT_BINARY_DIR}/generated
 )
 target_compile_options(demo PRIVATE ${DSE_CXX_FLAGS})
 target_link_options(demo PRIVATE

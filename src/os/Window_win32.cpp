@@ -9,33 +9,21 @@
 #include <exception>
 #include "WindowEventData_win32.h"
 #include "PaintEventData_win32.h"
+#include "core/errors_win32.h"
 
 namespace dse {
 namespace os {
 
-Window_win32::Window_win32() : wnd(makeWindowClsID(), static_cast<HINSTANCE>(GetModuleHandle(0)), this) {
-//	if (wnd == 0) {
-//		throw std::runtime_error("Fail to create window");
-//	}
+Window_win32::Window_win32() try : wnd(makeWindowClsID(), static_cast<HINSTANCE>(GetModuleHandle(0)), this) {
+} catch (std::system_error& e) {
+    if (e.code().category() == swal::win32_category::instance()) {
+        throw std::system_error(core::win32_errc(e.code().value()));
+    } else {
+        throw;
+    }
 }
 
-//LRESULT CALLBACK Window_win32::staticWndProc(HWND hWnd, UINT message, WPARAM wParam,
-//		LPARAM lParam) {
-//	Window_win32 *aThis;
-//	if (message == WM_NCCREATE){
-//		aThis = reinterpret_cast<Window_win32*>(reinterpret_cast<CREATESTRUCT*>(lParam)->lpCreateParams);
-//		SetWindowLongPtr(hWnd, GWLP_THIS, reinterpret_cast<LONG_PTR>(aThis));
-//	} else {
-//		aThis = reinterpret_cast<Window_win32*>(GetWindowLongPtr(hWnd, GWLP_THIS));
-//		if (!aThis) {
-//			return DefWindowProc(hWnd, message, wParam, lParam);
-//		}
-//	}
-//	return aThis->wndProc(hWnd, message, wParam, lParam);
-//}
-
-LRESULT Window_win32::wndProc(HWND hWnd, UINT message, WPARAM wParam,
-		LPARAM lParam) {
+LRESULT Window_win32::wndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) noexcept {
 	WindowEventData_win32 d{hWnd, message, wParam, lParam};
 	switch(message) {
 	case WM_PAINT: return onPaint(d);

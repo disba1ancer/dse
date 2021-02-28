@@ -86,7 +86,7 @@ enum class SetPointerModes {
 };
 
 template <typename T>
-class FileHandle {
+class FileOps {
 private:
 	const Handle& handle() const {
 		return static_cast<const T&>(*this);
@@ -105,12 +105,12 @@ public:
 		winapi_call(::GetOverlappedResult(handle(), &ovl, &result, wait));
 		return result;
 	}
-	DWORD Write(LPVOID buffer, DWORD size) const {
+	DWORD Write(LPCVOID buffer, DWORD size) const {
 		DWORD result;
 		winapi_call(WriteFile(handle(), buffer, size, &result, nullptr));
 		return result;
 	}
-	void Write(LPVOID buffer, DWORD size, OVERLAPPED& ovl) const {
+	void Write(LPCVOID buffer, DWORD size, OVERLAPPED& ovl) const {
 		winapi_call(WriteFile(handle(), buffer, size, nullptr, &ovl));
 	}
 	LARGE_INTEGER SetPointerEx(LARGE_INTEGER dist, SetPointerModes mode = SetPointerModes::Begin) const {
@@ -157,11 +157,16 @@ enum class CreateMode {
 	TruncateExisting = TRUNCATE_EXISTING
 };
 
-class File : public Handle, public FileHandle<File>, public OwnableHandle<File>, public WaitableHandle<File> {
+class FileHandle : public Handle, public FileOps<FileHandle> {
 public:
-	File() noexcept : Handle(INVALID_HANDLE_VALUE) {}
+	FileHandle(HANDLE handle) : Handle(handle) {}
+};
+
+class File : public FileHandle, public OwnableHandle<File>, public WaitableHandle<File> {
+public:
+	File() noexcept : FileHandle(INVALID_HANDLE_VALUE) {}
 	File(tstring_view filename, DWORD access, ShareMode shareMode, SECURITY_ATTRIBUTES* secattrs, CreateMode createMode, DWORD flags, HANDLE tmplt)
-		: Handle(winapi_call(CreateFile(filename.data(), access, static_cast<DWORD>(shareMode), secattrs, static_cast<DWORD>(createMode), flags, tmplt), CreateFile_error_check)) {}
+		: FileHandle(winapi_call(CreateFile(filename.data(), access, static_cast<DWORD>(shareMode), secattrs, static_cast<DWORD>(createMode), flags, tmplt), CreateFile_error_check)) {}
 	File(tstring_view filename, DWORD access, ShareMode shareMode, SECURITY_ATTRIBUTES& secattrs, CreateMode createMode, DWORD flags, const Handle& tmplt)
 		: File(filename.data(), access, shareMode, &secattrs, createMode, flags, tmplt) {}
 	File(tstring_view filename, DWORD access, ShareMode shareMode, SECURITY_ATTRIBUTES& secattrs, CreateMode createMode, DWORD flags)

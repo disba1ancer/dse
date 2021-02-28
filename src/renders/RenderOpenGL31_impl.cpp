@@ -7,12 +7,12 @@
 
 #include <array>
 #include <cstdio>
-#include <glbinding/gl/gl.h>
+#include <glbinding/gl31/gl.h>
 #include "RenderOpenGL31_impl.h"
 #include "os/win32.h"
 #include "os/WindowData_win32.h"
 #include "glwrp/gl.h"
-#include "gl31/shaders.h"
+#include "dse_shaders/gl31.h"
 #include "gl31/binds.h"
 #include "scn/Material.h"
 
@@ -27,6 +27,7 @@ auto reqGLExts = std::to_array<ReqGLExt, 2>({
 });
 using dse::renders::gl31::InputParams;
 using dse::renders::gl31::OutputParams;
+using namespace gl31;
 dse::math::vec3 fullscreenPrimitive[] = { {-1.f, -1.f, -1.f}, {3.f, -1.f, -1.f}, {-1.f, 3.f, -1.f} };
 }
 
@@ -133,6 +134,9 @@ RenderOpenGL31_impl::RenderOpenGL31_impl(os::Window& wnd) : wnd(&wnd),
 		throw std::runtime_error("Required extensions is not available");
 	}
 
+	auto size = wnd.size();
+	rebuildViewport(size[0], size[1]);
+
 	context.enableVSync(1);
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_CULL_FACE);
@@ -151,8 +155,8 @@ RenderOpenGL31_impl::RenderOpenGL31_impl(os::Window& wnd) : wnd(&wnd),
 	glClearColor(.03125f, .03125f, .0625f, 1.f);
 }
 
-void RenderOpenGL31_impl::onResize(os::WndEvtDt, int width, int height,
-		os::WindowShowCommand) {
+void RenderOpenGL31_impl::rebuildViewport(int width, int height)
+{
 	this->width = width;
 	this->height = height;
 	glViewport(0, 0, width, height);
@@ -163,6 +167,11 @@ void RenderOpenGL31_impl::onResize(os::WndEvtDt, int width, int height,
 	glUniform1f(invAspRatioUniform, float(height) / float(width));
 
 	rebuildSrgbFrameBuffer();
+}
+
+void RenderOpenGL31_impl::onResize(os::WndEvtDt, int width, int height,
+		os::WindowShowCommand) {
+	rebuildViewport(width, height);
 }
 
 auto RenderOpenGL31_impl::render() -> util::future<void> {
@@ -183,11 +192,11 @@ void RenderOpenGL31_impl::setScene(dse::scn::Scene &scene) {
 void RenderOpenGL31_impl::prepareShaders() {
 	glwrp::VertexShader vertShader;
 	fragmentProg.attachShader(vertShader);
-	vertShader.loadSource(gl31::fbVertexShader);
+	vertShader.loadSource(gl31::shader_post_vert);
 	vertShader.compile();
 	glwrp::FragmentShader fragShader;
 	fragmentProg.attachShader(fragShader);
-	fragShader.loadSource(gl31::fbFragmentShader);
+	fragShader.loadSource(gl31::shader_post_frag);
 	fragShader.compile();
 	glBindAttribLocation(fragmentProg, 0, "pos");
 	glBindFragDataLocation(fragmentProg, 0, "fragColor");
@@ -202,11 +211,11 @@ void RenderOpenGL31_impl::prepareShaders() {
 
 	vertShader = glwrp::VertexShader();
 	drawProg.attachShader(vertShader);
-	vertShader.loadSource(gl31::drawVertexShader);
+	vertShader.loadSource(gl31::shader_draw_vert);
 	vertShader.compile();
 	fragShader = glwrp::FragmentShader();
 	drawProg.attachShader(fragShader);
-	fragShader.loadSource(gl31::drawFragmentShader);
+	fragShader.loadSource(gl31::shader_draw_frag);
 	fragShader.compile();
 	glBindAttribLocation(drawProg, InputParams::Position, "vPos");
 	glBindAttribLocation(drawProg, InputParams::Normal, "vNorm");

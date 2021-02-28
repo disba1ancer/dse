@@ -144,7 +144,10 @@ int main(int argc, char* argv[]) {
 			auto rslt = norm(qmul({axe1[X], axe1[Y], axe1[Z], cs1}, cube1->getQRot()));
 			cube1->setQRot(rslt);
 			//cube2->setQRot(rslt);
-			if (spd != 0.f || sdspd != 0.f) cam.setPos(cam.getPos() + vecrotquat(norm(vec3{0.f, 0.f, -1.f} * spd + vec3{1.f, 0.f, 0.f} * sdspd), cam.getRot()) );
+			if (spd != 0.f || sdspd != 0.f) {
+				auto movement = norm(vec3{0.f, 0.f, -1.f} * spd + vec3{1.f, 0.f, 0.f} * sdspd);
+				cam.setPos(cam.getPos() + vecrotquat(movement, cam.getRot()));
+			}
 			//renderTask.reset(make_handler<&RenderOpenGL31::renderTask>(render));
 			//renderTask.then([&stepTask]{ thrPool.schedule(stepTask); });
 			//thrPool.schedule(renderTask);

@@ -29,8 +29,6 @@
 
 namespace dse::renders {
 
-using namespace gl;
-
 class RenderOpenGL31_impl {
 	os::Window* wnd;
 	notifier::connection<os::Window::PaintHandler> paintCon;
@@ -44,18 +42,18 @@ class RenderOpenGL31_impl {
 	glwrp::VertexBuffer vbo;
 	glwrp::Program fragmentProg;
 	glwrp::Program drawProg;
-	GLint fragWindowSizeUniform = 0;
-	GLint fragColorBufferUniform = 0;
-	GLint fragDepthBufferUniform = 0;
-	GLint drawWindowSizeUniform = 0;
-	GLint posUniform = 0;
-	GLint qRotUniform = 0;
-	GLint scaleUniform = 0;
-	GLint camPosUniform = 0;
-	GLint camQRotUniform = 0;
-	GLint matColorUnifrom = 0;
-	GLint invAspRatioUniform = 0;
-	GLint perspArgsUniform = 0;
+	gl::GLint fragWindowSizeUniform = 0;
+	gl::GLint fragColorBufferUniform = 0;
+	gl::GLint fragDepthBufferUniform = 0;
+	gl::GLint drawWindowSizeUniform = 0;
+	gl::GLint posUniform = 0;
+	gl::GLint qRotUniform = 0;
+	gl::GLint scaleUniform = 0;
+	gl::GLint camPosUniform = 0;
+	gl::GLint camQRotUniform = 0;
+	gl::GLint matColorUnifrom = 0;
+	gl::GLint invAspRatioUniform = 0;
+	gl::GLint perspArgsUniform = 0;
 	unsigned width = 1, height = 1;
 #ifdef DSE_MULTISAMPLE
 	glwrp::FrameBuffer renderFBOMSAA = 0;
@@ -73,6 +71,7 @@ class RenderOpenGL31_impl {
 	void rebuildSrgbFrameBuffer();
 	void prepareShaders();
 	void resumeRenderCaller();
+	void rebuildViewport(int width, int height);
 public:
 	RenderOpenGL31_impl(os::Window& wnd);
 	~RenderOpenGL31_impl() = default;

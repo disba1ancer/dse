@@ -129,7 +129,7 @@ public:
 };
 
 template <typename Cls, LRESULT(Cls::*mth)(HWND, UINT, WPARAM, LPARAM) = nullptr, int clsPtrIdx = GWLP_USERDATA>
-LRESULT CALLBACK ClsWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
+LRESULT CALLBACK ClsWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) noexcept {
 	Cls* obj;
 	Wnd wnd(hWnd);
 	if (message == WM_NCCREATE) {

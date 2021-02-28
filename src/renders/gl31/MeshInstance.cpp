@@ -7,11 +7,11 @@
 
 #include <algorithm>
 #include <vector>
-#include <glbinding/gl/gl.h>
+#include <glbinding/gl31/gl.h>
 #include "MeshInstance.h"
 #include "binds.h"
 
-using namespace gl;
+using namespace gl31;
 
 namespace dse::renders::gl31 {
 

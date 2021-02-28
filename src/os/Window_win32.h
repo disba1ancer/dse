@@ -18,17 +18,17 @@ namespace dse {
 namespace os {
 
 class Window_win32 {
-	swal::Window wnd;
 	notifier::notifier<Window::CloseHandler> closeSubscribers;
 	notifier::notifier<Window::ResizeHandler> resizeSubscribers;
 	notifier::notifier<Window::KeyHandler> keySubscribers;
 	notifier::notifier<Window::PaintHandler> paintSubscribers;
 	notifier::notifier<Window::MouseMoveHandler> mouseMoveSubscribers;
+	swal::Window wnd;
 
 	static constexpr int GWLP_THIS = 0;
 
 	//static LRESULT CALLBACK staticWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
-	LRESULT wndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
+	LRESULT wndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) noexcept;
 	static ATOM makeWindowClsID();
 	LRESULT onPaint(WindowEventData_win32& d);
 	LRESULT onClose(WindowEventData_win32& d);
