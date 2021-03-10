@@ -24,7 +24,9 @@ enum class SceneChangeEventType {
 
 class Scene {
 	std::list<Object> m_objects;
+public:
 	typedef void(ChangeEvent)(SceneChangeEventType, Object*);
+private:
 	notifier::notifier<ChangeEvent> changeSubscribers;
 public:
 	typedef util::ProxyIterator<decltype(m_objects), Scene> ObjectsIterator;

@@ -75,7 +75,11 @@ GLVersion getVersion(ContextVersion ver) {
 #ifdef _WIN32
 Context::ContextOwner::ContextOwner() noexcept : TrvMvOnlyRes(0) {}
 Context::ContextOwner::ContextOwner(HGLRC glrc) noexcept : TrvMvOnlyRes(glrc) {}
-Context::ContextOwner::~ContextOwner() { wglDeleteContext(resource); }
+Context::ContextOwner::~ContextOwner() {
+	if (resource) {
+		swal::winapi_call(wglDeleteContext(resource));
+	}
+}
 
 thread_local HGLRC Context::currentContext = 0;
 thread_local HDC Context::currentContextDC = 0;
@@ -83,7 +87,6 @@ thread_local HDC Context::currentContextDC = 0;
 Context::Context(os::Window& wnd, ContextVersion ver, ContextFlags flags) : dc(swal::Wnd(wnd.getSysData().hWnd).GetDC()) {
 	if (ver == ContextVersion::legacy) {
 		glrc = makeLegacyContext(dc);
-		MakeCurrent();
 	} else {
 		if (!(wglChoosePixelFormatARB && wglCreateContextAttribsARB)) {
 			os::Window wnd;
@@ -95,12 +98,9 @@ Context::Context(os::Window& wnd, ContextVersion ver, ContextFlags flags) : dc(s
 			wglCreateContextAttribsARB.load();
 		}
 		glrc = makeContext(dc, ver, flags);
-		MakeCurrent();
 	}
-	[[maybe_unused]] static bool init = [](){
-		glbinding::initialize(getProcAddress, false);
-		return true;
-	}();
+	glbinding::initialize(glbinding::ContextHandle(HGLRC(glrc)), &Context::getProcAddress, false, false);
+	MakeCurrent();
 }
 
 Context::~Context() {
@@ -122,8 +122,8 @@ void Context::enableVSync(int val) {
 auto Context::getProcAddress(const char *name) -> void(*)() {
 	auto f = reinterpret_cast<void(*)()>(wglGetProcAddress(name));
 	if (!f) {
-		auto glh = swal::winapi_call(GetModuleHandle(TEXT("opengl32.dll")));
-		f = reinterpret_cast<void(*)()>(swal::winapi_call(GetProcAddress(glh, name)));
+		static auto glh = swal::winapi_call(GetModuleHandle(TEXT("opengl32.dll")));
+		f = reinterpret_cast<void(*)()>(GetProcAddress(glh, name));
 	}
 	return f;
 }
@@ -183,7 +183,6 @@ void Context::MakeCurrentEmpty() {
 	currentContext = 0;
 	currentContextDC = 0;
 	wglMakeCurrent(0, 0);
-	glbinding::useContext(0);
 }
 #endif
 

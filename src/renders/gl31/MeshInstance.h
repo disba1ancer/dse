@@ -23,18 +23,21 @@ class MeshInstance {
 	glwrp::VAO vao;
 	glwrp::VertexBuffer vbo;
 	glwrp::ElementBuffer ibo;
+	std::size_t refcount;
 public:
 	MeshInstance(scn::IMesh* mesh);
-	scn::IMesh* getMesh() const;
+	auto getMesh() const -> scn::IMesh*;
 	bool isReady();
-	glwrp::VAO& getVAO();
-	glwrp::VertexBuffer& getVBO();
-	glwrp::ElementBuffer& getIBO();
-	std::size_t getSubmeshCount();
-	scn::IMesh::submesh_range getSubmeshRange(size_t n);
-	class Comparator : std::less<scn::IMesh*> {
-	public:
-		bool operator()(const MeshInstance& lm, const MeshInstance& rm) const;
+	auto getVAO() -> glwrp::VAO&;
+	auto getVBO() -> glwrp::VertexBuffer&;
+	auto getIBO() -> glwrp::ElementBuffer&;
+	auto getSubmeshCount() -> std::size_t;
+	auto getSubmeshRange(size_t n) -> scn::IMesh::submesh_range;
+	void AddRef();
+	void Release();
+	bool isNoRefs();
+	struct Deleter {
+		void operator()(MeshInstance* inst) const;
 	};
 };
 

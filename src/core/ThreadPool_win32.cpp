@@ -196,11 +196,11 @@ void ThreadPool_win32::handleIO(ThreadPool_win32::ThreadData &thrData) {
 			auto asyncHandle = static_cast<IAsyncIO*>(ioCompletion.ovl);
 			asyncHandle->complete(ioCompletion.bytesTransfered, ioCompletion.error);
 		}
+		ioCompletion = iocp.GetQueuedCompletionStatus(0);
 		if (
 			ioCompletion.ovl == nullptr &&
 			ioCompletion.error == WAIT_TIMEOUT
 		) break;
-		ioCompletion = iocp.GetQueuedCompletionStatus(0);
 	}
 }
 

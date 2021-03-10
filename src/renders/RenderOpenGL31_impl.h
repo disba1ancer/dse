@@ -32,12 +32,13 @@ class RenderOpenGL31_impl {
 	os::Window* wnd;
 	notifier::connection<os::Window::PaintHandler> paintCon;
 	notifier::connection<os::Window::ResizeHandler> sizeCon;
+	notifier::connection<scn::Scene::ChangeEvent> scnChangeCon;
 	glwrp::Context context;
 	glwrp::VAO vao;
 	scn::Scene* scene = nullptr;
 	scn::Camera* camera = nullptr;
-	std::map<scn::Object*, gl31::ObjectInstance> objects;
 	std::map<scn::IMesh*, gl31::MeshInstance> meshes;
+	std::map<scn::Object*, gl31::ObjectInstance> objects;
 	glwrp::VertexBuffer vbo;
 	glwrp::Program fragmentProg;
 	glwrp::Program drawProg;
@@ -64,6 +65,7 @@ class RenderOpenGL31_impl {
 	glwrp::TextureRectangle depthBuffer = 0;
 	util::promise<void> pr;
 	std::atomic_bool requested = false;
+	std::map<scn::IMesh*, gl31::MeshInstance>::iterator cleanupPointer;
 
 	void onPaint(os::WndEvtDt);
 	void onResize(os::WndEvtDt, int width, int height, os::WindowShowCommand);
@@ -75,6 +77,9 @@ class RenderOpenGL31_impl {
 	void drawPostprocess();
 	void fillInstances();
 	auto getMeshInstance(scn::IMesh* mesh) -> gl31::MeshInstance*;
+	void reloadInstance(gl31::ObjectInstance& objInst);
+	void onSceneChanged(scn::SceneChangeEventType act, scn::Object* obj);
+	void cleanupMeshes();
 public:
 	RenderOpenGL31_impl(os::Window& wnd);
 	~RenderOpenGL31_impl() = default;

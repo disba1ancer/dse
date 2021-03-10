@@ -16,10 +16,10 @@
 namespace dse {
 namespace notifier {
 
-template <typename T, typename Lockable = threadutils::emptylock>
+template <typename T, typename Lockable = util::emptylock>
 class connection;
 
-template <typename T, typename Lockable = threadutils::emptylock>
+template <typename T, typename Lockable = util::emptylock>
 class notifier;
 
 template <typename R, typename ... Args, typename Lockable>
@@ -100,13 +100,18 @@ public:
 
 	connection& operator =(connection&& con) {
 		swap(*this, con);
+		return *this;
 	}
 
 	static void swap(connection& a, connection& b) {
 		std::swap(a.notif, b.notif);
 		std::swap(a.it, b.it);
-		a.it->first = &a;
-		b.it->first = &b;
+		if (a.notif) {
+			a.it->first = &a;
+		}
+		if (b.notif) {
+			b.it->first = &b;
+		}
 	}
 
 	~connection() {

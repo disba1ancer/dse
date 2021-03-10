@@ -151,6 +151,7 @@ set (DSE_DEMO_SRCS
 
 set(DSE_MULTISAMPLE "" CACHE STRING "Enable multisampling with specified level")
 set(DSE_THREADPOOL_TASKS_PER_IO "16" CACHE STRING "Task count per IO and UI handling")
+set(DSE_RENDER_GC_OBJECTS_PER_FRAME "16" CACHE STRING "Object count wil be checked for deletion every frame")
 if (${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
     option(DSE_SUBSYSTEM_WINDOWS "Use windows subsystem while linking executable binary" ON)
 endif()

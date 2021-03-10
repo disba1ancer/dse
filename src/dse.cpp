@@ -25,6 +25,7 @@
 #include <algorithm>
 #include "core/ThreadPool.h"
 #include "core/File.h"
+#include "util/scope_exit.h"
 
 #include <swal/error.h>
 #include <string>
@@ -51,7 +52,7 @@ using dse::core::File;
 using dse::core::OpenMode;
 
 //ExecutionThread mainThread;
-ThreadPool thrPool;
+ThreadPool thrPool(1);
 
 int main(int argc, char* argv[]) {
 	Window window;

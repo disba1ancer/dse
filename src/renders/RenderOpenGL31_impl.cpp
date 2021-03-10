@@ -8,6 +8,7 @@
 #include <array>
 #include <cstdio>
 #include <glbinding/gl31/gl.h>
+#include <glbinding/gl31ext/gl.h>
 #include "RenderOpenGL31_impl.h"
 #include "os/win32.h"
 #include "os/WindowData_win32.h"
@@ -28,6 +29,7 @@ auto reqGLExts = std::to_array<ReqGLExt, 2>({
 using dse::renders::gl31::InputParams;
 using dse::renders::gl31::OutputParams;
 using namespace gl31;
+using namespace gl31ext;
 dse::math::vec3 fullscreenPrimitive[] = { {-1.f, -1.f, -1.f}, {3.f, -1.f, -1.f}, {-1.f, 3.f, -1.f} };
 }
 
@@ -68,28 +70,68 @@ void dse::renders::RenderOpenGL31_impl::drawPostprocess() {
 	glDepthFunc(GL_LESS);
 }
 
+void dse::renders::RenderOpenGL31_impl::reloadInstance(gl31::ObjectInstance& objInst) {
+	auto meshInst = objInst.mesh.get();
+	if (!meshInst || meshInst->getMesh() != objInst.object->getMesh()) {
+		auto mi = getMeshInstance(objInst.object->getMesh());
+		mi->AddRef();
+		objInst.mesh.reset(mi);
+	}
+	objInst.lastVersion = objInst.object->getVersion();
+}
+
+void RenderOpenGL31_impl::onSceneChanged(scn::SceneChangeEventType act, scn::Object* obj) {
+	switch (act) {
+		case decltype(act)::ObjectCreate: {
+			auto& inst = objects[obj];
+			inst.object = obj;
+			reloadInstance(inst);
+		} break;
+		case decltype(act)::ObjectDestroy: {
+			objects.erase(obj);
+		} break;
+	}
+}
+
+void RenderOpenGL31_impl::cleanupMeshes() {
+	auto end = meshes.end();
+	if (cleanupPointer == end) {
+		cleanupPointer = meshes.begin();
+	}
+	for (int i = 0; i < DSE_RENDER_GC_OBJECTS_PER_FRAME && cleanupPointer != end; ++i) {
+		if (cleanupPointer->second.isNoRefs()) {
+			meshes.erase(cleanupPointer++);
+		} else {
+			++cleanupPointer;
+		}
+	}
+}
+
 void RenderOpenGL31_impl::fillInstances() {
 	for (auto& object : (scene->objects())) {
 		auto& objInst = objects[&object];
 		objInst.object = &object;
-		objInst.mesh = getMeshInstance(object.getMesh());
-		objInst.lastVersion = object.getVersion();
+		reloadInstance(objInst);
 	}
+	scnChangeCon = scene->subscribeChangeEvent(util::from_method<&RenderOpenGL31_impl::onSceneChanged>(*this));
 }
 
 auto RenderOpenGL31_impl::getMeshInstance(scn::IMesh* mesh) -> gl31::MeshInstance* {
 	if (mesh) {
 		auto i = meshes.find(mesh);
 		if (i == meshes.end()) {
-			auto [i, r] = meshes.insert(std::make_pair(mesh, gl31::MeshInstance(mesh)));
-					if (!r) {
+			auto [i, r] = meshes.emplace(
+				std::piecewise_construct,
+				std::make_tuple(mesh),
+				std::make_tuple(mesh)
+			);
+			if (!r) {
 				throw std::bad_alloc();
 			} else {
 				return &(i->second);
 			}
-		} else {
-			return &(i->second);
 		}
+		return &(i->second);
 	}
 	return nullptr;
 }
@@ -110,6 +152,9 @@ void RenderOpenGL31_impl::onPaint(os::WndEvtDt) {
 				fillInstances();
 			}
 			for (auto& [obj, inst] : objects) {
+				if (inst.lastVersion != obj->getVersion()) {
+					reloadInstance(inst);
+				}
 				if (inst.mesh) {
 					auto& mesh = inst.mesh;
 					if (mesh) {
@@ -137,6 +182,7 @@ void RenderOpenGL31_impl::onPaint(os::WndEvtDt) {
 	}
 	drawPostprocess();
 	context.SwapBuffers();
+	cleanupMeshes();
 	swal::Wnd(wnd->getSysData().hWnd).ValidateRect();
 	if (requested.exchange(false, std::memory_order_relaxed)) {
 		auto pool = core::ThreadPool::getCurrentPool();
@@ -151,7 +197,8 @@ void RenderOpenGL31_impl::onPaint(os::WndEvtDt) {
 RenderOpenGL31_impl::RenderOpenGL31_impl(os::Window& wnd) : wnd(&wnd),
 		paintCon(wnd.subscribePaintEvent(util::from_method<&RenderOpenGL31_impl::onPaint>(*this))),
 		sizeCon(wnd.subscribeResizeEvent(util::from_method<&RenderOpenGL31_impl::onResize>(*this))),
-		context(wnd, glwrp::ContextVersion::gl31, glwrp::ContextFlags::Debug)
+		context(wnd, glwrp::ContextVersion::gl31, glwrp::ContextFlags::Debug),
+		cleanupPointer(meshes.end())
 {
 	GLint numExts;
 	unsigned availExtsNum = 0;
@@ -221,6 +268,7 @@ auto RenderOpenGL31_impl::render() -> util::future<void> {
 }
 
 void RenderOpenGL31_impl::setScene(dse::scn::Scene &scene) {
+	scnChangeCon.unsubscribe();
 	this->scene = &scene;
 	objects.clear();
 }

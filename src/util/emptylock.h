@@ -5,11 +5,10 @@
  *      Author: disba1ancer
  */
 
-#ifndef THREADUTILS_EMPTYLOCK_H_
-#define THREADUTILS_EMPTYLOCK_H_
+#ifndef UTIL_EMPTYLOCK_H_
+#define UTIL_EMPTYLOCK_H_
 
-namespace dse {
-namespace threadutils {
+namespace dse::util {
 
 class emptylock {
 public:
@@ -18,7 +17,6 @@ public:
 	void unlock() {}
 };
 
-} // namespace threadutils
-} // namespace dse
+} // namespace dse::util
 
 #endif /* THREADUTILS_EMPTYLOCK_H_ */

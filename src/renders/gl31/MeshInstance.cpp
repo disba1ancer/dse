@@ -15,17 +15,13 @@ using namespace gl31;
 
 namespace dse::renders::gl31 {
 
-MeshInstance::MeshInstance(scn::IMesh* mesh) : mesh(mesh), lastVersion(0), vao(0), vbo(0), ibo(0) {
+MeshInstance::MeshInstance(scn::IMesh* mesh) : mesh(mesh), lastVersion(0), vao(0), vbo(0), ibo(0), refcount(0) {
 	if (!mesh) {
 		std::runtime_error("Mesh can not be nullptr");
 	}
 }
 
-bool MeshInstance::Comparator::operator()(const MeshInstance& lm, const MeshInstance& rm) const {
-	return std::less<scn::IMesh*>::operator ()(lm.getMesh(), rm.getMesh());
-}
-
-scn::IMesh* MeshInstance::getMesh() const {
+auto MeshInstance::getMesh() const -> scn::IMesh* {
 	return mesh;
 }
 
@@ -63,24 +59,42 @@ bool MeshInstance::isReady() {
 	return true;
 }
 
-glwrp::VAO& MeshInstance::getVAO() {
+auto MeshInstance::getVAO() -> glwrp::VAO& {
 	return vao;
 }
 
-glwrp::VertexBuffer& MeshInstance::getVBO() {
+auto MeshInstance::getVBO() -> glwrp::VertexBuffer& {
 	return vbo;
 }
 
-glwrp::ElementBuffer& MeshInstance::getIBO() {
+auto MeshInstance::getIBO() -> glwrp::ElementBuffer& {
 	return ibo;
 }
 
-std::size_t MeshInstance::getSubmeshCount() {
+auto MeshInstance::getSubmeshCount() -> std::size_t {
 	return submeshRanges.size();
 }
 
-scn::IMesh::submesh_range MeshInstance::getSubmeshRange(size_t n) {
+auto MeshInstance::getSubmeshRange(size_t n) -> scn::IMesh::submesh_range {
 	return submeshRanges[n];
+}
+
+void MeshInstance::AddRef() {
+	++refcount;
+}
+
+void MeshInstance::Release() {
+	if (refcount) {
+		--refcount;
+	}
+}
+
+bool MeshInstance::isNoRefs() {
+	return refcount == 0 ;
+}
+
+void MeshInstance::Deleter::operator()(MeshInstance* inst) const {
+	inst->Release();
 }
 
 } /* namespace dse::renders::gl31 */

@@ -8,15 +8,15 @@
 #ifndef SUBSYS_GL31_IMPL_OBJECTINSTANCE_H_
 #define SUBSYS_GL31_IMPL_OBJECTINSTANCE_H_
 
+#include <memory>
 #include "scn/Object.h"
+#include "MeshInstance.h"
 
 namespace dse::renders::gl31 {
 
-class MeshInstance;
-
 struct ObjectInstance {
 	scn::Object* object;
-	MeshInstance* mesh;
+	std::unique_ptr<MeshInstance, MeshInstance::Deleter> mesh;
 	unsigned lastVersion;
 };
 
