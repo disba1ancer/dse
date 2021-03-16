@@ -8,283 +8,278 @@
 #ifndef VEC_H_
 #define VEC_H_
 
-namespace dse {
-namespace math {
+#include <cstddef>
+#include <type_traits>
+#include <concepts>
+#include <memory>
 
-enum VecComponents {
-	X,
-	Y,
-	Z,
-	W,
+namespace dse::math {
+
+template <typename value_t, std::size_t size>
+struct vec;
+
+namespace impl {
+
+template <typename value_t>
+concept no_cvref =
+	!std::is_reference_v<value_t> &&
+	!std::is_const_v<std::remove_reference_t<value_t>> &&
+	!std::is_volatile_v<std::remove_reference_t<value_t>>;
+
+template <typename value_t>
+concept ref_or_val =
+	std::is_lvalue_reference_v<value_t> ||
+	no_cvref<value_t>;
+
+template <typename>
+constexpr bool is_vector = false;
+
+template <typename type_t, std::size_t size>
+constexpr bool is_vector<vec<type_t, size>> = true;
+
+template <typename type_t>
+concept scalar_type = !is_vector<std::remove_cv_t<type_t>>;
+
+constexpr auto character_to_index(char ch) -> std::size_t {
+	return (ch - 'x') & 3;
+}
+
+} // namespace impl
+
+template <typename value_t, std::size_t size>
+requires(
+	!std::is_const_v<value_t> &&
+	!std::is_volatile_v<value_t> &&
+	!std::is_reference_v<value_t> &&
+	size > 1
+)
+struct vec<value_t, size> {
+	using value_type = value_t;
+	using reference_type = value_t&;
+	using const_reference_type = const value_t&;
+
+	value_t elements[size];
+
+	constexpr auto at_ptr(std::size_t index) -> value_t* { return elements + index; }
+	constexpr auto at_ptr(std::size_t index) const -> const value_t* { return elements + index; }
+	constexpr auto at(std::size_t index) -> reference_type { return elements[index]; }
+	constexpr auto at(std::size_t index) const -> const_reference_type { return elements[index]; }
+	constexpr auto operator[](std::size_t index) -> reference_type { return at(index); }
+	constexpr auto operator[](std::size_t index) const -> const_reference_type { return at(index); }
+private:
+	template <typename dst_value_t, std::size_t... seq>
+	requires(
+		!std::is_reference_v<dst_value_t> && !std::is_const_v<dst_value_t> && !std::is_volatile_v<dst_value_t>
+	)
+	constexpr auto cast_impl(std::index_sequence<seq...>) const -> vec<dst_value_t, size> {
+		return {static_cast<dst_value_t>(at(seq))...};
+	}
+public:
+	template <typename dst_value_t>
+	requires(
+		!std::is_reference_v<dst_value_t> && !std::is_const_v<dst_value_t> && !std::is_volatile_v<dst_value_t>
+	)
+	constexpr operator vec<dst_value_t, size>() const {
+		return cast_impl<dst_value_t>(std::make_index_sequence<size>{});
+	}
+private:
+	template <std::size_t... seq>
+	constexpr auto cast_impl(std::index_sequence<seq...>) const -> vec<const_reference_type, size> {
+		return {at_ptr(seq)...};
+	}
+public:
+	constexpr operator vec<const_reference_type, size>() const {
+		return cast_impl(std::make_index_sequence<size>{});
+	}
+private:
+	template <std::size_t... seq>
+	constexpr auto cast_impl(std::index_sequence<seq...>) -> vec<reference_type, size> {
+		return {at_ptr(seq)...};
+	}
+public:
+	constexpr operator vec<reference_type, size>() {
+		return cast_impl(std::make_index_sequence<size>{});
+	}
+private:
+	template <std::size_t swizzle_length, std::size_t... seq>
+	constexpr auto swizzle_impl(const char(&swizzle)[swizzle_length], std::index_sequence<seq...>) const
+		-> vec<const_reference_type, swizzle_length - 1>
+	{
+		return {at_ptr(impl::character_to_index(swizzle[seq]))...};
+	}
+public:
+	template <std::size_t swizzle_length>
+	requires(2 < swizzle_length && swizzle_length <= 5)
+	constexpr auto operator[](const char(&swizzle)[swizzle_length]) const
+		-> vec<const_reference_type, swizzle_length - 1>
+	{
+		return swizzle_impl(swizzle, std::make_index_sequence<swizzle_length - 1>{});
+	}
+private:
+	template <std::size_t swizzle_length, std::size_t... seq>
+	constexpr auto swizzle_impl(const char(&swizzle)[swizzle_length], std::index_sequence<seq...>)
+		-> vec<reference_type, swizzle_length - 1>
+	{
+		return {at_ptr(impl::character_to_index(swizzle[seq]))...};
+	}
+public:
+	template <std::size_t swizzle_length>
+	requires(2 < swizzle_length && swizzle_length <= 5)
+	constexpr auto operator[](const char(&swizzle)[swizzle_length]) -> vec<reference_type, swizzle_length - 1> {
+		return swizzle_impl(swizzle, std::make_index_sequence<swizzle_length - 1>{});
+	}
+
+	constexpr auto operator[](const char(&swizzle)[2]) const -> const_reference_type {
+		return at(impl::character_to_index(swizzle[0]));
+	}
+
+	constexpr auto operator[](const char(&swizzle)[2]) -> reference_type {
+		return at(impl::character_to_index(swizzle[0]));
+	}
+private:
+	template <typename T>
+	void assign_impl(const T& right) {
+		for (std::size_t i = 0; i < size; ++i) {
+			at(i) = right[i];
+		}
+	}
+public:
+//	auto operator=(const vec<value_type, size>& right) -> vec<value_type, size>&
+//	{
+//		assign_impl(right);
+//		return *this;
+//	}
+
+	auto operator=(const vec<reference_type, size>& right) -> vec<value_type, size>&
+	{
+		assign_impl(right);
+		return *this;
+	}
+
+	auto operator=(const vec<const_reference_type, size>& right) -> vec<value_type, size>&
+	{
+		assign_impl(right);
+		return *this;
+	}
+
+	constexpr auto x() -> reference_type requires(size >= 1) { return at(0); }
+	constexpr auto x() const -> const_reference_type requires(size >= 1) { return at(0); }
+	constexpr auto y() -> reference_type requires(size >= 2) { return at(1); }
+	constexpr auto y() const -> const_reference_type requires(size >= 2) { return at(1); }
+	constexpr auto z() -> reference_type requires(size >= 3) { return at(2); }
+	constexpr auto z() const -> const_reference_type requires(size >= 3) { return at(2); }
+	constexpr auto w() -> reference_type requires(size >= 4) { return at(3); }
+	constexpr auto w() const -> const_reference_type requires(size >= 4) { return at(3); }
 };
 
-template <typename type_t, unsigned size>
-struct alignas((size * sizeof(type_t) % 16) == 0 ? 16 : alignof(type_t)) vec {
+template <impl::scalar_type value_t, std::size_t size>
+struct vec<value_t&, size> {
+	using value_type = std::remove_cv_t<value_t>;
+	using reference_type = value_t&;
+	using const_reference_type = const value_t&;
 
-	type_t elements[size];
+	value_t* elements[size];
 
-	vec<type_t, size>& operator +=(const vec<type_t, size>& other);
-	vec<type_t, size>& operator -=(const vec<type_t, size>& other);
-	vec<type_t, size>& operator -=(const type_t& other);
-	vec<type_t, size>& operator *=(const vec<type_t, size>& other);
-	vec<type_t, size>& operator *=(const type_t& other);
-	vec<type_t, size>& operator /=(const vec<type_t, size>& other);
-	constexpr vec<type_t, size>& operator /=(const type_t& other);
-	vec<type_t, size>& negate();
-	vec<type_t, size> operator +(const vec<type_t, size>& other) const;
-	vec<type_t, size> operator -(const vec<type_t, size>& other) const;
-	vec<type_t, size> operator -(const type_t& other) const;
-	vec<type_t, size> operator *(const vec<type_t, size>& other) const;
-	vec<type_t, size> operator *(const type_t& other) const;
-	vec<type_t, size> operator /(const vec<type_t, size>& other) const;
-	constexpr vec<type_t, size> operator /(const type_t& other) const;
-	vec<type_t, size> operator -() const;
-	type_t& operator[](unsigned i);
-	const type_t& operator[](unsigned i) const;
-	bool operator !=(const vec<type_t, size>& other) const;
-	bool operator ==(const vec<type_t, size>& other) const;
-	template <typename type_to_t>
-	operator vec<type_to_t, size>() const;
+	constexpr auto at_ptr(std::size_t index) const -> value_t* { return elements[index]; }
+	constexpr auto at(std::size_t index) const -> reference_type { return *at_ptr(index); }
+	constexpr auto operator[](std::size_t index) const -> reference_type { return at(index); }
+private:
+	template <typename dst_value_t, std::size_t... seq>
+	requires(!std::is_reference_v<dst_value_t> && !std::is_const_v<dst_value_t> && !std::is_volatile_v<dst_value_t>)
+	constexpr auto cast_impl(std::index_sequence<seq...>) const -> vec<dst_value_t, size> {
+		return {static_cast<dst_value_t>(at(seq))...};
+	}
+public:
+	template <typename dst_value_t>
+	requires(!std::is_reference_v<dst_value_t> && !std::is_const_v<dst_value_t> && !std::is_volatile_v<dst_value_t>)
+	constexpr operator vec<dst_value_t, size>() const {
+		return cast_impl<dst_value_t>(std::make_index_sequence<size>{});
+	}
+private:
+	template <std::size_t... seq>
+	constexpr auto cast_impl_val(std::index_sequence<seq...>) const -> vec<value_type, size> {
+		return {at(seq)...};
+	}
+public:
+	constexpr operator vec<value_type, size>() const {
+		return cast_impl_val(std::make_index_sequence<size>{});
+	}
+private:
+	template <std::size_t... seq>
+	constexpr auto cast_impl_ref(std::index_sequence<seq...>) const -> vec<const_reference_type, size> {
+		return {at_ptr(seq)...};
+	}
+
+	constexpr operator vec<const_reference_type, size>() const {
+		return cast_impl_ref(std::make_index_sequence<size>{});
+	}
+private:
+	template <std::size_t swizzle_length, std::size_t... seq>
+	auto swizzle_impl(const char(&swizzle)[swizzle_length], std::index_sequence<seq...>) const
+		-> vec<reference_type, swizzle_length - 1>
+	{
+		return {at_ptr(impl::character_to_index(swizzle[seq]))...};
+	}
+public:
+	template <std::size_t swizzle_length>
+	requires(2 < swizzle_length && swizzle_length <= 5)
+	auto operator[](const char(&swizzle)[swizzle_length]) const -> vec<reference_type, swizzle_length - 1> {
+		return swizzle_impl(swizzle, std::make_index_sequence<swizzle_length - 1>{});
+	}
+
+	auto operator[](const char(&swizzle)[2]) const -> reference_type {
+		return at(impl::character_to_index(swizzle[0]));
+	}
+private:
+	template <typename T>
+	void assign_impl(const T& right) const requires (!std::is_const_v<value_t>) {
+		for (std::size_t i = 0; i < size; ++i) {
+			at(i) = right[i];
+		}
+	}
+public:
+	auto operator=(const vec<value_type, size>& right) const -> const vec<reference_type, size>&
+	requires (!std::is_const_v<value_t>)
+	{
+		assign_impl(right);
+		return *this;
+	}
+
+	auto operator=(const vec<value_type&, size>& right) const -> const vec<reference_type, size>&
+	requires (!std::is_const_v<value_t>)
+	{
+		assign_impl(right);
+		return *this;
+	}
+
+	auto operator=(const vec<const value_type&, size>& right) const -> const vec<reference_type, size>&
+	requires (!std::is_const_v<value_t>)
+	{
+		assign_impl(right);
+		return *this;
+	}
+
+    constexpr auto x() const -> reference_type requires(size >= 1) { return at(0); }
+    constexpr auto y() const -> reference_type requires(size >= 2) { return at(1); }
+    constexpr auto z() const -> reference_type requires(size >= 3) { return at(2); }
+    constexpr auto w() const -> reference_type requires(size >= 4) { return at(3); }
 };
 
-template <typename type_t, unsigned size>
-vec<type_t, size>& vec<type_t, size>::operator +=(const vec<type_t, size>& other) {
-	for (unsigned i = 0; i < size; ++i) {
-		elements[i] += other.elements[i];
-	}
-	return *this;
-}
+using uvec2 = vec<unsigned, 2>;
+using uvec3 = vec<unsigned, 3>;
+using uvec4 = vec<unsigned, 4>;
 
-template <typename type_t, unsigned size>
-vec<type_t, size>& vec<type_t, size>::operator -=(const vec<type_t, size>& other) {
-	for (unsigned i = 0; i < size; ++i) {
-		elements[i] -= other.elements[i];
-	}
-	return *this;
-}
+using ivec2 = vec<int, 2>;
+using ivec3 = vec<int, 3>;
+using ivec4 = vec<int, 4>;
 
-template <typename type_t, unsigned size>
-vec<type_t, size>& vec<type_t, size>::operator -=(const type_t& other) {
-	for (unsigned i = 0; i < size; ++i) {
-		elements[i] -= other;
-	}
-	return *this;
-}
+using vec2 = vec<float, 2>;
+using vec3 = vec<float, 3>;
+using vec4 = vec<float, 4>;
 
-template <typename type_t, unsigned size>
-vec<type_t, size>& vec<type_t, size>::operator *=(const vec<type_t, size>& other) {
-	for (unsigned i = 0; i < size; ++i) {
-		elements[i] *= other.elements[i];
-	}
-	return *this;
-}
+/*template <typename type_t, std::size_t sizeA, std::size_t sizeB>
+struct vec<vec<type_t, sizeA>, sizeB>;*/
 
-template <typename type_t, unsigned size>
-vec<type_t, size>& vec<type_t, size>::operator *=(const type_t& other) {
-	for (unsigned i = 0; i < size; ++i) {
-		elements[i] *= other;
-	}
-	return *this;
-}
-
-template <typename type_t, unsigned size>
-vec<type_t, size>& vec<type_t, size>::operator /=(const vec<type_t, size>& other) {
-	for (unsigned i = 0; i < size; ++i) {
-		elements[i] /= other.elements[i];
-	}
-	return *this;
-}
-
-template <typename type_t, unsigned size>
-constexpr vec<type_t, size>& vec<type_t, size>::operator /=(const type_t& other) {
-	for (unsigned i = 0; i < size; ++i) {
-		elements[i] /= other;
-	}
-	return *this;
-}
-
-template <typename type_t, unsigned size>
-vec<type_t, size> vec<type_t, size>::operator +(const vec<type_t, size>& other) const {
-	vec<type_t, size> result = *this;
-	result += other;
-	return result;
-}
-
-template <typename type_t, unsigned size>
-vec<type_t, size> vec<type_t, size>::operator -(const vec<type_t, size>& other) const {
-	vec<type_t, size> result = *this;
-	result -= other;
-	return result;
-}
-
-template <typename type_t, unsigned size>
-vec<type_t, size> vec<type_t, size>::operator -(const type_t& other) const {
-	vec<type_t, size> result = *this;
-	result -= other;
-	return result;
-}
-
-template <typename type_t, unsigned size>
-vec<type_t, size> vec<type_t, size>::operator *(const vec<type_t, size>& other) const {
-	vec<type_t, size> result = *this;
-	result *= other;
-	return result;
-}
-
-template <typename type_t, unsigned size>
-vec<type_t, size> vec<type_t, size>::operator *(const type_t& other) const {
-	vec<type_t, size> result = *this;
-	result *= other;
-	return result;
-}
-
-template <typename type_t, unsigned size>
-vec<type_t, size> vec<type_t, size>::operator /(const vec<type_t, size>& other) const {
-	vec<type_t, size> result = *this;
-	result /= other;
-	return result;
-}
-
-template <typename type_t, unsigned size>
-constexpr vec<type_t, size> vec<type_t, size>::operator /(const type_t& other) const {
-	vec<type_t, size> result = *this;
-	result /= other;
-	return result;
-}
-
-template <typename type_t, unsigned size>
-vec<type_t, size>& vec<type_t, size>::negate() {
-	for (unsigned i = 0; i < size; ++i) {
-		elements[i] = -elements[i];
-	}
-	return *this;
-}
-
-template <typename type_t, unsigned size>
-vec<type_t, size> vec<type_t, size>::operator -() const {
-	auto result = *this;
-	result.negate();
-	return result;
-}
-
-template <typename type_t, unsigned size>
-type_t& vec<type_t, size>::operator[](unsigned i) {
-	return elements[i];
-}
-
-template <typename type_t, unsigned size>
-const type_t& vec<type_t, size>::operator[](unsigned i) const {
-	return elements[i];
-}
-
-template <typename type_t, unsigned size>
-bool vec<type_t, size>::operator !=(const vec<type_t, size>& other) const {
-	for (unsigned i = 0; i < size; ++i) {
-		if (elements[i] != other.elements[i]) {
-			return true;
-		}
-	}
-	return false;
-}
-
-template <typename type_t, unsigned size>
-bool vec<type_t, size>::operator ==(const vec<type_t, size>& other) const {
-	return !(operator !=(other));
-}
-
-template <typename type_t, unsigned size>
-template <typename type_to_t>
-vec<type_t, size>::operator vec<type_to_t, size>() const {
-	vec<type_to_t, size> result;
-	for (unsigned i = 0; i < size; ++i) {
-		result.elements[i] = this->elements[i];
-	}
-	return result;
-}
-
-template <typename type_t, unsigned size>
-vec<type_t, size> operator *(const type_t& c, const vec<type_t, size>& v) {
-	vec<type_t, size> result = v;
-	result *= c;
-	return result;
-}
-
-/*template <typename type_t, unsigned sizeA, unsigned sizeB>
-vec<vec<type_t, sizeB>, sizeA> transpose(const vec<vec<type_t, sizeA>, sizeB>& src) {
-	vec<vec<type_t, sizeB>, sizeA> result;
-	for (unsigned i = 0; i < sizeA; ++i) {
-		for (unsigned j = 0; j < sizeA; ++j) {
-			result.elements[j].elements[i] = src.elements[i].elements[j];
-		}
-	}
-	return result;
-}
-
-template <typename type_t, unsigned sizeA, unsigned sizeB, unsigned sizeC>
-vec<vec<type_t, sizeA>, sizeC> operator*(const vec<vec<type_t, sizeA>, sizeB>& m1, const vec<vec<type_t, sizeB>, sizeC>& m2) {
-	vec<vec<type_t, sizeA>, sizeC> result;
-	for (unsigned i = 0; i < sizeA; ++i) {
-		for (unsigned j = 0; j < sizeC; ++j) {
-			result[i][j] = 0;
-			for (unsigned k = 0; k < sizeB; ++k) {
-				result.elements[i].elements[j] += m1.elements[i].elements[k] * m2.elements[k].elements[j];
-			}
-		}
-	}
-	return result;
-}
-
-template <typename type_t, unsigned size>
-vec<vec<type_t, size>, size>& operator*=(vec<vec<type_t, size>, size>& m1, const vec<vec<type_t, size>, size>& m2) {
-	for (unsigned i = 0; i < size; ++i) {
-		vec<type_t, size> row;
-		for (unsigned j = 0; j < size; ++j) {
-			row.elements[j] = 0;
-			for (unsigned k = 0; k < size; ++k) {
-				row.elements[j] += m1.elements[k].elements[i] * m2.elements[j].elements[k];
-			}
-		}
-		for (unsigned j = 0; j < size; ++j) {
-			m1.elements[j].elements[i] = row.elements[j];
-		}
-	}
-	return m1;
-}*/
-
-/*template <typename type_t, unsigned size>
-template <unsigned offset>
-vec<type_t, size>::PseudoField<offset>::operator type_t&() {
-	return reinterpret_cast<vec<type_t, size>*>(this)->elements[offset];
-}*/
-
-/*extern template class vec<unsigned, 2>;
-extern template class vec<unsigned, 3>;
-extern template class vec<unsigned, 4>;
-
-extern template class vec<int, 2>;
-extern template class vec<int, 3>;
-extern template class vec<int, 4>;
-
-extern template class vec<float, 2>;
-extern template class vec<float, 3>;
-extern template class vec<float, 4>;*/
-
-typedef vec<unsigned, 2> uvec2;
-typedef vec<unsigned, 3> uvec3;
-typedef vec<unsigned, 4> uvec4;
-
-typedef vec<int, 2> ivec2;
-typedef vec<int, 3> ivec3;
-typedef vec<int, 4> ivec4;
-
-typedef vec<float, 2> vec2;
-typedef vec<float, 3> vec3;
-typedef vec<float, 4> vec4;
-
-template <typename type_t, unsigned sizeA, unsigned sizeB>
-struct vec<vec<type_t, sizeA>, sizeB>;
-
-} /* namespace math */
-} /* namespace dse */
+} // namespace math::dse
 
 #endif /* VEC_H_ */

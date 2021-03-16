@@ -81,8 +81,7 @@ Context::ContextOwner::~ContextOwner() {
 	}
 }
 
-thread_local HGLRC Context::currentContext = 0;
-thread_local HDC Context::currentContextDC = 0;
+thread_local Context* Context::currentContext = nullptr;
 
 Context::Context(os::Window& wnd, ContextVersion ver, ContextFlags flags) : dc(swal::Wnd(wnd.getSysData().hWnd).GetDC()) {
 	if (ver == ContextVersion::legacy) {
@@ -104,7 +103,8 @@ Context::Context(os::Window& wnd, ContextVersion ver, ContextFlags flags) : dc(s
 }
 
 Context::~Context() {
-	if (currentContext == glrc) {
+	glbinding::releaseContext(glbinding::ContextHandle(HGLRC(glrc)));
+	if (currentContext == this) {
 		MakeCurrentEmpty();
 	}
 }
@@ -166,23 +166,28 @@ Context::ContextOwner Context::makeContext(swal::WindowDC &dc, ContextVersion ve
 }
 
 void Context::MakeCurrent(os::Window &wnd) {
-	dc = swal::Wnd(wnd.getSysData().hWnd).GetDC();
-	MakeCurrent();
+	auto newDC = swal::Wnd(wnd.getSysData().hWnd).GetDC();
+	if (currentContext != this || dc.get() != newDC.get()) {
+		dc = std::move(newDC);
+		MakeCurrentInternal();
+	}
 }
 
 void Context::MakeCurrent() {
-	if (currentContext != glrc || currentContextDC != dc) {
-		swal::winapi_call(wglMakeCurrent(dc, glrc));
-		currentContext = glrc;
-		currentContextDC = dc;
-		glbinding::useContext(glbinding::ContextHandle(HGLRC(glrc)));
+	if (currentContext != this) {
+		MakeCurrentInternal();
 	}
 }
 
 void Context::MakeCurrentEmpty() {
-	currentContext = 0;
-	currentContextDC = 0;
+	currentContext = nullptr;
 	wglMakeCurrent(0, 0);
+}
+
+void Context::MakeCurrentInternal() {
+	swal::winapi_call(wglMakeCurrent(dc, glrc));
+	currentContext = this;
+	glbinding::useContext(glbinding::ContextHandle(HGLRC(glrc)));
 }
 #endif
 

@@ -8,6 +8,7 @@
 #include "mcursor.h"
 #include "WindowData_win32.h"
 #include "win32.h"
+#include "math/vmath.h"
 
 void dse::os::setMouseCursorPos(const math::ivec2 &pos) {
 	SetCursorPos(pos[0], pos[1]);

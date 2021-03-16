@@ -10,35 +10,51 @@
 
 #include "vmath.h"
 
-namespace dse {
-namespace math {
+namespace dse::math {
 
-template <typename T>
-vec<T, 4> qmul(const vec<T, 4>& a, const vec<T, 4>& b) {
-	vec<T, 3> crs = a[W] * vec<T, 3>{b[X], b[Y], b[Z]} +
-			b[W] * vec<T, 3>{a[X], a[Y], a[Z]} +
-			cross(vec<T, 3>{a[X], a[Y], a[Z]}, vec<T, 3>{b[X], b[Y], b[Z]});
-	T dt = a[W] * b[W] - dot(vec<T, 3>{a[X], a[Y], a[Z]}, vec<T, 3>{b[X], b[Y], b[Z]});
-	return {
-		crs[X],
-		crs[Y],
-		crs[Z],
-		dt
+template <typename left_t, typename right_t>
+requires(impl::same_storage_type<left_t, right_t>)
+auto qmul(const vec<left_t, 4>& a, const vec<right_t, 4>& b) -> vec<std::remove_cvref_t<left_t>, 4> {
+//	vec<std::remove_cvref_t<left_t>, 3> crs = a.w() * vec<T, 3>{b.x(), b.y(), b.z()} +
+//			b.w() * vec<T, 3>{a.x(), a.y(), a.z()} +
+//			cross(vec<T, 3>{a.x(), a.y(), a.z()}, vec<T, 3>{b.x(), b.y(), b.z()});
+//	std::remove_cvref_t<left_t> dt = a.w() * b.w() - dot(vec<T, 3>{a.x(), a.y(), a.z()}, vec<T, 3>{b.x(), b.y(), b.z()});
+//	return {
+//		crs.x(),
+//		crs.y(),
+//		crs.z(),
+//		dt
+//	};
+//	vec<std::remove_cvref_t<left_t>, 4> result;
+//	result["xyz"] = a.w() * b["xyz"] + b.w() * a["xyz"] + cross(a["xyz"], b["xyz"]);
+//	result.w() = a.w() * b.w() - dot(a["xyz"], b["xyz"]);
+//	return result;
+	return {(
+		a["wwwx"] * b["xyzx"] +
+		a["xyzy"] * b["wwwy"] +
+		a["yzxz"] * b["zxyz"] +
+		-a["zxyw"] * b["yzxw"]) *
+		vec<std::remove_cvref_t<left_t>, 4>{1,1,1,-1}
 	};
 }
 
 template <typename T>
-vec<T, 4> qinv(const vec<T, 4>& a) {
-    return {-a[0], -a[1], -a[2], a[3]};
+auto qinv(const vec<T, 4>& a) -> vec<std::remove_cvref_t<T>, 4> {
+	return {-a.x(), -a.y(), -a.z(), a.w()};
 }
 
-template <typename T>
-vec<T, 3> vecrotquat(const vec<T, 3>& _vec, const vec<T, 4>& quat) {
-	auto rslt = qmul(qmul(quat, { _vec[0], _vec[1], _vec[2], 0.f }), qinv(quat));
-    return { rslt[0], rslt[1], rslt[2] };
+template <typename left_t, typename right_t>
+requires(impl::same_storage_type<left_t, right_t>)
+auto vecrotquat(const vec<left_t, 3>& _vec, const vec<right_t, 4>& quat) -> vec<std::remove_cvref_t<left_t>, 3> {
+    return qmul(qmul(quat, vec<std::remove_cvref_t<left_t>, 4>{ _vec.x(), _vec.y(), _vec.z(), 0.f }), qinv(quat))["xyz"];
 }
 
-} // namespace math
-} // namespace dse
+/*
+ * vec4(a.w, a.z, -a.y, -a.x) vec4(-a.x, -a.y, -a.z, a.w)
+ * vec4(-a.z, a.w, a.x, -a.y) vec4(-a.x, -a.y, -a.z, a.w)
+ * vec4(a.y, -a.x, a.w, -a.z) vec4(-a.x, -a.y, -a.z, a.w)
+ */
+
+} // namespace dse::math
 
 #endif /* MATH_QMATH_H_ */

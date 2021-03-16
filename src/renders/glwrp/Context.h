@@ -68,8 +68,7 @@ class Context {
 	swal::WindowDC dc;
 	ContextOwner glrc;
 	int vsync = 0;
-	static thread_local HGLRC currentContext;
-	static thread_local HDC currentContextDC;
+	static thread_local Context* currentContext;
 #endif
 public:
 	Context(os::Window& wnd, ContextVersion ver, ContextFlags flags);
@@ -86,6 +85,8 @@ public:
 	void MakeCurrent(os::Window& wnd);
 	void MakeCurrent();
 	static void MakeCurrentEmpty();
+private:
+	void MakeCurrentInternal();
 };
 
 } /* namespace dse::renders::glwrp */

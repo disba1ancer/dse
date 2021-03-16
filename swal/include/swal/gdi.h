@@ -44,23 +44,20 @@ public:
 	Pen(COLORREF color, PenStyle style = PenStyle::Solid, int width = 1) : GdiObj(winapi_call(CreatePen(static_cast<int>(style), width, color))) {}
 };
 
-class DC {
+class DC : public zero_or_resource<HDC> {
 public:
-	DC(HDC hdc) : hdc(hdc) {}
-	operator HDC() const { return hdc; }
-	HGDIOBJ SelectObject(HGDIOBJ obj) const { return winapi_call(::SelectObject(hdc, obj)); }
-	void MoveTo(int x, int y) const { winapi_call(::MoveToEx(hdc, x, y, nullptr)); }
+	DC(HDC hdc) : zero_or_resource(hdc) {}
+	HGDIOBJ SelectObject(HGDIOBJ obj) const { return winapi_call(::SelectObject(get(), obj)); }
+	void MoveTo(int x, int y) const { winapi_call(::MoveToEx(get(), x, y, nullptr)); }
 	POINT MoveToEx(int x, int y) const {
 		POINT pt;
-		winapi_call(::MoveToEx(hdc, x, y, &pt));
+		winapi_call(::MoveToEx(get(), x, y, &pt));
 		return pt;
 	}
-	void LineTo(int x, int y) const { winapi_call(::LineTo(hdc, x, y)); }
-	COLORREF SetPenColor(COLORREF color) const { return winapi_call(::SetDCPenColor(*this, color), invalid_color_error_check); }
-	COLORREF SetPixel(int x, int y, COLORREF color) const { return winapi_call(::SetPixel(*this, x, y, color), invalid_color_error_check); }
-	void FillRect(RECT& rc, HBRUSH brush) const { winapi_call(::FillRect(*this, &rc, brush)); }
-private:
-	HDC hdc;
+	void LineTo(int x, int y) const { winapi_call(::LineTo(get(), x, y)); }
+	COLORREF SetPenColor(COLORREF color) const { return winapi_call(::SetDCPenColor(get(), color), invalid_color_error_check); }
+	COLORREF SetPixel(int x, int y, COLORREF color) const { return winapi_call(::SetPixel(get(), x, y, color), invalid_color_error_check); }
+	void FillRect(RECT& rc, HBRUSH brush) const { winapi_call(::FillRect(get(), &rc, brush)); }
 };
 
 class PaintDC : private PAINTSTRUCT, public DC {

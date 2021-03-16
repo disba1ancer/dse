@@ -52,7 +52,7 @@ using dse::core::File;
 using dse::core::OpenMode;
 
 //ExecutionThread mainThread;
-ThreadPool thrPool(1);
+ThreadPool thrPool;
 
 int main(int argc, char* argv[]) {
 	Window window;
@@ -125,11 +125,11 @@ int main(int argc, char* argv[]) {
 			auto center = window.size() / 2;
 			auto moffset = dse::math::ivec2{x, y} - center;
 			constexpr float sens = 3.f / 4096.f;
-			pitch = std::clamp(pitch - moffset[1] * sens, 0.f, PI);
-			yaw -= moffset[0] * sens;
+			pitch = std::clamp(pitch - moffset.y() * sens, 0.f, PI);
+			yaw -= moffset.x() * sens;
 			auto pitchHalf = pitch * .5f;
 			auto yawHalf = yaw * .5f;
-			auto camrot = qmul(vec4{ 0, 0, std::sin(yawHalf), std::cos(yawHalf) }, { std::sin(pitchHalf), 0, 0, std::cos(pitchHalf) });
+			auto camrot = qmul(vec4{ 0, 0, std::sin(yawHalf), std::cos(yawHalf) }, vec4{ std::sin(pitchHalf), 0, 0, std::cos(pitchHalf) });
 			cam.setRot(camrot);
 			setMouseCursorPosWndRel(center, window);
 		});
@@ -142,7 +142,7 @@ int main(int argc, char* argv[]) {
 			auto angle = 1.f;
 			auto axe1 = norm(-vec3{1.f, 1.f, 1.f}) * std::sin(PI * angle / 360.f);
 			auto cs1 = std::cos(PI * angle / 360.f);
-			auto rslt = norm(qmul({axe1[X], axe1[Y], axe1[Z], cs1}, cube1->getQRot()));
+			auto rslt = norm(qmul(vec4{axe1.x(), axe1.y(), axe1.z(), cs1}, cube1->getQRot()));
 			cube1->setQRot(rslt);
 			//cube2->setQRot(rslt);
 			if (spd != 0.f || sdspd != 0.f) {
