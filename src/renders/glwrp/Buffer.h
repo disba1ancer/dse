@@ -50,6 +50,7 @@ public:
 
 typedef TargetBuffer<GL_ELEMENT_ARRAY_BUFFER> ElementBuffer;
 typedef TargetBuffer<GL_ARRAY_BUFFER> VertexBuffer;
+typedef TargetBuffer<GL_UNIFORM_BUFFER> UniformBuffer;
 
 } /* namespace dse::renders::glwrp */
 

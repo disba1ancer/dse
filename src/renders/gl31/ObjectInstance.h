@@ -17,6 +17,7 @@ namespace dse::renders::gl31 {
 struct ObjectInstance {
 	scn::Object* object;
 	std::unique_ptr<MeshInstance, MeshInstance::Deleter> mesh;
+	glwrp::UniformBuffer ubo{false};
 	unsigned lastVersion;
 };
 

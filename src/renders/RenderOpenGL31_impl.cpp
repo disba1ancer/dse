@@ -16,18 +16,23 @@
 #include "dse_shaders/gl31.h"
 #include "gl31/binds.h"
 #include "scn/Material.h"
+#include "math/qmath.h"
 
 namespace {
 struct ReqGLExt {
 	const char* name;
 	bool avail;
 };
-auto reqGLExts = std::to_array<ReqGLExt, 2>({
+auto reqGLExts = std::to_array<ReqGLExt>({
 	{"GL_ARB_draw_elements_base_vertex", false},
 	{"GL_ARB_instanced_arrays", false},
+	{"GL_ARB_sampler_objects", false},
 });
 using dse::renders::gl31::InputParams;
 using dse::renders::gl31::OutputParams;
+using dse::renders::gl31::UniformIndices;
+using dse::renders::gl31::ObjectInstanceUniform;
+using dse::renders::gl31::CameraUniform;
 using namespace gl31;
 using namespace gl31ext;
 dse::math::vec3 fullscreenPrimitive[] = { {-1.f, -1.f, -1.f}, {3.f, -1.f, -1.f}, {-1.f, 3.f, -1.f} };
@@ -36,10 +41,21 @@ dse::math::vec3 fullscreenPrimitive[] = { {-1.f, -1.f, -1.f}, {3.f, -1.f, -1.f},
 namespace dse::renders {
 
 void RenderOpenGL31_impl::setupCamera() {
-	glUniform3fv(camPosUniform, 1, camera->getPos().elements);
-	glUniform4fv(camQRotUniform, 1, camera->getRot().elements);
+	CameraUniform uniforms = {};
+	auto& camPos = uniforms.pos;
+	camPos["xyz"] = camera->getPos();
+	camPos.w() = 1.f;
+	auto& viewProj = uniforms.viewProj;
+	math::mat3 mRot = matFromQuat(qinv(camera->getRot()));
+	viewProj[0]["xyz"] = mRot[0];
+	viewProj[1]["xyz"] = mRot[1];
+	viewProj[2]["xyz"] = mRot[2];
+	viewProj[3]["xyz"] = -(mRot * uniforms.pos["xyz"]);
+	viewProj[3].w() = 1.f;
+//	glUniform3fv(camPosUniform, 1, camera->getPos().elements);
+//	glUniform4fv(camQRotUniform, 1, camera->getRot().elements);
 	auto zNear = camera->getNear(),
-			zFar = camera->getFar();
+		zFar = camera->getFar();
 	if (zNear == zFar) {
 		zNear = 1.f;
 		zFar = 131072.f;
@@ -48,7 +64,16 @@ void RenderOpenGL31_impl::setupCamera() {
 	float a = c / (zFar - zNear);
 	float b = 2 * zFar * zNear * a;
 	a *= (zFar + zNear);
-	glUniform4f(perspArgsUniform, a, b, c, 0.f);
+	math::vec4 persp = {float(height) / float(width), 1.f, a, c};
+	viewProj[0] = viewProj[0]["xyzz"] * persp;
+	viewProj[1] = viewProj[1]["xyzz"] * persp;
+	viewProj[2] = viewProj[2]["xyzz"] * persp;
+	viewProj[3] = viewProj[3]["xyzz"] * persp;
+	viewProj[3].z() += b;
+//	glUniform4f(perspArgsUniform, a, b, c, 0.f);
+	cameraUBO.bind();
+	glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(CameraUniform), &uniforms);
+	glBindBufferBase(GL_UNIFORM_BUFFER, UniformIndices::CameraBind, cameraUBO);
 }
 
 void dse::renders::RenderOpenGL31_impl::drawPostprocess() {
@@ -72,11 +97,29 @@ void dse::renders::RenderOpenGL31_impl::drawPostprocess() {
 
 void dse::renders::RenderOpenGL31_impl::reloadInstance(gl31::ObjectInstance& objInst) {
 	auto meshInst = objInst.mesh.get();
-	if (!meshInst || meshInst->getMesh() != objInst.object->getMesh()) {
+	if (meshInst == nullptr || meshInst->getMesh() != objInst.object->getMesh()) {
 		auto mi = getMeshInstance(objInst.object->getMesh());
-		mi->AddRef();
+		if (mi) mi->AddRef();
 		objInst.mesh.reset(mi);
 	}
+	ObjectInstanceUniform uniforms;
+	auto rotScale = math::transpose(math::matFromQuat(objInst.object->getQRot()));
+	auto vPos = objInst.object->getPos();
+	auto vScale = objInst.object->getScale();
+	rotScale[0] *= vScale;
+	rotScale[1] *= vScale;
+	rotScale[2] *= vScale;
+	uniforms.transform = { math::vec4
+		{rotScale[0].x(), rotScale[0].y(), rotScale[0].z(), vPos.x()},
+		{rotScale[1].x(), rotScale[1].y(), rotScale[1].z(), vPos.y()},
+		{rotScale[2].x(), rotScale[2].y(), rotScale[2].z(), vPos.z()}
+	};
+	if (objInst.ubo == 0) {
+		objInst.ubo = glwrp::UniformBuffer();
+		glBufferData(GL_UNIFORM_BUFFER, sizeof(uniforms), nullptr, GL_DYNAMIC_DRAW);
+	}
+	objInst.ubo.bind();
+	glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(uniforms), &uniforms);
 	objInst.lastVersion = objInst.object->getVersion();
 }
 
@@ -85,7 +128,7 @@ void RenderOpenGL31_impl::onSceneChanged(scn::SceneChangeEventType act, scn::Obj
 		case decltype(act)::ObjectCreate: {
 			auto& inst = objects[obj];
 			inst.object = obj;
-			reloadInstance(inst);
+			inst.lastVersion = obj->getVersion() - 1;
 		} break;
 		case decltype(act)::ObjectDestroy: {
 			objects.erase(obj);
@@ -160,9 +203,12 @@ void RenderOpenGL31_impl::onPaint(os::WndEvtDt) {
 					if (mesh) {
 						if (mesh->isReady()) {
 							glBindVertexArray(mesh->getVAO());
-							glUniform3fv(posUniform, 1, (obj->getPos()).elements);
-							glUniform4fv(qRotUniform, 1, (obj->getQRot()).elements);
-							glUniform3fv(scaleUniform, 1, (obj->getScale()).elements);
+//							auto v = obj->getPos();
+//							glUniform4fv(posUniform, 1, math::vec4{v[0], v[1], v[2], 0}.elements);
+//							glUniform4fv(qRotUniform, 1, (obj->getQRot()).elements);
+//							v = obj->getScale();
+//							glUniform4fv(scaleUniform, 1, math::vec4{v[0], v[1], v[2], 0}.elements);
+							glBindBufferBase(GL_UNIFORM_BUFFER, UniformIndices::ObjectInstanceBind, inst.ubo);
 							auto subCount = mesh->getSubmeshCount();
 							for (std::size_t i = 0; i < subCount; ++i) {
 								auto [start, count] = mesh->getSubmeshRange(i);
@@ -216,9 +262,6 @@ RenderOpenGL31_impl::RenderOpenGL31_impl(os::Window& wnd) : wnd(&wnd),
 		throw std::runtime_error("Required extensions is not available");
 	}
 
-	auto size = wnd.size();
-	rebuildViewport(size[0], size[1]);
-
 	context.enableVSync(1);
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_CULL_FACE);
@@ -227,6 +270,9 @@ RenderOpenGL31_impl::RenderOpenGL31_impl(os::Window& wnd) : wnd(&wnd),
 #endif
 
 	prepareShaders();
+
+	auto size = wnd.size();
+	rebuildViewport(size.x(), size.y());
 
 	glBindVertexArray(vao);
 	glBindBuffer(GL_ARRAY_BUFFER, vbo);
@@ -246,7 +292,7 @@ void RenderOpenGL31_impl::rebuildViewport(int width, int height)
 	glUniform2f(fragWindowSizeUniform, width, height);
 	glUseProgram(drawProg);
 	glUniform2f(drawWindowSizeUniform, width, height);
-	glUniform1f(invAspRatioUniform, float(height) / float(width));
+//	glUniform1f(invAspRatioUniform, float(height) / float(width));
 
 	rebuildSrgbFrameBuffer();
 }
@@ -307,18 +353,20 @@ void RenderOpenGL31_impl::prepareShaders() {
 	glBindAttribLocation(drawProg, InputParams::UV, "vUV");
 	glBindFragDataLocation(drawProg, OutputParams::FragmentColor, "fragColor");
 	drawProg.link();
+
+	auto objectInstanceBlockIndex = drawProg.getUniformBlockIndex("ObjectInstance");
+	glUniformBlockBinding(drawProg, objectInstanceBlockIndex, UniformIndices::ObjectInstanceBind);
+	auto cameraBlockIndex = drawProg.getUniformBlockIndex("Camera");
+	glUniformBlockBinding(drawProg, cameraBlockIndex, UniformIndices::CameraBind);
+	cameraUBO = glwrp::UniformBuffer();
+	cameraUBO.bind();
+	glBufferData(GL_UNIFORM_BUFFER, sizeof(CameraUniform), nullptr, GL_DYNAMIC_DRAW);
+	glBindBufferBase(GL_UNIFORM_BUFFER, UniformIndices::CameraBind, cameraUBO);
+
 	drawWindowSizeUniform = glGetUniformLocation(drawProg, "windowSize");
-	posUniform = glGetUniformLocation(drawProg, "iPos");
-	qRotUniform = glGetUniformLocation(drawProg, "qRot");
-	scaleUniform = glGetUniformLocation(drawProg, "scale");
-	camPosUniform = glGetUniformLocation(drawProg, "camPos");
-	camQRotUniform = glGetUniformLocation(drawProg, "camQRot");
 	matColorUnifrom = glGetUniformLocation(drawProg, "matColor");
-	invAspRatioUniform = glGetUniformLocation(drawProg, "invAspRatio");
-	perspArgsUniform = glGetUniformLocation(drawProg, "perspArgs");
 	glUseProgram(drawProg);
 	glUniform2f(drawWindowSizeUniform, 0, 0);
-	glUniform1f(invAspRatioUniform, 1.f);
 }
 
 void RenderOpenGL31_impl::resumeRenderCaller() {

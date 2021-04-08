@@ -73,7 +73,7 @@ int main(int argc, char* argv[]) {
 		Camera cam;
 		Scene scene;
 		Cube cubeMesh;
-		Material mat(dse::math::vec4{.2f, .8f, .4f, 1.f});
+		Material mat(dse::math::vec4{.2f, .8f, .4f, .5f});
 		auto cube1 = scene.createObject(Object(&cubeMesh));
 		auto cube2 = scene.createObject(Object(&cubeMesh));
 		cube1->setPos({-1.f, -1.f, -1.f});

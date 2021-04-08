@@ -8,12 +8,10 @@
 #ifndef MATH_CONSTANTS_H_
 #define MATH_CONSTANTS_H_
 
-namespace dse {
-namespace math {
+namespace dse::math {
 
 constexpr float PI = 3.14159265f;
 
-} // namespace math
-} // namespace dse
+} // namespace dse::math
 
 #endif /* MATH_CONSTANTS_H_ */

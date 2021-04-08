@@ -3,26 +3,26 @@ in vec3 vNorm;
 in vec3 vTang;
 in vec2 vUV;
 
-uniform vec3 camPos;
-uniform vec4 camQRot;
-uniform float invAspRatio;
-uniform vec4 perspArgs;
-uniform vec3 iPos;
-uniform vec4 qRot;
-uniform vec3 scale;
+layout(std140) uniform Camera {
+    mat4 viewProj;
+    vec4 pos;
+} camera;
+layout(std140) uniform ObjectInstance {
+    layout(row_major) mat4x3 transform;
+} object;
 
 out vec3 fNorm;
 out vec3 fTang;
 out vec3 fBitang;
 out vec2 fUV;
-out vec3 fragPos;
-out vec3 lightDir;
+out vec3 vWorldPos;
 
 vec4 qmul(vec4 a, vec4 b) {
-    return vec4(
-        a.w * b.xyz + b.w * a.xyz + cross(a.xyz, b.xyz),
-        a.w * b.w - dot(a.xyz, b.xyz)
-    );
+    return (a.wwwx * b.xyzx + a.xyzy * b.wwwy + a.yzxz * b.zxyz - a.zxyw * b.yzxw) * vec4(1,1,1,-1);
+//    return vec4(
+//        a.w * b.xyz + b.w * a.xyz + cross(a.xyz, b.xyz),
+//        a.w * b.w - dot(a.xyz, b.xyz)
+//    );
 }
 
 vec4 qinv(vec4 q) {
@@ -34,15 +34,10 @@ vec3 vecrotquat(vec3 vec, vec4 quat) {
 }
 
 void main() {
-    vec4 q = qmul(qinv(camQRot), qRot);
-    fNorm = vecrotquat(vNorm, q);
-    fTang = vecrotquat(vTang, q);
+    fNorm = normalize((object.transform * vec4(vNorm, 0.f)).xyz);
+    fTang = normalize((object.transform * vec4(vTang, 0.f)).xyz);
     fUV = vUV;
-    vec3 pos = vPos * scale;
-    pos = vecrotquat(pos, qRot);
-    pos += iPos - camPos;
-    pos = vecrotquat(pos, qinv(camQRot));
-    lightDir = vecrotquat(normalize(vec3(1.f, 1.f, -1.f)), qinv(camQRot));
-    fragPos = pos;
-    gl_Position = vec4(pos.x * invAspRatio, pos.y, pos.z * perspArgs.x + perspArgs.y, pos.z * perspArgs.z + perspArgs.w);
+    vec3 pos = (object.transform * vec4(vPos, 1.f)).xyz;
+    vWorldPos = pos;
+    gl_Position = camera.viewProj * vec4(pos, 1.f);
 }

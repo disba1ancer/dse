@@ -46,14 +46,7 @@ class RenderOpenGL31_impl {
 	gl::GLint fragColorBufferUniform = 0;
 	gl::GLint fragDepthBufferUniform = 0;
 	gl::GLint drawWindowSizeUniform = 0;
-	gl::GLint posUniform = 0;
-	gl::GLint qRotUniform = 0;
-	gl::GLint scaleUniform = 0;
-	gl::GLint camPosUniform = 0;
-	gl::GLint camQRotUniform = 0;
 	gl::GLint matColorUnifrom = 0;
-	gl::GLint invAspRatioUniform = 0;
-	gl::GLint perspArgsUniform = 0;
 	unsigned width = 1, height = 1;
 #ifdef DSE_MULTISAMPLE
 	glwrp::FrameBuffer renderFBOMSAA = 0;
@@ -63,6 +56,7 @@ class RenderOpenGL31_impl {
 	glwrp::FrameBuffer renderFBO = 0;
 	glwrp::TextureRectangle colorBuffer = 0;
 	glwrp::TextureRectangle depthBuffer = 0;
+	glwrp::UniformBuffer cameraUBO = 0;
 	util::promise<void> pr;
 	std::atomic_bool requested = false;
 	std::map<scn::IMesh*, gl31::MeshInstance>::iterator cleanupPointer;

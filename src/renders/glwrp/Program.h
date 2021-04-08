@@ -16,15 +16,18 @@ namespace dse::renders::glwrp {
 
 class Program : TrvMvOnlyRes<GLuint, true> {
 public:
-	Program() noexcept : TrvMvOnlyRes(glCreateProgram()) {
+	Program() : TrvMvOnlyRes(glCreateProgram()) {
 	}
 	~Program() {
 		glDeleteProgram(resource);
 	}
 	Program(Program &&other) = default;
 	Program& operator=(Program &&other) = default;
-	void attachShader(Shader& shader) noexcept {
+	void attachShader(Shader& shader) {
 		glAttachShader(resource, shader);
+	}
+	GLuint getUniformBlockIndex(const GLchar* uniformBlockName) {
+		glGetUniformBlockIndex(resource, uniformBlockName);
 	}
 	void link() {
 		glLinkProgram(resource);

@@ -9,6 +9,7 @@
 #define MATH_QMATH_H_
 
 #include "vmath.h"
+#include "mat.h"
 
 namespace dse::math {
 
@@ -53,7 +54,48 @@ auto vecrotquat(const vec<left_t, 3>& _vec, const vec<right_t, 4>& quat) -> vec<
  * vec4(a.w, a.z, -a.y, -a.x) vec4(-a.x, -a.y, -a.z, a.w)
  * vec4(-a.z, a.w, a.x, -a.y) vec4(-a.x, -a.y, -a.z, a.w)
  * vec4(a.y, -a.x, a.w, -a.z) vec4(-a.x, -a.y, -a.z, a.w)
+ *
+ * ( w, z,-y,-x) * (-x,-y,-z, w)
+ * x*x - y*y - z*z + w*w
+ * 2*(x*y + z*w)
+ * 2*(x*z - y*w)
+ * 0
+ *
+ * (-z, w, x,-y) * (-x,-y,-z, w)
+ * 2*(x*y-z*w)
+ * -x*x + y*y - z*z + w*w
+ * 2*(y*z+x*w)
+ * 0
+ *
+ * (y,-x, w,-z) vec4(-x,-y,-z, w)
+ * 2*(x*z+y*w)
+ * 2*(y*z-x*w)
+ * -x*x-y*y+z*z+w*w
+ * 0
  */
+
+template <typename value_t>
+auto matFromQuat(const vec<value_t, 4>& quat) -> mat<value_t, 3, 3> {
+    auto xx = quat.x();
+    auto yy = quat.y();
+    auto zz = quat.z();
+    auto ww = quat.w();
+    auto xy = 2 * xx * yy;
+    auto xz = 2 * xx * zz;
+    auto xw = 2 * xx * ww;
+    auto yz = 2 * yy * zz;
+    auto yw = 2 * yy * ww;
+    auto zw = 2 * zz * ww;
+    xx *= xx;
+    yy *= yy;
+    zz *= zz;
+    ww *= ww;
+    return {
+        xx - yy - zz + ww, xy + zw, xz - yw,
+        xy - zw, -xx + yy - zz + ww, yz + xw,
+        xz + yw, yz - xw, -xx - yy + zz + ww
+    };
+}
 
 } // namespace dse::math
 
