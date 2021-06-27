@@ -27,7 +27,7 @@ public:
 		glAttachShader(resource, shader);
 	}
 	GLuint getUniformBlockIndex(const GLchar* uniformBlockName) {
-		glGetUniformBlockIndex(resource, uniformBlockName);
+		return glGetUniformBlockIndex(resource, uniformBlockName);
 	}
 	void link() {
 		glLinkProgram(resource);

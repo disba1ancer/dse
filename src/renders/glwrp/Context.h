@@ -52,8 +52,6 @@ template <> struct enable_enum_bitwise<dse::renders::glwrp::ContextFlags> :
 	std::true_type {};
 } namespace dse::renders::glwrp {
 
-using namespace util::enum_bitwise;
-
 class Context {
 #ifdef _WIN32
 	struct ContextOwner : public TrvMvOnlyRes<HGLRC, true> {

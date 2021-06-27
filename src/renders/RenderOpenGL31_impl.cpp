@@ -17,6 +17,7 @@
 #include "gl31/binds.h"
 #include "scn/Material.h"
 #include "math/qmath.h"
+#include <iostream>
 
 namespace {
 struct ReqGLExt {
@@ -33,9 +34,20 @@ using dse::renders::gl31::OutputParams;
 using dse::renders::gl31::UniformIndices;
 using dse::renders::gl31::ObjectInstanceUniform;
 using dse::renders::gl31::CameraUniform;
+using dse::renders::gl31::TextureUnits;
 using namespace gl31;
 using namespace gl31ext;
 dse::math::vec3 fullscreenPrimitive[] = { {-1.f, -1.f, -1.f}, {3.f, -1.f, -1.f}, {-1.f, 3.f, -1.f} };
+auto pendingTextureData = std::to_array<unsigned char>({
+	40, 40, 40, 40, 40, 40, 240, 40, 240, 240, 40, 240, 40, 40, 40, 40, 40, 40, 240, 40, 240, 240, 40, 240,
+	40, 40, 40, 40, 40, 40, 240, 40, 240, 240, 40, 240, 40, 40, 40, 40, 40, 40, 240, 40, 240, 240, 40, 240,
+	240, 40, 240, 240, 40, 240, 40, 40, 40, 40, 40, 40, 240, 40, 240, 240, 40, 240, 40, 40, 40, 40, 40, 40,
+	240, 40, 240, 240, 40, 240, 40, 40, 40, 40, 40, 40, 240, 40, 240, 240, 40, 240, 40, 40, 40, 40, 40, 40,
+	40, 40, 40, 40, 40, 40, 240, 40, 240, 240, 40, 240, 40, 40, 40, 40, 40, 40, 240, 40, 240, 240, 40, 240,
+	40, 40, 40, 40, 40, 40, 240, 40, 240, 240, 40, 240, 40, 40, 40, 40, 40, 40, 240, 40, 240, 240, 40, 240,
+	240, 40, 240, 240, 40, 240, 40, 40, 40, 40, 40, 40, 240, 40, 240, 240, 40, 240, 40, 40, 40, 40, 40, 40,
+	240, 40, 240, 240, 40, 240, 40, 40, 40, 40, 40, 40, 240, 40, 240, 240, 40, 240, 40, 40, 40, 40, 40, 40,
+});
 }
 
 namespace dse::renders {
@@ -52,8 +64,6 @@ void RenderOpenGL31_impl::setupCamera() {
 	viewProj[2]["xyz"] = mRot[2];
 	viewProj[3]["xyz"] = -(mRot * uniforms.pos["xyz"]);
 	viewProj[3].w() = 1.f;
-//	glUniform3fv(camPosUniform, 1, camera->getPos().elements);
-//	glUniform4fv(camQRotUniform, 1, camera->getRot().elements);
 	auto zNear = camera->getNear(),
 		zFar = camera->getFar();
 	if (zNear == zFar) {
@@ -70,10 +80,9 @@ void RenderOpenGL31_impl::setupCamera() {
 	viewProj[2] = viewProj[2]["xyzz"] * persp;
 	viewProj[3] = viewProj[3]["xyzz"] * persp;
 	viewProj[3].z() += b;
-//	glUniform4f(perspArgsUniform, a, b, c, 0.f);
 	cameraUBO.bind();
-	glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(CameraUniform), &uniforms);
-	glBindBufferBase(GL_UNIFORM_BUFFER, UniformIndices::CameraBind, cameraUBO);
+	glBufferSubData(cameraUBO.target, 0, sizeof(CameraUniform), &uniforms);
+	glBindBufferBase(cameraUBO.target, UniformIndices::CameraBind, cameraUBO);
 }
 
 void dse::renders::RenderOpenGL31_impl::drawPostprocess() {
@@ -81,13 +90,14 @@ void dse::renders::RenderOpenGL31_impl::drawPostprocess() {
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, renderFBO);
 	glBlitFramebuffer(0, 0, width, height, 0, 0, width, height, GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT, GL_NEAREST);
 #endif
+	glBindSampler(TextureUnits::PostProcColor, postProcColor);
+	glBindSampler(TextureUnits::PostProcDepth, postProcDepth);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glDepthFunc(GL_ALWAYS);
-	glActiveTexture(GL_TEXTURE1);
+	glActiveTexture(texture(TextureUnits::PostProcColor));
 	colorBuffer.bind();
-	glActiveTexture(GL_TEXTURE2);
+	glActiveTexture(texture(TextureUnits::PostProcDepth));
 	depthBuffer.bind();
-	glActiveTexture(GL_TEXTURE0);
 	glUseProgram(fragmentProg);
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	glBindVertexArray(vao);
@@ -115,11 +125,11 @@ void dse::renders::RenderOpenGL31_impl::reloadInstance(gl31::ObjectInstance& obj
 		{rotScale[2].x(), rotScale[2].y(), rotScale[2].z(), vPos.z()}
 	};
 	if (objInst.ubo == 0) {
-		objInst.ubo = glwrp::UniformBuffer();
-		glBufferData(GL_UNIFORM_BUFFER, sizeof(uniforms), nullptr, GL_DYNAMIC_DRAW);
+		objInst.ubo = {};
+		glBufferData(objInst.ubo.target, sizeof(uniforms), nullptr, GL_DYNAMIC_DRAW);
 	}
 	objInst.ubo.bind();
-	glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(uniforms), &uniforms);
+	glBufferSubData(objInst.ubo.target, 0, sizeof(uniforms), &uniforms);
 	objInst.lastVersion = objInst.object->getVersion();
 }
 
@@ -186,8 +196,11 @@ void RenderOpenGL31_impl::onPaint(os::WndEvtDt) {
 	glBindFramebuffer(GL_FRAMEBUFFER, renderFBO);
 #endif
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glBindSampler(TextureUnits::DrawDiffuse, drawDiffuse);
+	glActiveTexture(texture(TextureUnits::DrawDiffuse));
+	pendingTexture.bind();
 	glUseProgram(drawProg);
-	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+//	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	if (camera) {
 		setupCamera();
 		if (scene) {
@@ -203,12 +216,7 @@ void RenderOpenGL31_impl::onPaint(os::WndEvtDt) {
 					if (mesh) {
 						if (mesh->isReady()) {
 							glBindVertexArray(mesh->getVAO());
-//							auto v = obj->getPos();
-//							glUniform4fv(posUniform, 1, math::vec4{v[0], v[1], v[2], 0}.elements);
-//							glUniform4fv(qRotUniform, 1, (obj->getQRot()).elements);
-//							v = obj->getScale();
-//							glUniform4fv(scaleUniform, 1, math::vec4{v[0], v[1], v[2], 0}.elements);
-							glBindBufferBase(GL_UNIFORM_BUFFER, UniformIndices::ObjectInstanceBind, inst.ubo);
+							glBindBufferBase(inst.ubo.target, UniformIndices::ObjectInstanceBind, inst.ubo);
 							auto subCount = mesh->getSubmeshCount();
 							for (std::size_t i = 0; i < subCount; ++i) {
 								auto [start, count] = mesh->getSubmeshRange(i);
@@ -230,7 +238,7 @@ void RenderOpenGL31_impl::onPaint(os::WndEvtDt) {
 	context.SwapBuffers();
 	cleanupMeshes();
 	swal::Wnd(wnd->getSysData().hWnd).ValidateRect();
-	if (requested.exchange(false, std::memory_order_relaxed)) {
+	if (requested.exchange(false, std::memory_order_acquire)) {
 		auto pool = core::ThreadPool::getCurrentPool();
 		pool.schedule(
 			util::from_method<
@@ -238,6 +246,12 @@ void RenderOpenGL31_impl::onPaint(os::WndEvtDt) {
 			>(*this)
 		);
 	}
+}
+
+void dse::renders::RenderOpenGL31_impl::prepareSamplers() {
+	postProcColor = {};
+	postProcDepth = {};
+	drawDiffuse = {};
 }
 
 RenderOpenGL31_impl::RenderOpenGL31_impl(os::Window& wnd) : wnd(&wnd),
@@ -257,10 +271,17 @@ RenderOpenGL31_impl::RenderOpenGL31_impl(os::Window& wnd) : wnd(&wnd),
 				++availExtsNum;
 			}
 		}
+		std::cout << extName << "\n";
 	}
 	if (availExtsNum != std::size(reqGLExts)) {
 		throw std::runtime_error("Required extensions is not available");
 	}
+
+	GLint val;
+	glGetIntegerv(GL_MAX_ARRAY_TEXTURE_LAYERS, &val);
+	std::cout << "GL_MAX_ARRAY_TEXTURE_LAYERS: " << val;
+	glGetIntegerv(GL_MAX_TEXTURE_SIZE, &val);
+	std::cout << "\nGL_MAX_TEXTURE_SIZE: " << val << std::endl;
 
 	context.enableVSync(1);
 	glEnable(GL_DEPTH_TEST);
@@ -270,21 +291,23 @@ RenderOpenGL31_impl::RenderOpenGL31_impl(os::Window& wnd) : wnd(&wnd),
 #endif
 
 	prepareShaders();
+	prepareSamplers();
 
 	auto size = wnd.size();
 	rebuildViewport(size.x(), size.y());
 
 	glBindVertexArray(vao);
-	glBindBuffer(GL_ARRAY_BUFFER, vbo);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(fullscreenPrimitive), fullscreenPrimitive, GL_STATIC_DRAW);
+	vbo.bind();
+	glBufferData(vbo.target, sizeof(fullscreenPrimitive), fullscreenPrimitive, GL_STATIC_DRAW);
 	glEnableVertexAttribArray(0);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
 
 	glClearColor(.03125f, .03125f, .0625f, 1.f);
 }
 
-void RenderOpenGL31_impl::rebuildViewport(int width, int height)
+void RenderOpenGL31_impl::rebuildViewport(unsigned width, unsigned height)
 {
+	if (this->width == width && this->height == height) return;
 	this->width = width;
 	this->height = height;
 	glViewport(0, 0, width, height);
@@ -292,7 +315,6 @@ void RenderOpenGL31_impl::rebuildViewport(int width, int height)
 	glUniform2f(fragWindowSizeUniform, width, height);
 	glUseProgram(drawProg);
 	glUniform2f(drawWindowSizeUniform, width, height);
-//	glUniform1f(invAspRatioUniform, float(height) / float(width));
 
 	rebuildSrgbFrameBuffer();
 }
@@ -304,7 +326,7 @@ void RenderOpenGL31_impl::onResize(os::WndEvtDt, int width, int height,
 
 auto RenderOpenGL31_impl::render() -> util::future<void> {
 	pr = util::promise<void>();
-	requested.store(true, std::memory_order_relaxed);
+	requested.store(true, std::memory_order_release);
 #ifdef _WIN32
 	auto hWnd = wnd->getSysData().hWnd;
 	InvalidateRect(hWnd, nullptr, FALSE);
@@ -332,18 +354,16 @@ void RenderOpenGL31_impl::prepareShaders() {
 	glBindFragDataLocation(fragmentProg, 0, "fragColor");
 	fragmentProg.link();
 	fragWindowSizeUniform = glGetUniformLocation(fragmentProg, "windowSize");
-	fragColorBufferUniform = glGetUniformLocation(fragmentProg, "colorBuffer");
-	fragDepthBufferUniform = glGetUniformLocation(fragmentProg, "depthBuffer");
 	glUseProgram(fragmentProg);
 	glUniform2f(fragWindowSizeUniform, width, height);
-	glUniform1i(fragColorBufferUniform, 1);
-	glUniform1i(fragDepthBufferUniform, 2);
+	glUniform1i(glGetUniformLocation(fragmentProg, "colorBuffer"), TextureUnits::PostProcColor);
+	glUniform1i(glGetUniformLocation(fragmentProg, "depthBuffer"), TextureUnits::PostProcDepth);
 
-	vertShader = glwrp::VertexShader();
+	vertShader = {};
 	drawProg.attachShader(vertShader);
 	vertShader.loadSource(gl31::shader_draw_vert);
 	vertShader.compile();
-	fragShader = glwrp::FragmentShader();
+	fragShader = {};
 	drawProg.attachShader(fragShader);
 	fragShader.loadSource(gl31::shader_draw_frag);
 	fragShader.compile();
@@ -358,15 +378,19 @@ void RenderOpenGL31_impl::prepareShaders() {
 	glUniformBlockBinding(drawProg, objectInstanceBlockIndex, UniformIndices::ObjectInstanceBind);
 	auto cameraBlockIndex = drawProg.getUniformBlockIndex("Camera");
 	glUniformBlockBinding(drawProg, cameraBlockIndex, UniformIndices::CameraBind);
-	cameraUBO = glwrp::UniformBuffer();
+	cameraUBO = {};
 	cameraUBO.bind();
-	glBufferData(GL_UNIFORM_BUFFER, sizeof(CameraUniform), nullptr, GL_DYNAMIC_DRAW);
-	glBindBufferBase(GL_UNIFORM_BUFFER, UniformIndices::CameraBind, cameraUBO);
+	glBufferData(cameraUBO.target, sizeof(CameraUniform), nullptr, GL_DYNAMIC_DRAW);
+	glBindBufferBase(cameraUBO.target, UniformIndices::CameraBind, cameraUBO);
 
 	drawWindowSizeUniform = glGetUniformLocation(drawProg, "windowSize");
 	matColorUnifrom = glGetUniformLocation(drawProg, "matColor");
 	glUseProgram(drawProg);
 	glUniform2f(drawWindowSizeUniform, 0, 0);
+	glUniform1i(glGetUniformLocation(drawProg, "diffuse"), TextureUnits::DrawDiffuse);
+	pendingTexture = {};
+	glTexImage2D(pendingTexture.target, 0, GL_SRGB, 8, 8, 0, GL_BGR, GL_UNSIGNED_BYTE, pendingTextureData.data());
+	glGenerateMipmap(pendingTexture.target);
 }
 
 void RenderOpenGL31_impl::resumeRenderCaller() {
@@ -374,29 +398,34 @@ void RenderOpenGL31_impl::resumeRenderCaller() {
 }
 
 void RenderOpenGL31_impl::rebuildSrgbFrameBuffer() {
+	glActiveTexture(GL_TEXTURE0);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	renderFBO = glwrp::FrameBuffer();
+	renderFBO = {};
 	glBindFramebuffer(GL_FRAMEBUFFER, renderFBO);
-	colorBuffer = glwrp::TextureRectangle();
-	glTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_R11F_G11F_B10F, width, height, 0, GL_RGB, GL_FLOAT, nullptr);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_RECTANGLE, colorBuffer, 0);
-	depthBuffer = glwrp::TextureRectangle();
-	glTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_DEPTH_COMPONENT24, width, height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_RECTANGLE, depthBuffer, 0);
-	glBindTexture(GL_TEXTURE_RECTANGLE, 0);
+	colorBuffer = {};
+	glTexParameteri(colorBuffer.target, GL_TEXTURE_BASE_LEVEL, 0);
+	glTexParameteri(colorBuffer.target, GL_TEXTURE_MAX_LEVEL, 0);
+	glTexImage2D(colorBuffer.target, 0, GL_R11F_G11F_B10F, width, height, 0, GL_RGB, GL_UNSIGNED_INT_10F_11F_11F_REV, nullptr);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, attachment(OutputParams::FragmentColor), colorBuffer.target, colorBuffer, 0);
+	depthBuffer = {};
+	glTexParameteri(depthBuffer.target, GL_TEXTURE_BASE_LEVEL, 0);
+	glTexParameteri(depthBuffer.target, GL_TEXTURE_MAX_LEVEL, 0);
+	glTexImage2D(depthBuffer.target, 0, GL_DEPTH24_STENCIL8, width, height, 0, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, nullptr);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, depthBuffer.target, depthBuffer, 0);
 #ifdef DSE_MULTISAMPLE
-	renderFBOMSAA = glwrp::FrameBuffer();
+	renderFBOMSAA = {};
 	glBindFramebuffer(GL_FRAMEBUFFER, renderFBOMSAA);
-	colorBufferMSAA = glwrp::RenderBuffer();
+	colorBufferMSAA = {};
 	glBindRenderbuffer(GL_RENDERBUFFER, colorBufferMSAA);
 	glRenderbufferStorageMultisample(GL_RENDERBUFFER, DSE_MULTISAMPLE, GL_R11F_G11F_B10F, width, height);
 	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, colorBufferMSAA);
-	depthBufferMSAA = glwrp::RenderBuffer();
+	depthBufferMSAA = {};
 	glBindRenderbuffer(GL_RENDERBUFFER, depthBufferMSAA);
 	glRenderbufferStorageMultisample(GL_RENDERBUFFER, DSE_MULTISAMPLE, GL_DEPTH_COMPONENT24, width, height);
 	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthBufferMSAA);
 	glBindRenderbuffer(GL_RENDERBUFFER, 0);
 #endif
+	glFinish();
 }
 
 void RenderOpenGL31_impl::setCamera(dse::scn::Camera &camera) {

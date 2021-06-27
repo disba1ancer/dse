@@ -15,6 +15,12 @@
 
 namespace dse::util {
 
+template <typename T>
+class future;
+
+template <typename T>
+class promise;
+
 namespace impl {
 
 template <typename T>
@@ -28,13 +34,14 @@ public:
 	refcounter& operator=(refcounter&&) = delete;
 	~refcounter() = default;
 protected:
-	virtual void destroy() noexcept = 0; /*{
+	/*virtual void destroy() noexcept = 0;*/ /*{
 		delete static_cast<T*>(this);
 	}*/
 public:
 	void release() noexcept {
 		if (refs.fetch_sub(1, std::memory_order_release) == 1) {
-			this->destroy();
+			std::atomic_thread_fence(std::memory_order_acquire);
+			static_cast<T*>(this)->T::destroy();
 		}
 	}
 	struct deleter {
@@ -50,8 +57,6 @@ public:
 	}
 };
 
-}
-
 template <typename T>
 class shared_state_base;
 
@@ -62,29 +67,22 @@ template <typename T>
 class shared_state;
 
 template <typename T>
-class future;
-
-template <typename T>
 class promise_base;
 
 template <typename T>
 class promise_typed;
 
 template <typename T>
-class promise;
-
-template <typename T>
-class shared_state_base : public impl::refcounter<shared_state<T>> {
+class shared_state_base : public refcounter<shared_state<T>> {
 private:
 	using continuation_type = function_view<void(future<T>)>;
+	std::atomic_bool isReady = false;
 	std::mutex mtx;
-	std::condition_variable cvar;
 	continuation_type continuations;
 public:
 	friend class shared_state_type<T>;
 	friend class shared_state<T>;
 	enum types {
-		Undefined,
 		Value,
 		Exception
 	};
@@ -97,34 +95,36 @@ class shared_state_type : public shared_state_base<T> {
 public:
 	using value_type = T;
 	using store_type = T;
+	using shared_state_base<T>::isReady;
 	using shared_state_base<T>::mtx;
-	using shared_state_base<T>::cvar;
-	using shared_state_base<T>::Undefined;
 	using shared_state_base<T>::Value;
 	friend class shared_state<T>;
 private:
-	std::variant<std::monostate, store_type, std::exception_ptr> value;
+	std::variant<store_type, std::exception_ptr> value;
 	//void notify_and_continue();
 public:
 	void set_value(const value_type& val) {
-		{
-			std::scoped_lock lck(mtx);
-			if (value.index() != Undefined) {
-				throw std::future_error(std::future_errc::promise_already_satisfied);
-			}
-			value.template emplace<Value>(val);
+		if (isReady.load(std::memory_order_acquire)) {
+			throw std::future_error(std::future_errc::promise_already_satisfied);
 		}
+		value.template emplace<Value>(val);
 		this->notify_and_continue();
 	}
 	void set_value(value_type&& val) {
-		{
-			std::scoped_lock lck(mtx);
-			if (value.index() != Undefined) {
-				throw std::future_error(std::future_errc::promise_already_satisfied);
-			}
-			value.template emplace<Value>(std::move(val));
+		if (isReady.load(std::memory_order_acquire)) {
+			throw std::future_error(std::future_errc::promise_already_satisfied);
 		}
+		value.template emplace<Value>(std::move(val));
 		this->notify_and_continue();
+	}
+	std::optional<std::reference_wrapper<T>> try_get() {
+		if (!isReady.load(std::memory_order_acquire)) {
+			return {};
+		}
+		if (this->value.index() == this->Exception) {
+			std::rethrow_exception(std::get<this->Exception>(this->value));
+		}
+		return std::ref(std::get<this->Value>(this->value));
 	}
 	void return_value(const value_type& val) {
 		set_value(val);
@@ -139,22 +139,27 @@ class shared_state_type<void> : public shared_state_base<void> {
 public:
 	using value_type = void;
 	using store_type = std::monostate;
+	using shared_state_base<value_type>::isReady;
 	using shared_state_base<value_type>::mtx;
-	using shared_state_base<value_type>::cvar;
-	using shared_state_base<value_type>::Undefined;
 	friend class shared_state<value_type>;
 private:
-	std::variant<std::monostate, store_type, std::exception_ptr> value;
+	std::variant<store_type, std::exception_ptr> value;
 public:
 	void set_value() {
-		{
-			std::scoped_lock lck(mtx);
-			if (value.index() != Undefined) {
-				throw std::future_error(std::future_errc::promise_already_satisfied);
-			}
-			value.emplace<Value>(std::monostate());
+		if (isReady.load(std::memory_order_acquire)) {
+			throw std::future_error(std::future_errc::promise_already_satisfied);
 		}
+		value.emplace<Value>(std::monostate());
 		this->notify_and_continue();
+	}
+	bool try_get() {
+		if (!isReady.load(std::memory_order_acquire)) {
+			return false;
+		}
+		if (this->value.index() == this->Exception) {
+			std::rethrow_exception(std::get<this->Exception>(this->value));
+		}
+		return true;
 	}
 	void return_void() {
 		set_value();
@@ -166,23 +171,29 @@ class shared_state_type<T&> : public shared_state_base<T&> {
 public:
 	using value_type = T&;
 	using store_type = std::reference_wrapper<T>;
+	using shared_state_base<value_type>::isReady;
 	using shared_state_base<value_type>::mtx;
-	using shared_state_base<value_type>::cvar;
 	using shared_state_base<value_type>::Value;
 	using shared_state_base<value_type>::Undefined;
 	friend class shared_state<value_type>;
 private:
-	std::variant<std::monostate, store_type, std::exception_ptr> value;
+	std::variant<store_type, std::exception_ptr> value;
 public:
 	void set_value(value_type& val) {
-		{
-			std::scoped_lock lck(mtx);
-			if (value.index() != Undefined) {
-				throw std::future_error(std::future_errc::promise_already_satisfied);
-			}
-			value.template emplace<Value>(std::ref(val));
+		if (isReady.load(std::memory_order_acquire)) {
+			throw std::future_error(std::future_errc::promise_already_satisfied);
 		}
+		value.template emplace<Value>(std::ref(val));
 		this->notify_and_continue();
+	}
+	std::optional<std::reference_wrapper<T>> try_get() {
+		if (!isReady.load(std::memory_order_acquire)) {
+			return {};
+		}
+		if (this->value.index() == this->Exception) {
+			std::rethrow_exception(std::get<this->Exception>(this->value));
+		}
+		return std::ref(std::get<this->Value>(this->value));
 	}
 	void return_value(value_type& val) {
 		set_value(val);
@@ -197,9 +208,10 @@ class shared_state final :
 	public shared_state_type<T>
 {
 public:
-	using typename impl::refcounter<shared_state<T>>::deleter;
+	using typename refcounter<shared_state<T>>::deleter;
 	using typename shared_state_type<T>::value_type;
 	using typename shared_state_base<T>::continuation_type;
+	using shared_state_base<T>::isReady;
 private:
 	bool isCoroPromise = true;
 	shared_state(bool coro) : isCoroPromise(coro) {}
@@ -208,8 +220,9 @@ public:
 	static std::unique_ptr<shared_state<T>, deleter> constuct() {
 		return { new shared_state(false), deleter() };
 	}
-protected:
-	virtual void destroy() noexcept override {
+private:
+	friend class refcounter<shared_state<T>>;
+	void destroy() noexcept /*override*/ {
 		if (isCoroPromise) {
 			std::coroutine_handle<shared_state<T>>::from_promise(*this).destroy();
 		} else {
@@ -218,48 +231,22 @@ protected:
 	}
 public:
 	void set_exception(std::exception_ptr eptr) {
+		if (isReady.load(std::memory_order_acquire)) {
+			throw std::future_error(std::future_errc::promise_already_satisfied);
+		}
 		this->value.template emplace<this->Exception>(eptr);
 		this->notify_and_continue();
 	}
-	void wait() {
-		std::unique_lock lck(this->mtx);
-		if (this->value.index() == this->Undefined) {
-			this->cvar.wait(lck);
-		}
-	}
-	template <typename Rep, typename Period>
-	void wait_for(const std::chrono::duration<Rep, Period>& timeout) {
-		std::unique_lock lck(this->mtx);
-		if (this->value.index == this->Undefined) {
-			this->cvar.wait_for(lck, timeout);
-		}
-	}
-	template <typename Clock, typename Duration>
-	void wait_until(const std::chrono::time_point<Clock, Duration>& timeout) {
-		std::unique_lock lck(this->mtx);
-		if (this->value.index == this->Undefined) {
-			this->cvar.wait_until(lck, timeout);
-		}
-	}
-	T get() {
-		wait();
-		if (this->value.index() == this->Exception) {
-			std::rethrow_exception(std::get<this->Exception>(this->value));
-		}
-		return static_cast<value_type>(std::get<this->Value>(this->value));
-	}
 	void then(continuation_type continuation) {
-		{
-			std::scoped_lock lck(this->mtx);
-			if (this->value.index() == this->Undefined) {
-				this->continuations = continuation;
-				return;
-			}
+		if (isReady.load(std::memory_order_acquire)) {
+			continuation(this->share());
+			return;
 		}
-		continuation(this->share());
+		std::scoped_lock lck(this->mtx);
+		this->continuations = continuation;
 	}
 	bool is_ready() const {
-		return this->value.index() != this->Undefined;
+		return isReady.load(std::memory_order_acquire);
 	}
 	future<value_type> get_return_object();
 	std::suspend_never initial_suspend() {
@@ -277,62 +264,14 @@ public:
 	final_suspend_t final_suspend() {
 		return {};
 	}
-	void unhandled_exception() {
+	void unhandled_exception() noexcept {
 		set_exception(std::current_exception());
 	}
 };
 
 template <typename T>
-class future {
-public:
-	using value_type = T;
-	friend class promise_base<value_type>;
-	friend class shared_state_base<value_type>;
-	friend class shared_state<value_type>;
-	using promise_type = shared_state<value_type>;
-private:
-	using sh_state = shared_state<value_type>;
-	using pointer_type = typename sh_state::pointer_type;
-	using continuation_type = typename sh_state::continuation_type;
-	pointer_type state;
-	future(pointer_type&& state) : state(std::move(state)) {}
-public:
-	future() noexcept = default;
-	future(const future&) = delete;
-	future(future&&) noexcept = default;
-	future& operator=(const future&) = delete;
-	future& operator=(future&&) noexcept = default;
-	~future() = default;
-	bool valid() const noexcept {
-		return state;
-	}
-	void wait() const {
-		state->wait();
-	}
-	template <typename Rep, typename Period>
-	void wait_for(const std::chrono::duration<Rep, Period>& timeout) const {
-		state->wait_for(timeout);
-	}
-	template <typename Clock, typename Duration>
-	void wait_until(const std::chrono::time_point<Clock, Duration>& timeout) const {
-		state->wait_until(timeout);
-	}
-	T get() {
-		auto state = std::move(this->state);
-		return state->get();
-	}
-	bool is_ready() const {
-		return state->is_ready();
-	}
-	void then(continuation_type continuation) {
-		auto state = std::move(this->state);
-		state->then(continuation);
-	}
-};
-
-template <typename T>
 void shared_state_base<T>::notify_and_continue() {
-	cvar.notify_all();
+	isReady.store(true, std::memory_order_release);
 	if (continuations) continuations(this->share());
 }
 
@@ -361,6 +300,7 @@ public:
 		return state->share();
 	}
 	void set_exception(std::exception_ptr eptr) {
+		if (!state) throw std::future_error(std::future_errc::no_state);
 		state->set_exception(eptr);
 	}
 };
@@ -407,8 +347,99 @@ public:
 template <typename T>
 class promise_typed<T&&>;
 
+}
+
 template <typename T>
-class promise : public promise_typed<T> {
+class future_base {
+public:
+	using value_type = T;
+	friend class future<value_type>;
+	using promise_type = impl::shared_state<value_type>;
+private:
+	using sh_state = impl::shared_state<value_type>;
+	using pointer_type = typename sh_state::pointer_type;
+	using continuation_type = typename sh_state::continuation_type;
+	pointer_type state;
+	future_base(pointer_type&& state) : state(std::move(state)) {}
+public:
+	future_base() noexcept = default;
+	future_base(const future_base&) = delete;
+	future_base(future_base&&) noexcept = default;
+	future_base& operator=(const future_base&) = delete;
+	future_base& operator=(future_base&&) noexcept = default;
+	~future_base() = default;
+	bool valid() const noexcept {
+		return state;
+	}
+	bool is_ready() const {
+		if (!state) throw std::future_error(std::future_errc::no_state);
+		return state->is_ready();
+	}
+	void then(continuation_type continuation) {
+		if (!state) throw std::future_error(std::future_errc::no_state);
+		auto state = std::move(this->state);
+		state->then(continuation);
+	}
+};
+
+template <typename T>
+class future : public future_base<T> {
+	using value_type = future_base<T>::value_type;
+	using pointer_type = typename future_base<T>::pointer_type;
+	friend class impl::promise_base<value_type>;
+	friend class impl::shared_state_base<value_type>;
+	friend class impl::shared_state<value_type>;
+	future(pointer_type&& state) : future_base<T>(std::move(state)) {}
+public:
+	std::optional<T> try_get() {
+		auto state = std::move(this->state);
+		auto result = state->try_get();
+		if (!result) {
+			return {};
+		}
+		return std::move(result->get());
+	}
+};
+
+template <>
+class future<void> : public future_base<void> {
+	using value_type = future_base<void>::value_type;
+	using pointer_type = typename future_base<void>::pointer_type;
+	friend class impl::promise_base<value_type>;
+	friend class impl::shared_state_base<value_type>;
+	friend class impl::shared_state<value_type>;
+	future(pointer_type&& state) : future_base<void>(std::move(state)) {}
+public:
+	bool try_get() {
+		auto state = std::move(this->state);
+		return state->try_get();
+	}
+};
+
+template <typename T>
+class future<T&> : public future_base<T&> {
+	using value_type = future_base<T&>::value_type;
+	using pointer_type = typename future_base<T&>::pointer_type;
+	friend class impl::promise_base<value_type>;
+	friend class impl::shared_state_base<value_type>;
+	friend class impl::shared_state<value_type>;
+	future(pointer_type&& state) : future_base<T&>(std::move(state)) {}
+public:
+	std::optional<std::reference_wrapper<T>> try_get() {
+		auto state = std::move(this->state);
+		auto result = state->try_get();
+		if (!result) {
+			return false;
+		}
+		return std::ref(result.value());
+	}
+};
+
+template <typename T>
+class future<T&&>;
+
+template <typename T>
+class promise : public impl::promise_typed<T> {
 public:
 	void swap(promise& other) {
 		auto t = std::move(*this);
@@ -416,6 +447,8 @@ public:
 		other = std::move(t);
 	}
 };
+
+namespace impl {
 
 template <typename T>
 class future_awaiter {
@@ -434,18 +467,28 @@ public:
 		this->handle = handle;
 		ft.then(*this);
 	}
-	T await_resume() {
-		return ft.get();
-	}
+	T await_resume();
 };
 
 template <typename T>
-auto operator co_await(future<T>& ft) -> future_awaiter<T> {
+T future_awaiter<T>::await_resume() {
+	return ft.try_get().value();
+}
+
+template <>
+inline void future_awaiter<void>::await_resume() {
+	ft.try_get();
+}
+
+}
+
+template <typename T>
+auto operator co_await(future<T>& ft) -> impl::future_awaiter<T> {
 	return { std::move(ft) };
 }
 
 template <typename T>
-auto operator co_await(future<T>&& ft) -> future_awaiter<T> {
+auto operator co_await(future<T>&& ft) -> impl::future_awaiter<T> {
 	return { std::move(ft) };
 }
 

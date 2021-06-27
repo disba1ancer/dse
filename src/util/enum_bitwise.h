@@ -19,30 +19,32 @@ struct enable_enum_bitwise {
 	static constexpr bool value = false;
 };
 
-namespace enum_bitwise {
+template <typename T>
+constexpr bool enable_enum_bitwise_v = enable_enum_bitwise<T>::value;
 
-template <typename Enum>
-typename std::enable_if<dse::util::enable_enum_bitwise<Enum>::value, Enum>::type operator|(Enum enum1, Enum enum2) {
-	return static_cast<Enum>(static_cast<typename std::underlying_type<Enum>::type>(enum1) | static_cast<typename std::underlying_type<Enum>::type>(enum2));
+}
 }
 
 template <typename Enum>
-typename std::enable_if<dse::util::enable_enum_bitwise<Enum>::value, Enum>::type operator&(Enum enum1, Enum enum2) {
-	return static_cast<Enum>(static_cast<typename std::underlying_type<Enum>::type>(enum1) & static_cast<typename std::underlying_type<Enum>::type>(enum2));
+Enum operator|(Enum enum1, Enum enum2) requires (dse::util::enable_enum_bitwise_v<Enum>) {
+	using und_t = typename std::underlying_type_t<Enum>;
+	return static_cast<Enum>(static_cast<und_t>(enum1) | static_cast<und_t>(enum2));
 }
 
 template <typename Enum>
-typename std::enable_if<dse::util::enable_enum_bitwise<Enum>::value, Enum&>::type operator|=(Enum& enum1, Enum enum2) {
+Enum operator&(Enum enum1, Enum enum2) requires (dse::util::enable_enum_bitwise_v<Enum>) {
+	using und_t = typename std::underlying_type_t<Enum>;
+	return static_cast<Enum>(static_cast<und_t>(enum1) & static_cast<und_t>(enum2));
+}
+
+template <typename Enum>
+Enum& operator|=(Enum& enum1, Enum enum2) requires (dse::util::enable_enum_bitwise_v<Enum>) {
 	return enum1 = enum1 | enum2;
 }
 
 template <typename Enum>
-typename std::enable_if<dse::util::enable_enum_bitwise<Enum>::value, Enum&>::type operator&=(Enum& enum1, Enum enum2) {
+Enum operator&=(Enum& enum1, Enum enum2) requires (dse::util::enable_enum_bitwise_v<Enum>) {
 	return enum1 = enum1 & enum2;
-}
-
-}
-}
 }
 
 #endif /* UTIL_ENUM_BITWISE_H_ */

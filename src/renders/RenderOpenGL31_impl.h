@@ -19,6 +19,7 @@
 #include "gl31/ObjectInstance.h"
 #include "glwrp/Program.h"
 #include "glwrp/Buffer.h"
+#include "glwrp/Sampler.h"
 #include "glwrp/Shader.h"
 #include "glwrp/FrameBuffer.h"
 #include "glwrp/Texture.h"
@@ -43,8 +44,6 @@ class RenderOpenGL31_impl {
 	glwrp::Program fragmentProg;
 	glwrp::Program drawProg;
 	gl::GLint fragWindowSizeUniform = 0;
-	gl::GLint fragColorBufferUniform = 0;
-	gl::GLint fragDepthBufferUniform = 0;
 	gl::GLint drawWindowSizeUniform = 0;
 	gl::GLint matColorUnifrom = 0;
 	unsigned width = 1, height = 1;
@@ -54,9 +53,13 @@ class RenderOpenGL31_impl {
 	glwrp::RenderBuffer depthBufferMSAA = 0;
 #endif
 	glwrp::FrameBuffer renderFBO = 0;
-	glwrp::TextureRectangle colorBuffer = 0;
-	glwrp::TextureRectangle depthBuffer = 0;
+	glwrp::Texture2D colorBuffer = 0;
+	glwrp::Texture2D depthBuffer = 0;
+	glwrp::Texture2D pendingTexture = 0;
 	glwrp::UniformBuffer cameraUBO = 0;
+	glwrp::Sampler postProcColor = 0;
+	glwrp::Sampler postProcDepth = 0;
+	glwrp::Sampler drawDiffuse = 0;
 	util::promise<void> pr;
 	std::atomic_bool requested = false;
 	std::map<scn::IMesh*, gl31::MeshInstance>::iterator cleanupPointer;
@@ -66,7 +69,7 @@ class RenderOpenGL31_impl {
 	void rebuildSrgbFrameBuffer();
 	void prepareShaders();
 	void resumeRenderCaller();
-	void rebuildViewport(int width, int height);
+	void rebuildViewport(unsigned width, unsigned height);
 	void setupCamera();
 	void drawPostprocess();
 	void fillInstances();
@@ -84,6 +87,8 @@ public:
 	auto render() -> util::future<void>;
 	void setScene(dse::scn::Scene& scene);
 	void setCamera(dse::scn::Camera& camera);
+private:
+	void prepareSamplers();
 };
 
 } /* namespace dse::renders */

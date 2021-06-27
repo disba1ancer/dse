@@ -135,7 +135,7 @@ public:
 	}
 	void return_void() {}
 	void unhandled_exception() { std::terminate(); }
-	std::suspend_always final_suspend() {
+	std::suspend_always final_suspend() noexcept {
 		return {};
 	}
 };

@@ -35,7 +35,7 @@ public:
 	}
 };
 
-template <gl::GLenum target>
+template <gl::GLenum _target>
 class TargetBuffer: public Buffer {
 public:
 	TargetBuffer(bool nonempty = true) noexcept : Buffer(nonempty) {
@@ -46,6 +46,10 @@ public:
 	void bind() {
 		glBindBuffer(target, *this);
 	}
+	static void unbind() noexcept {
+		glBindBuffer(target, 0);
+	}
+	static constexpr gl::GLenum target = _target;
 };
 
 typedef TargetBuffer<GL_ELEMENT_ARRAY_BUFFER> ElementBuffer;

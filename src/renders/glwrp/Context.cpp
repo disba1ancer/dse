@@ -32,6 +32,7 @@ const int pixelFormatAtributes[] =
 	WGL_ALPHA_BITS_ARB, 8,
 	WGL_DEPTH_BITS_ARB, 24,
 	WGL_STENCIL_BITS_ARB, 8,
+	WGL_FRAMEBUFFER_SRGB_CAPABLE_ARB, TRUE,
 	0, 0
 };
 #endif

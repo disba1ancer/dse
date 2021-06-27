@@ -40,8 +40,6 @@ enum class StPoint {
 	END,
 };
 
-using namespace util::enum_bitwise;
-
 class IOTargetDelete {
 public:
 	void operator()(IOTarget_impl* obj);

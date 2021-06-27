@@ -66,6 +66,7 @@ set (DSE_CORE_SRCS
     src/scn/Object.h
     src/scn/Scene.cpp
     src/scn/Scene.h
+    src/scn/ITextureDataProvider.h
     src/renders/glwrp/Buffer.h
     src/renders/glwrp/Context.cpp
     src/renders/glwrp/Context.h
@@ -75,6 +76,7 @@ set (DSE_CORE_SRCS
     src/renders/glwrp/ImportedFunction.h
     src/renders/glwrp/Program.h
     src/renders/glwrp/RenderBuffer.h
+    src/renders/glwrp/Sampler.h
     src/renders/glwrp/Shader.h
     src/renders/glwrp/Texture.h
     src/renders/glwrp/TrvMvOnlyRes.h

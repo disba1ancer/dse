@@ -35,7 +35,7 @@ public:
 	}
 };
 
-template <gl::GLenum target>
+template <gl::GLenum _target>
 class TargetTexture: public Texture {
 public:
 	TargetTexture(bool nonempty = true) noexcept : Texture(nonempty) {
@@ -46,9 +46,14 @@ public:
 	void bind() noexcept {
 		glBindTexture(target, *this);
 	}
+	static void unbind() noexcept {
+		glBindTexture(target, 0);
+	}
+	static constexpr gl::GLenum target = _target;
 };
 
 typedef TargetTexture<GL_TEXTURE_2D> Texture2D;
+typedef TargetTexture<GL_TEXTURE_2D_ARRAY> Texture2DArray;
 typedef TargetTexture<GL_TEXTURE_RECTANGLE> TextureRectangle;
 
 } /* dse::renders::glwrp */

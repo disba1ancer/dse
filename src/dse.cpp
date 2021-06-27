@@ -73,7 +73,7 @@ int main(int argc, char* argv[]) {
 		Camera cam;
 		Scene scene;
 		Cube cubeMesh;
-		Material mat(dse::math::vec4{.2f, .8f, .4f, .5f});
+		Material mat(dse::math::vec4{.2f, .8f, .4f, .0f});
 		auto cube1 = scene.createObject(Object(&cubeMesh));
 		auto cube2 = scene.createObject(Object(&cubeMesh));
 		cube1->setPos({-1.f, -1.f, -1.f});
@@ -124,7 +124,7 @@ int main(int argc, char* argv[]) {
 			using namespace dse::math;
 			auto center = window.size() / 2;
 			auto moffset = dse::math::ivec2{x, y} - center;
-			constexpr float sens = 3.f / 4096.f;
+			constexpr float sens = 30.f / 65536.f;
 			pitch = std::clamp(pitch - moffset.y() * sens, 0.f, PI);
 			yaw -= moffset.x() * sens;
 			auto pitchHalf = pitch * .5f;

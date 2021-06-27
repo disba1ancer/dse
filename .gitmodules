@@ -1,0 +1,3 @@
+[submodule "swal"]
+	path = swal
+	url = git@github.com:disba1ancer/swal.git

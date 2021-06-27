@@ -174,7 +174,7 @@ auto ThreadPool_win32::pop(ThreadData &thrData) -> Task {
 	if (thrData.taskQueue.empty()) {
 		trySteal(thrData);
 	}
-	if (!thrData.taskQueue.empty()){
+	if (!thrData.taskQueue.empty()) {
 		auto task = std::move(thrData.taskQueue.front());
 		thrData.taskQueue.pop_front();
 		return task;

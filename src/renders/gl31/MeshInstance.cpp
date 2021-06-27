@@ -39,13 +39,13 @@ bool MeshInstance::isReady() {
 				submeshRanges[i] = mesh->getSubmeshRange(i);
 			}
 		}
-		vao = glwrp::VAO();
-		vbo = glwrp::VertexBuffer();
-		ibo = glwrp::ElementBuffer();
+		vao = {};
+		vbo = {};
+		ibo = {};
 		mesh->loadVerticesRange(vertexData.data(), 0, vertCount);
 		mesh->loadElementsRange(elementData.data(), 0, elemCount);
-		glBufferData(GL_ARRAY_BUFFER, vertCount * sizeof(scn::IMesh::vertex), vertexData.data(), GL_STATIC_DRAW);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, elemCount * sizeof(std::uint32_t), elementData.data(), GL_STATIC_DRAW);
+		glBufferData(vbo.target, vertCount * sizeof(scn::IMesh::vertex), vertexData.data(), GL_STATIC_DRAW);
+		glBufferData(ibo.target, elemCount * sizeof(std::uint32_t), elementData.data(), GL_STATIC_DRAW);
 		glEnableVertexAttribArray(InputParams::Position);
 		glEnableVertexAttribArray(InputParams::Normal);
 		glEnableVertexAttribArray(InputParams::Tangent);
