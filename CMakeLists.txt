@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.19)
 project(dse
     LANGUAGES CXX
-    VERSION 1.0
+    VERSION 0.0.1.0
     DESCRIPTION "DSE Engine"
 )
 
@@ -24,8 +24,6 @@ set(DSE_SUBSYSTEM_WINDOWS_LINK_OPTIONS
 set(DSE_CORE_WIN32_SRCS
     src/core/File_win32.cpp
     src/core/File_win32.h
-#    src/os/io/IOCP_win32.cpp
-#    src/os/io/IOCP_win32.h
     src/os/PaintEventData_win32.h
     src/os/win32.h
     src/os/Window_win32.cpp
@@ -48,8 +46,6 @@ set (DSE_CORE_SRCS
     src/core/File.cpp
     src/core/File.h
     src/os/KeyboardKeyState.h
-    src/os/loop.cpp
-    src/os/loop.h
     src/os/mcursor.cpp
     src/os/mcursor.h
     src/os/Window.cpp
@@ -93,8 +89,6 @@ set (DSE_CORE_SRCS
     src/renders/RenderOpenGL31_impl.cpp
     src/renders/RenderOpenGL31_impl.h
     src/util/emptylock.h
-    src/util/ExecutionThread.cpp
-    src/util/ExecutionThread.h
     src/util/spinlock.h
     src/util/TaskState.h
     src/core/ThreadPool.cpp
@@ -110,7 +104,9 @@ set (DSE_CORE_SRCS
     src/util/ProxyContainer.h
     src/util/ProxyIterator.h
     src/util/functional.h
-    src/util/future.h
+    src/util/TagInvoke.h
+    src/util/execution.h
+    src/util/coroutine.h
     ${PROJECT_BINARY_DIR}/generated/dse_shaders/gl31.cpp
     ${PROJECT_BINARY_DIR}/generated/dse_shaders/gl31.h
 )

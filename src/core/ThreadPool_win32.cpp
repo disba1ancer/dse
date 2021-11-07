@@ -36,7 +36,7 @@ ThreadPool_win32::~ThreadPool_win32() {
 	}
 }
 
-void ThreadPool_win32::schedule(Task task) {
+void ThreadPool_win32::Schedule(const Task& task) {
 	std::size_t taskCount;
 	ThreadData& thrData = (thrDataPtr ? *thrDataPtr : threadsData[0]);
 	{
@@ -47,11 +47,11 @@ void ThreadPool_win32::schedule(Task task) {
 	//condvar.notify_all();
 	if (slpThrds.load(std::memory_order_relaxed) && taskCount > 1) {
 		slpThrds.store(false, std::memory_order_relaxed);
-		wakeupThreads();
+		WakeupThreads();
 	}
 }
 
-int ThreadPool_win32::run(PoolCaps caps) {
+int ThreadPool_win32::Run(PoolCaps caps) {
 	this->caps = caps;
 	util::scope_exit f([this]{
 		thrDataPtr = nullptr;
@@ -64,67 +64,67 @@ int ThreadPool_win32::run(PoolCaps caps) {
 	running.store(true, std::memory_order_relaxed);
 	mainThread = GetCurrentThreadId();
 	for (std::size_t i = 1; i < threadsData.size(); ++i) {
-		threadsData[i].thr = std::thread(&ThreadPool_win32::thrEntry, this, i);
+		threadsData[i].thr = std::thread(&ThreadPool_win32::ThrEntry, this, i);
 	}
 
 	threadsData[0].currentPool = this;
 	thrDataPtr = &(threadsData[0]);
-	join(true);
+	Join(true);
 
 	return 0;
 }
 
-void ThreadPool_win32::join() {
-	join(false);
+void ThreadPool_win32::Join() {
+	Join(false);
 }
 
-void ThreadPool_win32::stop() {
+void ThreadPool_win32::Stop() {
 	if (running.exchange(false, std::memory_order_relaxed)) {
-		wakeupThreads();
+		WakeupThreads();
 	}
 }
 
-std::shared_ptr<ThreadPool_win32> ThreadPool_win32::getCurrentPool() {
+std::shared_ptr<ThreadPool_win32> ThreadPool_win32::GetCurrentPool() {
 	auto t = thrDataPtr->currentPool->shared_from_this();
 	return t;
 }
 
-void ThreadPool_win32::iocpAttach(swal::Handle &handle) {
+void ThreadPool_win32::IOCPAttach(swal::Handle &handle) {
 	iocp.AssocFile(handle, 0x0DB9);
 }
 
-void ThreadPool_win32::join(bool isMain) {
+void ThreadPool_win32::Join(bool isMain) {
 	if (thrDataPtr) {
 		ThreadData& thrData = *thrDataPtr;
 		thrData.isMain = isMain;
 		while (running.load(std::memory_order_relaxed)) {
-			handleSystem(thrData);
+			HandleSystem(thrData);
 			for (
 				int i = 0;
 				i < DSE_THREADPOOL_TASKS_PER_IO
-					&& (thrData.currentTask = pop(thrData));
+					&& (thrData.currentTask = Pop(thrData));
 				++i
 			) {
 				if (thrData.currentTask) {
 					thrData.currentTask();
 				}
 			}
-			waitForWork(thrData);
+			WaitForWork(thrData);
 		}
 	}
 }
 
-auto ThreadPool_win32::getCurrentTask() -> const Task& {
+auto ThreadPool_win32::GetCurrentTask() -> const Task& {
 	return thrDataPtr->currentTask;
 }
 
-void ThreadPool_win32::thrEntry(size_t dataIdx) {
+void ThreadPool_win32::ThrEntry(size_t dataIdx) {
 	threadsData[dataIdx].currentPool = this;
 	thrDataPtr = &(threadsData[dataIdx]);
-	join();
+	Join();
 }
 
-void ThreadPool_win32::handleMessages() {
+void ThreadPool_win32::HandleMessages() {
 	MSG msg;
 	while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
 		switch (msg.message) {
@@ -141,7 +141,7 @@ void ThreadPool_win32::handleMessages() {
 	}
 }
 
-void ThreadPool_win32::trySteal(ThreadData& thrData) {
+void ThreadPool_win32::TrySteal(ThreadData& thrData) {
 	bool lckQueues = false;
 	for (;;) {
 		for (auto& thrData2 : threadsData) {
@@ -161,7 +161,7 @@ void ThreadPool_win32::trySteal(ThreadData& thrData) {
 		}
 		if (lckQueues) {
 			util::unlock_guard lck(thrData.mtx);
-			handleSystem(thrData);
+			HandleSystem(thrData);
 			lckQueues = false;
 		} else {
 			return;
@@ -169,10 +169,10 @@ void ThreadPool_win32::trySteal(ThreadData& thrData) {
 	}
 }
 
-auto ThreadPool_win32::pop(ThreadData &thrData) -> Task {
+auto ThreadPool_win32::Pop(ThreadData &thrData) -> Task {
 	std::scoped_lock lck(thrData.mtx);
 	if (thrData.taskQueue.empty()) {
-		trySteal(thrData);
+		TrySteal(thrData);
 	}
 	if (!thrData.taskQueue.empty()) {
 		auto task = std::move(thrData.taskQueue.front());
@@ -182,19 +182,19 @@ auto ThreadPool_win32::pop(ThreadData &thrData) -> Task {
 	return nullptr;
 }
 
-void ThreadPool_win32::wakeupThreads() {
+void ThreadPool_win32::WakeupThreads() {
 	for (std::size_t i = 0; i < threadsData.size(); ++i) {
 		iocp.PostQueuedCompletionStatus(0, WakeupMessage, nullptr);
 	}
 	if (mainThread) swal::winapi_call(PostThreadMessage(mainThread, WakeupMessage, 0, 0));
 }
 
-void ThreadPool_win32::handleIO(ThreadPool_win32::ThreadData &thrData) {
+void ThreadPool_win32::HandleIO(ThreadPool_win32::ThreadData &thrData) {
 	auto& ioCompletion = thrData.ioCompletion;
 	for(;;) {
 		if (ioCompletion.ovl != nullptr) {
 			auto asyncHandle = static_cast<IAsyncIO*>(ioCompletion.ovl);
-			asyncHandle->complete(ioCompletion.bytesTransfered, ioCompletion.error);
+			asyncHandle->Complete(ioCompletion.bytesTransfered, ioCompletion.error);
 		}
 		ioCompletion = iocp.GetQueuedCompletionStatus(0);
 		if (
@@ -204,8 +204,8 @@ void ThreadPool_win32::handleIO(ThreadPool_win32::ThreadData &thrData) {
 	}
 }
 
-void ThreadPool_win32::waitForWork(ThreadData &thrData) {
-	if (getTasksCount(thrData) == 0 && running.load(std::memory_order_relaxed)) {
+void ThreadPool_win32::WaitForWork(ThreadData &thrData) {
+	if (GetTasksCount(thrData) == 0 && running.load(std::memory_order_relaxed)) {
 		slpThrds.store(true, std::memory_order_relaxed);
 		if (thrData.isMain) {
 			swal::winapi_call(WaitMessage());
@@ -215,18 +215,18 @@ void ThreadPool_win32::waitForWork(ThreadData &thrData) {
 	}
 }
 
-size_t ThreadPool_win32::getTasksCount(ThreadData &thrData) {
+size_t ThreadPool_win32::GetTasksCount(ThreadData &thrData) {
 	std::scoped_lock lck(thrData.mtx);
 	return thrData.taskQueue.size();
 }
 
-void ThreadPool_win32::handleSystem(ThreadData& thrData) {
-	if (thrData.isMain) handleMessages();
-	handleIO(thrData);
+void ThreadPool_win32::HandleSystem(ThreadData& thrData) {
+	if (thrData.isMain) HandleMessages();
+	HandleIO(thrData);
 }
 
-std::shared_ptr<ThreadPool_win32> IAsyncIO::getImplFromPool(ThreadPool& pool) {
-	return pool.get_impl();
+std::shared_ptr<ThreadPool_win32> IAsyncIO::GetImplFromPool(ThreadPool& pool) {
+	return pool.GetImpl();
 }
 
 } // namespace dse::core

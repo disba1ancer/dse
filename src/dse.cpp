@@ -5,8 +5,7 @@
  *      Author: disba1ancer
  */
 
-#include "util/ExecutionThread.h"
-#include "os/loop.h"
+#include "util/coroutine.h"
 #include "os/Window.h"
 #include <cstdio>
 #include <cstdint>
@@ -26,12 +25,12 @@
 #include "core/ThreadPool.h"
 #include "core/File.h"
 #include "util/scope_exit.h"
+#include "util/execution.h"
 
 #include <swal/error.h>
 #include <string>
 
 using namespace std::string_literals;
-using dse::util::ExecutionThread;
 using dse::os::Window;
 using dse::os::WindowShowCommand;
 using dse::os::KeyboardKeyState;
@@ -43,8 +42,7 @@ using dse::scn::Cube;
 using dse::scn::Scene;
 using dse::scn::Object;
 using dse::scn::Camera;
-using dse::os::setMouseCursorPosWndRel;
-using dse::util::TaskState;
+using dse::os::SetMouseCursorPosWndRel;
 using dse::scn::Material;
 using dse::core::ThreadPool;
 using dse::core::PoolCaps;
@@ -52,21 +50,38 @@ using dse::core::File;
 using dse::core::OpenMode;
 
 //ExecutionThread mainThread;
-ThreadPool thrPool;
+ThreadPool thrPool(1);
+
+dse::util::Task<int> Test(int t)
+{
+	co_return t;
+}
+struct TestReceiver {
+	friend void dse_TagInvoke(dse::util::TagT<dse::util::SetValue>, TestReceiver&&, int i)
+	{
+		std::printf("%i\n", i);
+	}
+	friend void dse_TagInvoke(dse::util::TagT<dse::util::SetError>, TestReceiver&&, std::exception_ptr)
+	{}
+	friend void dse_TagInvoke(dse::util::TagT<dse::util::SetDone>, TestReceiver&&)
+	{}
+};
 
 int main(int argc, char* argv[]) {
 	Window window;
 	RenderOpenGL31 render(window);
-	window.show();
-	setMouseCursorPosWndRel(window.size() / 2, window);
-	auto root = [&window, &render, argc, argv]([[maybe_unused]] ThreadPool& pool) -> dse::core::pool_task {
+	window.Show();
+	SetMouseCursorPosWndRel(window.Size() / 2, window);
+	auto root = [&window, &render, argc, argv]() -> dse::util::Task<void> {
+		using namespace dse::math;
+		dse::util::Connect(Test(10), TestReceiver{});
 		File file(thrPool, u8"test.txt", OpenMode::READ);
 		std::byte buf[4096];
-		if (file.isValid()) {
-			auto r = co_await file.readAsync(buf, 4096);
-			std::printf("%.*s\n", int(r.transfered), reinterpret_cast<char*>(buf));
+		if (file.IsValid()) {
+			auto [transfered, error] = co_await file.ReadAsync(buf, std::size(buf));
+			std::printf("%.*s\n", int(transfered), reinterpret_cast<char*>(buf));
 		} else {
-			std::printf("%s", file.status().message().data());
+			std::printf("%s%s\n", "ERROR: ", file.Status().message().data());
 		}
 		std::fflush(stdout);
 
@@ -82,18 +97,18 @@ int main(int argc, char* argv[]) {
 		cube2->setPos({1.f, 1.f, 1.f});
 		//cube2->setScale({.25f, .25f, .25f});
 		cube2->setMaterial(0, &mat);
-		render.setScene(scene);
+		render.SetScene(scene);
 		cam.setPos({0.f, -4.f, 0.f});
 		cam.setRot({std::sqrt(2.f) * 0.5f, 0.f, 0.f, std::sqrt(2.f) * 0.5f});
 		cam.setNear(.03125f);
 		cam.setFar(1024.f);
-		render.setCamera(cam);
-		auto closeCon = window.subscribeCloseEvent([](WndEvtDt){
-			thrPool.stop();
+		render.SetCamera(cam);
+		auto closeCon = window.SubscribeCloseEvent([](WndEvtDt){
+			thrPool.Stop();
 		});
 		float pitch = dse::math::PI * 0.5, yaw = 0.f;
 		float spd = 0.f, sdspd = 0.f;
-		auto keyCon = window.subscribeKeyEvent([&spd, &sdspd](WndEvtDt, KeyboardKeyState cmd, int key){
+		auto keyCon = window.SubscribeKeyEvent([&spd, &sdspd](WndEvtDt, KeyboardKeyState cmd, int key){
 			constexpr auto speed = .015625f;
 			switch (key) {
 			case 'W':
@@ -113,30 +128,24 @@ int main(int argc, char* argv[]) {
 				if (cmd == KeyboardKeyState::UP) sdspd -= speed;
 				break;
 			case 27:
-				thrPool.stop();
+				thrPool.Stop();
 				break;
 			default:
 				std::printf("%i %i\n", static_cast<int>(cmd), key);
 				std::fflush(stdout);
 			}
 		});
-		auto mmoveCon = window.subscribeMouseMoveEvent([&window, &pitch, &yaw, &cam](WndEvtDt, int x, int y) {
-			using namespace dse::math;
-			auto center = window.size() / 2;
-			auto moffset = dse::math::ivec2{x, y} - center;
-			constexpr float sens = 30.f / 65536.f;
-			pitch = std::clamp(pitch - moffset.y() * sens, 0.f, PI);
-			yaw -= moffset.x() * sens;
-			auto pitchHalf = pitch * .5f;
-			auto yawHalf = yaw * .5f;
-			auto camrot = qmul(vec4{ 0, 0, std::sin(yawHalf), std::cos(yawHalf) }, vec4{ std::sin(pitchHalf), 0, 0, std::cos(pitchHalf) });
-			cam.setRot(camrot);
-			setMouseCursorPosWndRel(center, window);
+		ivec2 moffset = { 0, 0 };
+		auto mmoveCon = window.SubscribeMouseMoveEvent([&window, &moffset](WndEvtDt, int x, int y) {
+			auto center = window.Size() / 2;
+			moffset += ivec2{x, y} - center;
+			SetMouseCursorPosWndRel(center, window);
 		});
 		/*auto sizeCon = window.subscribeResizeEvent([](WndEvtDt, int, int, WindowShowCommand) {
 			mainThread.yieldTasks();
 		});
 		mainThread.addTask(dse::os::nonLockLoop());*/
+		auto lastFrameEnd = std::chrono::steady_clock::now();
 		while (true) {
 			using namespace dse::math;
 			auto angle = 1.f;
@@ -149,12 +158,35 @@ int main(int argc, char* argv[]) {
 				auto movement = norm(vec3{0.f, 0.f, -1.f} * spd + vec3{1.f, 0.f, 0.f} * sdspd);
 				cam.setPos(cam.getPos() + vecrotquat(movement, cam.getRot()));
 			}
+			constexpr float sens = 30.f / 65536.f;
+			pitch = std::clamp(pitch - moffset.y() * sens, 0.f, PI);
+			yaw -= moffset.x() * sens;
+			auto pitchHalf = pitch * .5f;
+			auto yawHalf = yaw * .5f;
+			auto camrot = qmul(vec4{ 0, 0, std::sin(yawHalf), std::cos(yawHalf) }, vec4{ std::sin(pitchHalf), 0, 0, std::cos(pitchHalf) });
+			cam.setRot(camrot);
+			moffset = vec2{0, 0};
 			//renderTask.reset(make_handler<&RenderOpenGL31::renderTask>(render));
 			//renderTask.then([&stepTask]{ thrPool.schedule(stepTask); });
 			//thrPool.schedule(renderTask);
-			co_await render.render();
+
+			co_await render.Render();
+
+			constexpr auto frameDuration = std::chrono::nanoseconds(1000000000 / 60);
+			auto cur = std::chrono::steady_clock::now();
+			auto curDur = cur - lastFrameEnd;
+			auto frames = (curDur / frameDuration) + 1;
+			lastFrameEnd += frames * frameDuration;
+//			lastFrameEnd = cur;
+			auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(curDur);
+			auto count = ms.count();
+			std::printf("                \r%lli\r", count);
+			while (std::chrono::steady_clock::now() < lastFrameEnd) ;
 		}
 	};
-	auto r = root(thrPool);
-	return thrPool.run(PoolCaps::UI);
+	auto r = root();
+	thrPool.Schedule(dse::util::function_view<void()>(&r, [](void*p){
+		static_cast<decltype(r)*>(p)->Resume();
+	}));
+	return thrPool.Run(PoolCaps::UI);
 }

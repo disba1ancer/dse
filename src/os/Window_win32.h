@@ -44,7 +44,7 @@ public:
 	Window_win32& operator=(const Window_win32 &other) = delete;
 	Window_win32& operator=(Window_win32 &&other) = delete;
 	bool isVisible() const;
-	void show(WindowShowCommand command = WindowShowCommand::SHOW);
+	void show(WindowShowCommand command = WindowShowCommand::Show);
 	const WindowData& getSysData();
 	math::ivec2 size();
 	void resize(const math::ivec2& size);

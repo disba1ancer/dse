@@ -180,7 +180,7 @@ GENERATE_VARIANT(&);
 GENERATE_VARIANT(const&);
 GENERATE_VARIANT(volatile&);
 GENERATE_VARIANT(const volatile&);
-#undef DECARE_is_from_method
+#undef GENERATE_VARIANT
 
 template <typename T>
 inline constexpr auto is_from_method_v = is_from_method<T>::value;

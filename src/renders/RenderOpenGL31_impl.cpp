@@ -50,9 +50,11 @@ auto pendingTextureData = std::to_array<unsigned char>({
 });
 }
 
+//extern "C" __declspec(dllexport) int NvOptimusEnablement = 1;
+
 namespace dse::renders {
 
-void RenderOpenGL31_impl::setupCamera() {
+void RenderOpenGL31_impl::SetupCamera() {
 	CameraUniform uniforms = {};
 	auto& camPos = uniforms.pos;
 	camPos["xyz"] = camera->getPos();
@@ -85,7 +87,7 @@ void RenderOpenGL31_impl::setupCamera() {
 	glBindBufferBase(cameraUBO.target, UniformIndices::CameraBind, cameraUBO);
 }
 
-void dse::renders::RenderOpenGL31_impl::drawPostprocess() {
+void dse::renders::RenderOpenGL31_impl::DrawPostprocess() {
 #ifdef DSE_MULTISAMPLE
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, renderFBO);
 	glBlitFramebuffer(0, 0, width, height, 0, 0, width, height, GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT, GL_NEAREST);
@@ -105,10 +107,10 @@ void dse::renders::RenderOpenGL31_impl::drawPostprocess() {
 	glDepthFunc(GL_LESS);
 }
 
-void dse::renders::RenderOpenGL31_impl::reloadInstance(gl31::ObjectInstance& objInst) {
+void dse::renders::RenderOpenGL31_impl::ReloadInstance(gl31::ObjectInstance& objInst) {
 	auto meshInst = objInst.mesh.get();
 	if (meshInst == nullptr || meshInst->getMesh() != objInst.object->getMesh()) {
-		auto mi = getMeshInstance(objInst.object->getMesh());
+		auto mi = GetMeshInstance(objInst.object->getMesh());
 		if (mi) mi->AddRef();
 		objInst.mesh.reset(mi);
 	}
@@ -133,7 +135,7 @@ void dse::renders::RenderOpenGL31_impl::reloadInstance(gl31::ObjectInstance& obj
 	objInst.lastVersion = objInst.object->getVersion();
 }
 
-void RenderOpenGL31_impl::onSceneChanged(scn::SceneChangeEventType act, scn::Object* obj) {
+void RenderOpenGL31_impl::OnSceneChanged(scn::SceneChangeEventType act, scn::Object* obj) {
 	switch (act) {
 		case decltype(act)::ObjectCreate: {
 			auto& inst = objects[obj];
@@ -146,7 +148,7 @@ void RenderOpenGL31_impl::onSceneChanged(scn::SceneChangeEventType act, scn::Obj
 	}
 }
 
-void RenderOpenGL31_impl::cleanupMeshes() {
+void RenderOpenGL31_impl::CleanupMeshes() {
 	auto end = meshes.end();
 	if (cleanupPointer == end) {
 		cleanupPointer = meshes.begin();
@@ -160,16 +162,16 @@ void RenderOpenGL31_impl::cleanupMeshes() {
 	}
 }
 
-void RenderOpenGL31_impl::fillInstances() {
+void RenderOpenGL31_impl::FillInstances() {
 	for (auto& object : (scene->objects())) {
 		auto& objInst = objects[&object];
 		objInst.object = &object;
-		reloadInstance(objInst);
+		ReloadInstance(objInst);
 	}
-	scnChangeCon = scene->subscribeChangeEvent(util::from_method<&RenderOpenGL31_impl::onSceneChanged>(*this));
+	scnChangeCon = scene->subscribeChangeEvent(util::from_method<&RenderOpenGL31_impl::OnSceneChanged>(*this));
 }
 
-auto RenderOpenGL31_impl::getMeshInstance(scn::IMesh* mesh) -> gl31::MeshInstance* {
+auto RenderOpenGL31_impl::GetMeshInstance(scn::IMesh* mesh) -> gl31::MeshInstance* {
 	if (mesh) {
 		auto i = meshes.find(mesh);
 		if (i == meshes.end()) {
@@ -189,7 +191,7 @@ auto RenderOpenGL31_impl::getMeshInstance(scn::IMesh* mesh) -> gl31::MeshInstanc
 	return nullptr;
 }
 
-void RenderOpenGL31_impl::onPaint(os::WndEvtDt) {
+void RenderOpenGL31_impl::OnPaint(os::WndEvtDt) {
 #ifdef DSE_MULTISAMPLE
 	glBindFramebuffer(GL_FRAMEBUFFER, renderFBOMSAA);
 #else
@@ -202,14 +204,14 @@ void RenderOpenGL31_impl::onPaint(os::WndEvtDt) {
 	glUseProgram(drawProg);
 //	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	if (camera) {
-		setupCamera();
+		SetupCamera();
 		if (scene) {
 			if (objects.empty()) {
-				fillInstances();
+				FillInstances();
 			}
 			for (auto& [obj, inst] : objects) {
 				if (inst.lastVersion != obj->getVersion()) {
-					reloadInstance(inst);
+					ReloadInstance(inst);
 				}
 				if (inst.mesh) {
 					auto& mesh = inst.mesh;
@@ -234,29 +236,27 @@ void RenderOpenGL31_impl::onPaint(os::WndEvtDt) {
 			}
 		}
 	}
-	drawPostprocess();
+	DrawPostprocess();
 	context.SwapBuffers();
-	cleanupMeshes();
-	swal::Wnd(wnd->getSysData().hWnd).ValidateRect();
-	if (requested.exchange(false, std::memory_order_acquire)) {
-		auto pool = core::ThreadPool::getCurrentPool();
-		pool.schedule(
-			util::from_method<
-				&RenderOpenGL31_impl::resumeRenderCaller
-			>(*this)
-		);
+
+	CleanupMeshes();
+	swal::Wnd(wnd->GetSysData().hWnd).ValidateRect();
+	if (requested.load(std::memory_order_acquire)) {
+		auto pool = core::ThreadPool::GetCurrentPool();
+		pool.Schedule(renderCallback);
+		requested.store(false, std::memory_order_release);
 	}
 }
 
-void dse::renders::RenderOpenGL31_impl::prepareSamplers() {
+void dse::renders::RenderOpenGL31_impl::PrepareSamplers() {
 	postProcColor = {};
 	postProcDepth = {};
 	drawDiffuse = {};
 }
 
 RenderOpenGL31_impl::RenderOpenGL31_impl(os::Window& wnd) : wnd(&wnd),
-		paintCon(wnd.subscribePaintEvent(util::from_method<&RenderOpenGL31_impl::onPaint>(*this))),
-		sizeCon(wnd.subscribeResizeEvent(util::from_method<&RenderOpenGL31_impl::onResize>(*this))),
+		paintCon(wnd.SubscribePaintEvent(util::from_method<&RenderOpenGL31_impl::OnPaint>(*this))),
+		sizeCon(wnd.SubscribeResizeEvent(util::from_method<&RenderOpenGL31_impl::OnResize>(*this))),
 		context(wnd, glwrp::ContextVersion::gl31, glwrp::ContextFlags::Debug),
 		cleanupPointer(meshes.end())
 {
@@ -283,18 +283,18 @@ RenderOpenGL31_impl::RenderOpenGL31_impl(os::Window& wnd) : wnd(&wnd),
 	glGetIntegerv(GL_MAX_TEXTURE_SIZE, &val);
 	std::cout << "\nGL_MAX_TEXTURE_SIZE: " << val << std::endl;
 
-	context.enableVSync(1);
+//	context.enableVSync(1);
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_CULL_FACE);
 #ifdef DSE_MULTISAMPLE
 	glEnable(GL_MULTISAMPLE);
 #endif
 
-	prepareShaders();
-	prepareSamplers();
+	PrepareShaders();
+	PrepareSamplers();
 
-	auto size = wnd.size();
-	rebuildViewport(size.x(), size.y());
+	auto size = wnd.Size();
+	RebuildViewport(size.x(), size.y());
 
 	glBindVertexArray(vao);
 	vbo.bind();
@@ -305,7 +305,7 @@ RenderOpenGL31_impl::RenderOpenGL31_impl(os::Window& wnd) : wnd(&wnd),
 	glClearColor(.03125f, .03125f, .0625f, 1.f);
 }
 
-void RenderOpenGL31_impl::rebuildViewport(unsigned width, unsigned height)
+void RenderOpenGL31_impl::RebuildViewport(unsigned width, unsigned height)
 {
 	if (this->width == width && this->height == height) return;
 	this->width = width;
@@ -316,32 +316,32 @@ void RenderOpenGL31_impl::rebuildViewport(unsigned width, unsigned height)
 	glUseProgram(drawProg);
 	glUniform2f(drawWindowSizeUniform, width, height);
 
-	rebuildSrgbFrameBuffer();
+	RebuildSrgbFrameBuffer();
 }
 
-void RenderOpenGL31_impl::onResize(os::WndEvtDt, int width, int height,
+void RenderOpenGL31_impl::OnResize(os::WndEvtDt, int width, int height,
 		os::WindowShowCommand) {
-	rebuildViewport(width, height);
+	RebuildViewport(width, height);
 }
 
-auto RenderOpenGL31_impl::render() -> util::future<void> {
-	pr = util::promise<void>();
+void RenderOpenGL31_impl::Render(const util::function_view<void()>& cb) {
+	while (requested.load(std::memory_order_acquire));
+	renderCallback = cb;
 	requested.store(true, std::memory_order_release);
 #ifdef _WIN32
-	auto hWnd = wnd->getSysData().hWnd;
+	auto hWnd = wnd->GetSysData().hWnd;
 	InvalidateRect(hWnd, nullptr, FALSE);
 	//UpdateWindow(hWnd);
 #endif
-	return pr.get_future();
 }
 
-void RenderOpenGL31_impl::setScene(dse::scn::Scene &scene) {
+void RenderOpenGL31_impl::SetScene(dse::scn::Scene &scene) {
 	scnChangeCon.unsubscribe();
 	this->scene = &scene;
 	objects.clear();
 }
 
-void RenderOpenGL31_impl::prepareShaders() {
+void RenderOpenGL31_impl::PrepareShaders() {
 	glwrp::VertexShader vertShader;
 	fragmentProg.attachShader(vertShader);
 	vertShader.loadSource(gl31::shader_post_vert);
@@ -393,11 +393,7 @@ void RenderOpenGL31_impl::prepareShaders() {
 	glGenerateMipmap(pendingTexture.target);
 }
 
-void RenderOpenGL31_impl::resumeRenderCaller() {
-	pr.set_value();
-}
-
-void RenderOpenGL31_impl::rebuildSrgbFrameBuffer() {
+void RenderOpenGL31_impl::RebuildSrgbFrameBuffer() {
 	glActiveTexture(GL_TEXTURE0);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	renderFBO = {};
@@ -428,7 +424,7 @@ void RenderOpenGL31_impl::rebuildSrgbFrameBuffer() {
 	glFinish();
 }
 
-void RenderOpenGL31_impl::setCamera(dse::scn::Camera &camera) {
+void RenderOpenGL31_impl::SetCamera(dse::scn::Camera &camera) {
 	this->camera = &camera;
 }
 

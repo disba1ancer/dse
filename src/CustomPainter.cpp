@@ -14,7 +14,7 @@
 
 namespace {
 auto getWindowHandle(dse::os::Window* window) -> swal::Wnd {
-	return window->getSysData().hWnd;
+	return window->GetSysData().hWnd;
 }
 }
 
@@ -32,7 +32,7 @@ void CustomPainter::paint(dse::os::WndEvtDt data) {
 }
 
 CustomPainter::CustomPainter(dse::os::Window &wnd) : wnd(&wnd),
-	paintCon(wnd.subscribePaintEvent(from_method<&CustomPainter::paint>(*this))) {
+	paintCon(wnd.SubscribePaintEvent(from_method<&CustomPainter::paint>(*this))) {
 }
 
 void CustomPainter::invalidate() {

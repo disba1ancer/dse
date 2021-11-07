@@ -19,56 +19,52 @@ File::File() : impl(new IOTarget_impl()) {
 File::File(ThreadPool& pool, std::u8string_view filepath, OpenMode mode) : impl(new IOTarget_impl(pool, filepath, mode)) {
 }
 
-bool File::isValid() const {
-	return impl->isValid();
+bool File::IsValid() const {
+	return impl->IsValid();
 }
 
-auto File::read(std::byte buf[], std::size_t size) -> Result {
-	return impl->read(buf, size);
+auto File::Read(std::byte buf[], std::size_t size) -> impl::FileOpResult {
+	return impl->Read(buf, size);
 }
 
-auto File::write(std::byte buf[], std::size_t size) -> Result {
-	return impl->write(buf, size);
+auto File::Write(const std::byte buf[], std::size_t size) -> impl::FileOpResult {
+	return impl->Write(buf, size);
 }
 
-File::File(File &&other) = default;
-File& File::operator=(File &&other) = default;
-File::~File() noexcept = default;
-
-auto File::tell() const -> FilePos {
-	return impl->tell();
+auto File::Tell() const -> FilePos {
+	return impl->Tell();
 }
 
-auto File::seek(FilePos pos) -> std::error_code {
-	return impl->seek(pos);
+auto File::Seek(FilePos pos) -> std::error_code {
+	return impl->Seek(pos);
 }
 
-auto File::seek(FileOff offset, StPoint rel) -> std::error_code {
-	return impl->seek(offset, rel);
+auto File::Seek(FileOff offset, StPoint rel) -> std::error_code {
+	return impl->Seek(offset, rel);
 }
 
-std::error_code File::status() const {
-	return impl->status();
+std::error_code File::Status() const {
+	return impl->Status();
 }
 
-auto File::resize() -> std::error_code {
-	return impl->resize();
+auto File::Resize() -> std::error_code {
+	return impl->Resize();
 }
 
-bool File::isEOF() const {
-	return impl->isEOF();
+bool File::IsEOF() const {
+	return impl->IsEOF();
 }
 
-auto File::readAsync(std::byte buf[], std::size_t size) -> util::future<Result> {
-	return impl->readAsync(buf, size);
+void File::ReadAsync(std::byte buf[], std::size_t size, const Callback& cb) {
+	return impl->ReadAsync(buf, size, cb);
 }
 
-auto File::writeAsync(std::byte buf[], std::size_t size) -> util::future<Result> {
-	return impl->writeAsync(buf, size);
+void File::WriteAsync(const std::byte buf[], std::size_t size, const Callback& cb) {
+	return impl->WriteAsync(buf, size, cb);
 }
 
-auto File::cancel() -> std::error_code {
-	return impl->cancel();
+auto File::Cancel() -> std::error_code {
+	return impl->Cancel();
 }
 
 } // namespace dse::core

@@ -15,7 +15,7 @@ namespace dse {
 namespace os {
 
 void setMouseCursorPos(const math::ivec2& pos);
-void setMouseCursorPosWndRel(const math::ivec2& pos, Window& wnd);
+void SetMouseCursorPosWndRel(const math::ivec2& pos, Window& wnd);
 
 } // namespace os
 } // namespace dse

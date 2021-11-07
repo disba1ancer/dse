@@ -12,15 +12,15 @@ class pimpl {
 protected:
 	pimpl() noexcept : impl(std::shared_ptr<Impl>()) {}
 	pimpl(std::shared_ptr<Impl> ptr) : impl(ptr) {}
-	std::shared_ptr<Impl> get_impl() {
+	std::shared_ptr<Impl> GetImpl() {
 		return impl;
 	}
-	std::shared_ptr<const Impl> get_impl() const {
+	std::shared_ptr<const Impl> GetImpl() const {
 		return impl;
 	}
 public:
 	explicit operator bool() const {
-		auto result = get_impl();
+		auto result = GetImpl();
 		return bool(result);
 	}
 	bool operator==(const pimpl<Cls, Impl>& second) const {

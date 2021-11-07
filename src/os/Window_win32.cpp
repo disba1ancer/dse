@@ -14,8 +14,9 @@
 namespace dse {
 namespace os {
 
-Window_win32::Window_win32() try : wnd(makeWindowClsID(), static_cast<HINSTANCE>(GetModuleHandle(0)), this) {
-} catch (std::system_error& e) {
+Window_win32::Window_win32() try :
+    wnd(makeWindowClsID(), static_cast<HINSTANCE>(GetModuleHandle(0)), this)
+{} catch (std::system_error& e) {
     if (e.code().category() == swal::win32_category::instance()) {
         throw std::system_error(core::win32_errc(e.code().value()));
     } else {
@@ -23,34 +24,40 @@ Window_win32::Window_win32() try : wnd(makeWindowClsID(), static_cast<HINSTANCE>
     }
 }
 
-LRESULT Window_win32::wndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) noexcept {
+LRESULT Window_win32::wndProc(
+	HWND hWnd,
+	UINT message,
+	WPARAM wParam,
+	LPARAM lParam
+) noexcept
+{
 	WindowEventData_win32 d{hWnd, message, wParam, lParam};
 	switch(message) {
-	case WM_PAINT: return onPaint(d);
-	case WM_CLOSE: return onClose(d);
-	case WM_SIZE: return onSize(d);
-	case WM_SYSKEYDOWN:
-	case WM_KEYDOWN: return onKeyDown(d);
-	case WM_SYSKEYUP:
-	case WM_KEYUP: return onKeyUp(d);
-	case WM_SYSCHAR: break;
-	case WM_MOUSEMOVE: return onMouseMove(d);
-	case WM_ACTIVATE: {
-		if (!LOWORD(wParam)) {
-			auto style = GetWindowLongPtr(hWnd, GWL_STYLE);
-			if (style & WS_POPUP) {
-				wnd.Show(swal::ShowCmd::Minimize);
+		case WM_PAINT: return onPaint(d);
+		case WM_CLOSE: return onClose(d);
+		case WM_SIZE: return onSize(d);
+		case WM_SYSKEYDOWN:
+		case WM_KEYDOWN: return onKeyDown(d);
+		case WM_SYSKEYUP:
+		case WM_KEYUP: return onKeyUp(d);
+		case WM_SYSCHAR: break;
+		case WM_MOUSEMOVE: return onMouseMove(d);
+		case WM_ACTIVATE: {
+			if (!LOWORD(wParam)) {
+				auto style = GetWindowLongPtr(hWnd, GWL_STYLE);
+				if (style & WS_POPUP) {
+					wnd.Show(swal::ShowCmd::Minimize);
+				}
 			}
+			break;
 		}
-		break;
-	}
-	/*case WM_SETCURSOR:
-		if (LOWORD(lParam) == HTCLIENT) {
-			SetCursor(NULL);
-			return TRUE;
-		}
-		[[fallthrough]];*/
-	default: return DefWindowProc(hWnd, message, wParam, lParam);
+		/*case WM_SETCURSOR:
+			if (LOWORD(lParam) == HTCLIENT) {
+				SetCursor(NULL);
+				return TRUE;
+			}
+			[[fallthrough]];*/
+		default: return DefWindowProc(hWnd, message, wParam, lParam);
 	}
 	return 0;
 }
@@ -77,8 +84,8 @@ ATOM Window_win32::makeWindowClsID() {
 	return clsID;
 }
 
-Window_win32::~Window_win32() {
-}
+Window_win32::~Window_win32()
+{}
 
 bool Window_win32::isVisible() const {
 	return wnd.IsVisible();
@@ -90,26 +97,26 @@ void Window_win32::show(WindowShowCommand command) {
 
 	auto showCmd = ShowCmd::Show;
 	switch (command) {
-		case WindowShowCommand::HIDE:
+		case WindowShowCommand::Hide:
 			showCmd = ShowCmd::Hide;
 			break;
-		case WindowShowCommand::SHOW:
+		case WindowShowCommand::Show:
 			break;
-		case WindowShowCommand::SHOW_MINIMIZED:
+		case WindowShowCommand::ShowMinimized:
 			showCmd = ShowCmd::ShowMinimized;
 			break;
-		case (WindowShowCommand::SHOW_RESTORED):
+		case (WindowShowCommand::ShowRestored):
 			showCmd = ShowCmd::ShowNormal;
 			break;
-		case WindowShowCommand::SHOW_MAXIMIZED:
+		case WindowShowCommand::ShowMaximized:
 			showCmd = ShowCmd::ShowMaximized;
 			break;
-		case WindowShowCommand::SHOW_FULL_SCREEN:
+		case WindowShowCommand::ShowFullScreen:
 			showCmd = ShowCmd::ShowMaximized;
 			break;
 	}
 	auto style = wnd.GetLongPtr(GWL_STYLE);
-	if (command == WindowShowCommand::SHOW_FULL_SCREEN && !(style & WS_POPUP)) {
+	if (command == WindowShowCommand::ShowFullScreen && !(style & WS_POPUP)) {
 		style |= WS_POPUP;
 		style &= ~WS_OVERLAPPEDWINDOW;
 		wnd.SetLongPtr(GWL_STYLE, style);
@@ -145,14 +152,14 @@ LRESULT Window_win32::onClose(WindowEventData_win32& d) {
 
 LRESULT Window_win32::onSize(WindowEventData_win32& d) {
 	typedef WindowShowCommand WSC;
-	WSC cmd = WSC::SHOW_RESTORED;
+	WSC cmd = WSC::ShowRestored;
 
 	switch (d.wParam) {
 	case SIZE_MINIMIZED:
-		cmd = WSC::SHOW_MINIMIZED;
+		cmd = WSC::ShowMinimized;
 		break;
 	case SIZE_MAXIMIZED:
-		cmd = WSC::SHOW_MAXIMIZED;
+		cmd = WSC::ShowMaximized;
 		break;
 	}
 

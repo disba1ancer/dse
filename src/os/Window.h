@@ -43,22 +43,22 @@ public:
 	Window(Window &&other) = delete;
 	Window& operator=(const Window &other) = delete;
 	Window& operator=(Window &&other) = delete;
-	bool isVisible() const;
-	void show(WindowShowCommand command = WindowShowCommand::SHOW);
-	const WindowData& getSysData();
-	math::ivec2 size();
-	void resize(const math::ivec2& size);
+	bool IsVisible() const;
+	void Show(WindowShowCommand command = WindowShowCommand::Show);
+	const WindowData& GetSysData();
+	math::ivec2 Size();
+	void Resize(const math::ivec2& size);
 	typedef void(SimpleHandler)(WndEvtDt);
 	typedef SimpleHandler CloseHandler;
-	notifier::connection<CloseHandler> subscribeCloseEvent(std::function<CloseHandler>&& c);
+	auto SubscribeCloseEvent(std::function<CloseHandler>&& c) -> notifier::connection<CloseHandler>;
 	typedef void(ResizeHandler)(WndEvtDt, int, int, WindowShowCommand);
-	notifier::connection<ResizeHandler> subscribeResizeEvent(std::function<ResizeHandler>&& c);
+	auto SubscribeResizeEvent(std::function<ResizeHandler>&& c) -> notifier::connection<ResizeHandler>;
 	typedef void(KeyHandler)(WndEvtDt, KeyboardKeyState, int);
-	notifier::connection<KeyHandler> subscribeKeyEvent(std::function<KeyHandler>&& c);
+	auto SubscribeKeyEvent(std::function<KeyHandler>&& c) -> notifier::connection<KeyHandler>;
 	typedef void(PaintHandler)(WndEvtDt);
-	notifier::connection<PaintHandler> subscribePaintEvent(std::function<PaintHandler>&& c);
+	auto SubscribePaintEvent(std::function<PaintHandler>&& c) -> notifier::connection<PaintHandler>;
 	typedef void(MouseMoveHandler)(WndEvtDt, int x, int y);
-	notifier::connection<MouseMoveHandler> subscribeMouseMoveEvent(std::function<MouseMoveHandler>&& c);
+	auto SubscribeMouseMoveEvent(std::function<MouseMoveHandler>&& c) -> notifier::connection<MouseMoveHandler>;
 };
 
 } /* namespace os */

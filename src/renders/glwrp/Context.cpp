@@ -32,7 +32,7 @@ const int pixelFormatAtributes[] =
 	WGL_ALPHA_BITS_ARB, 8,
 	WGL_DEPTH_BITS_ARB, 24,
 	WGL_STENCIL_BITS_ARB, 8,
-	WGL_FRAMEBUFFER_SRGB_CAPABLE_ARB, TRUE,
+	WGL_FRAMEBUFFER_SRGB_CAPABLE_ARB, FALSE,
 	0, 0
 };
 #endif
@@ -84,7 +84,7 @@ Context::ContextOwner::~ContextOwner() {
 
 thread_local Context* Context::currentContext = nullptr;
 
-Context::Context(os::Window& wnd, ContextVersion ver, ContextFlags flags) : dc(swal::Wnd(wnd.getSysData().hWnd).GetDC()) {
+Context::Context(os::Window& wnd, ContextVersion ver, ContextFlags flags) : dc(swal::Wnd(wnd.GetSysData().hWnd).GetDC()) {
 	if (ver == ContextVersion::legacy) {
 		glrc = makeLegacyContext(dc);
 	} else {
@@ -167,7 +167,7 @@ Context::ContextOwner Context::makeContext(swal::WindowDC &dc, ContextVersion ve
 }
 
 void Context::MakeCurrent(os::Window &wnd) {
-	auto newDC = swal::Wnd(wnd.getSysData().hWnd).GetDC();
+	auto newDC = swal::Wnd(wnd.GetSysData().hWnd).GetDC();
 	if (currentContext != this || dc.get() != newDC.get()) {
 		dc = std::move(newDC);
 		MakeCurrentInternal();

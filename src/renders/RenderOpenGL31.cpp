@@ -15,16 +15,16 @@ RenderOpenGL31::RenderOpenGL31(os::Window& wnd) : impl(new RenderOpenGL31_impl(w
 
 RenderOpenGL31::~RenderOpenGL31() = default;
 
-auto RenderOpenGL31::render() -> util::future<void> {
-	return impl->render();
+void RenderOpenGL31::Render(const util::function_view<void()>& cb) {
+	return impl->Render(cb);
 }
 
-void RenderOpenGL31::setScene(dse::scn::Scene &scene) {
-	impl->setScene(scene);
+void RenderOpenGL31::SetScene(dse::scn::Scene &scene) {
+	impl->SetScene(scene);
 }
 
-void RenderOpenGL31::setCamera(dse::scn::Camera &camera) {
-	impl->setCamera(camera);
+void RenderOpenGL31::SetCamera(dse::scn::Camera &camera) {
+	impl->SetCamera(camera);
 }
 
 } /* namespace dse::renders */

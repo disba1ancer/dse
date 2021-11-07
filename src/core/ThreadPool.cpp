@@ -25,29 +25,29 @@ ThreadPool::ThreadPool(std::nullptr_t) noexcept : pimpl() {
 /*ThreadPool::~ThreadPool() {
 }*/
 
-void ThreadPool::schedule(Task task) {
-	get_impl()->schedule(task);
+void ThreadPool::Schedule(const Task& task) {
+	GetImpl()->Schedule(task);
 }
 
-int ThreadPool::run(PoolCaps caps) {
-	return get_impl()->run(caps);
+int ThreadPool::Run(PoolCaps caps) {
+	return GetImpl()->Run(caps);
 }
 
-void  ThreadPool::join() {
-	get_impl()->join();
+void  ThreadPool::Join() {
+	GetImpl()->Join();
 }
 
-void ThreadPool::stop() {
-	get_impl()->stop();
+void ThreadPool::Stop() {
+	GetImpl()->Stop();
 }
 
-auto ThreadPool::getCurrentTask() -> const Task& {
-	return ThreadPool_impl::getCurrentTask();
+auto ThreadPool::GetCurrentTask() -> const Task& {
+	return ThreadPool_impl::GetCurrentTask();
 }
 
-ThreadPool ThreadPool::getCurrentPool()
+ThreadPool ThreadPool::GetCurrentPool()
 {
-	return ThreadPool_impl::getCurrentPool();
+	return ThreadPool_impl::GetCurrentPool();
 }
 
 //ThreadPool::Task::Task(TaskHandler&& taskHandler) :

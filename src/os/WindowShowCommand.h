@@ -12,12 +12,12 @@ namespace dse {
 namespace os {
 
 enum class WindowShowCommand {
-	HIDE,
-	SHOW,
-	SHOW_MINIMIZED,
-	SHOW_RESTORED,
-	SHOW_MAXIMIZED,
-	SHOW_FULL_SCREEN
+	Hide,
+	Show,
+	ShowMinimized,
+	ShowRestored,
+	ShowMaximized,
+	ShowFullScreen
 };
 
 } /* namespace os */

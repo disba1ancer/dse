@@ -14,8 +14,8 @@ void dse::os::setMouseCursorPos(const math::ivec2 &pos) {
 	SetCursorPos(pos[0], pos[1]);
 }
 
-void dse::os::setMouseCursorPosWndRel(const math::ivec2 &pos, Window &wnd) {
-	auto wndData = wnd.getSysData();
+void dse::os::SetMouseCursorPosWndRel(const math::ivec2 &pos, Window &wnd) {
+	auto wndData = wnd.GetSysData();
 	POINT pt = { 0, 0 };
 	ClientToScreen(wndData.hWnd, &pt);
 	setMouseCursorPos(math::ivec2{pt.x, pt.y} + pos);
