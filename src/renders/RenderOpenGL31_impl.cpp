@@ -168,7 +168,7 @@ void RenderOpenGL31_impl::FillInstances() {
 		objInst.object = &object;
 		ReloadInstance(objInst);
 	}
-	scnChangeCon = scene->subscribeChangeEvent(util::from_method<&RenderOpenGL31_impl::OnSceneChanged>(*this));
+	scnChangeCon = scene->subscribeChangeEvent(util::StaticMemFn<&RenderOpenGL31_impl::OnSceneChanged>(*this));
 }
 
 auto RenderOpenGL31_impl::GetMeshInstance(scn::IMesh* mesh) -> gl31::MeshInstance* {
@@ -255,8 +255,8 @@ void dse::renders::RenderOpenGL31_impl::PrepareSamplers() {
 }
 
 RenderOpenGL31_impl::RenderOpenGL31_impl(os::Window& wnd) : wnd(&wnd),
-		paintCon(wnd.SubscribePaintEvent(util::from_method<&RenderOpenGL31_impl::OnPaint>(*this))),
-		sizeCon(wnd.SubscribeResizeEvent(util::from_method<&RenderOpenGL31_impl::OnResize>(*this))),
+		paintCon(wnd.SubscribePaintEvent(util::StaticMemFn<&RenderOpenGL31_impl::OnPaint>(*this))),
+		sizeCon(wnd.SubscribeResizeEvent(util::StaticMemFn<&RenderOpenGL31_impl::OnResize>(*this))),
 		context(wnd, glwrp::ContextVersion::gl31, glwrp::ContextFlags::Debug),
 		cleanupPointer(meshes.end())
 {
@@ -324,7 +324,7 @@ void RenderOpenGL31_impl::OnResize(os::WndEvtDt, int width, int height,
 	RebuildViewport(width, height);
 }
 
-void RenderOpenGL31_impl::Render(const util::function_view<void()>& cb) {
+void RenderOpenGL31_impl::Render(const util::FunctionPtr<void()>& cb) {
 	while (requested.load(std::memory_order_acquire));
 	renderCallback = cb;
 	requested.store(true, std::memory_order_release);

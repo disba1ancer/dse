@@ -40,7 +40,7 @@ public:
 	typedef std::function<void()> FinishHandler;
 	friend IAsyncIO;
 
-	using Task = util::function_view<void()>;
+	using Task = util::FunctionPtr<void()>;
 //	class Task {
 //	public:
 //		friend ThreadPool_impl;

@@ -37,7 +37,7 @@ using dse::os::KeyboardKeyState;
 using dse::os::WndEvtDt;
 using dse::os::PntEvtDt;
 using dse::renders::RenderOpenGL31;
-using dse::util::from_method;
+using dse::util::StaticMemFn;
 using dse::scn::Cube;
 using dse::scn::Scene;
 using dse::scn::Object;
@@ -52,21 +52,6 @@ using dse::core::OpenMode;
 //ExecutionThread mainThread;
 ThreadPool thrPool(1);
 
-dse::util::Task<int> Test(int t)
-{
-	co_return t;
-}
-struct TestReceiver {
-	friend void dse_TagInvoke(dse::util::TagT<dse::util::SetValue>, TestReceiver&&, int i)
-	{
-		std::printf("%i\n", i);
-	}
-	friend void dse_TagInvoke(dse::util::TagT<dse::util::SetError>, TestReceiver&&, std::exception_ptr)
-	{}
-	friend void dse_TagInvoke(dse::util::TagT<dse::util::SetDone>, TestReceiver&&)
-	{}
-};
-
 int main(int argc, char* argv[]) {
 	Window window;
 	RenderOpenGL31 render(window);
@@ -74,7 +59,6 @@ int main(int argc, char* argv[]) {
 	SetMouseCursorPosWndRel(window.Size() / 2, window);
 	auto root = [&window, &render, argc, argv]() -> dse::util::Task<void> {
 		using namespace dse::math;
-		dse::util::Connect(Test(10), TestReceiver{});
 		File file(thrPool, u8"test.txt", OpenMode::READ);
 		std::byte buf[4096];
 		if (file.IsValid()) {
@@ -185,7 +169,7 @@ int main(int argc, char* argv[]) {
 		}
 	};
 	auto r = root();
-	thrPool.Schedule(dse::util::function_view<void()>(&r, [](void*p){
+	thrPool.Schedule(dse::util::FunctionPtr<void()>(&r, [](void*p){
 		static_cast<decltype(r)*>(p)->Resume();
 	}));
 	return thrPool.Run(PoolCaps::UI);

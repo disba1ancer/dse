@@ -15,7 +15,7 @@ RenderOpenGL31::RenderOpenGL31(os::Window& wnd) : impl(new RenderOpenGL31_impl(w
 
 RenderOpenGL31::~RenderOpenGL31() = default;
 
-void RenderOpenGL31::Render(const util::function_view<void()>& cb) {
+void RenderOpenGL31::Render(const util::FunctionPtr<void()>& cb) {
 	return impl->Render(cb);
 }
 

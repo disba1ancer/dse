@@ -131,7 +131,7 @@ class File {
 public:
 	using FilePos = std::uint_least64_t;
 	using FileOff = std::int_least64_t;
-	using Callback = util::function_view<void(std::size_t, std::error_code)>;
+	using Callback = util::FunctionPtr<void(std::size_t, std::error_code)>;
 private:
 	std::unique_ptr<IOTarget_impl, IOTargetDelete> impl;
 public:
@@ -164,9 +164,9 @@ template <impl::FileOp op, typename R>
 void impl::dse_TagInvoke(util::TagT<util::Start>, FileOpstate<op, R>& opstate)
 {
 	if constexpr (op == FileOp::Read) {
-		opstate.file->ReadAsync(opstate.buf, opstate.size, util::from_method<&FileOpstate<op, R>::callback>(opstate));
+		opstate.file->ReadAsync(opstate.buf, opstate.size, util::StaticMemFn<&FileOpstate<op, R>::callback>(opstate));
 	} else {
-		opstate.file->WriteAsync(opstate.buf, opstate.size, util::from_method<&FileOpstate<op, R>::callback>(opstate));
+		opstate.file->WriteAsync(opstate.buf, opstate.size, util::StaticMemFn<&FileOpstate<op, R>::callback>(opstate));
 	}
 }
 

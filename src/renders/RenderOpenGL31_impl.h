@@ -59,7 +59,7 @@ class RenderOpenGL31_impl {
 	glwrp::Sampler postProcColor = 0;
 	glwrp::Sampler postProcDepth = 0;
 	glwrp::Sampler drawDiffuse = 0;
-	util::function_view<void()> renderCallback;
+	util::FunctionPtr<void()> renderCallback;
 	std::atomic_bool requested = false;
 	std::map<scn::IMesh*, gl31::MeshInstance>::iterator cleanupPointer;
 
@@ -82,7 +82,7 @@ public:
 	RenderOpenGL31_impl(RenderOpenGL31_impl &&other) = delete;
 	RenderOpenGL31_impl& operator=(const RenderOpenGL31_impl &other) = delete;
 	RenderOpenGL31_impl& operator=(RenderOpenGL31_impl &&other) = delete;
-	void Render(const util::function_view<void()>& cb);
+	void Render(const util::FunctionPtr<void()>& cb);
 	void SetScene(dse::scn::Scene& scene);
 	void SetCamera(dse::scn::Camera& camera);
 private:

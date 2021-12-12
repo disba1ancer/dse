@@ -138,6 +138,9 @@ class TaskAwaiter;
 template <typename Ret, typename Recv>
 class TaskOpstate;
 
+template <typename Ret, typename Recv>
+void dse_TagInvoke(TagT<Start>, TaskOpstate<Ret, Recv>&);
+
 template <typename T>
 struct TaskBase;
 
@@ -236,7 +239,7 @@ struct TaskBase {
     using Handle = std::coroutine_handle<PromiseType>;
     friend class TaskAwaiter<T>;
     template <typename Ret, typename Recv>
-    friend class TaskOpstate;
+    friend void dse_TagInvoke(TagT<Start>, TaskOpstate<Ret, Recv>&);
 protected:
     Handle handle;
     TaskBase(std::coroutine_handle<PromiseType> handle) : handle(handle)
@@ -280,7 +283,7 @@ struct TaskBase<T>::PromiseType : PromiseTypeBase<T> {
     friend class TaskAwaiter<T>;
     friend class FinalAwaiter<T>;
     template <typename Ret, typename Recv>
-    friend class TaskOpstate;
+    friend void dse_TagInvoke(TagT<Start>, TaskOpstate<Ret, Recv>&);
     auto get_return_object() -> Task<T>
     {
         return { Task<T>::Handle::from_promise(*this) };
@@ -468,14 +471,17 @@ public:
 		task(std::move(task)),
 		receiver(std::move(receiver))
 	{}
-	void dse_TagInvoke(util::TagT<util::Start>, TaskOpstate& sndr)
-	{
-		auto handle = task.handle;
-		auto& promise = handle.promise();
-		promise.rsm = *this;
-		handle.resume();
-	}
+	friend void dse_TagInvoke<>(util::TagT<util::Start>, TaskOpstate<Ret, Recv>& sndr);
 };
+
+template <typename Ret, typename Recv>
+void dse_TagInvoke(util::TagT<util::Start>, TaskOpstate<Ret, Recv>& sndr)
+{
+	auto handle = sndr.task.handle;
+	auto& promise = handle.promise();
+	promise.rsm = static_cast<CoroReceiver<Ret>*>(&sndr);
+	handle.resume();
+}
 
 }
 

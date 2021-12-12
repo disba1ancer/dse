@@ -34,7 +34,7 @@ public:
 	RenderOpenGL31(RenderOpenGL31&&) = delete;
 	auto operator=(const RenderOpenGL31&) -> RenderOpenGL31& = delete;
 	auto operator=(RenderOpenGL31&&) -> RenderOpenGL31& = delete;
-	void Render(const util::function_view<void()>& cb);
+	void Render(const util::FunctionPtr<void()>& cb);
 	auto Render() -> oglimpl::RenderSender;
 	void SetScene(dse::scn::Scene& scene);
 	void SetCamera(dse::scn::Camera& camera);
@@ -57,7 +57,7 @@ public:
 	{}
 	friend void dse_TagInvoke(util::TagT<util::Start>, RenderOpstate& opstate)
 	{
-		opstate.render.Render(util::from_method<&RenderOpstate::EndCallback>(opstate));
+		opstate.render.Render(util::StaticMemFn<&RenderOpstate::EndCallback>(opstate));
 	}
 };
 
