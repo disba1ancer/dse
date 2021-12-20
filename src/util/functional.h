@@ -88,13 +88,62 @@ struct IsMemFnToFunc<StaticMemFn<m>> : std::true_type {};
 template <typename T>
 constexpr auto& IsMemFnToFuncV = IsMemFnToFunc<T>::value;
 
+template <typename T>
+struct IsUnqualifiedFunction : std::false_type {};
+
+template <typename Ret, typename ... Args>
+struct IsUnqualifiedFunction<Ret(Args...)> : std::true_type {};
+
+template <typename Ret, typename ... Args>
+struct IsUnqualifiedFunction<Ret(Args...) noexcept> : std::true_type {};
+
+template <typename T>
+concept UnqualifiedFunction = IsUnqualifiedFunction<T>::value;
+
+template <typename T>
+struct AddVoidArg;
+
+template <typename Ret, typename ... Args>
+struct AddVoidArg<Ret(Args...)> {
+    using Type = Ret(void*, Args...);
+};
+
+template <typename Ret, typename ... Args>
+struct AddVoidArg<Ret(Args...) noexcept> {
+    using Type = Ret(void*, Args...) noexcept;
+};
+
+template <typename T>
+using AddVoidArgT = typename AddVoidArg<T>::Type;
+
+template <typename T>
+struct FunctionPtrBase;
+
+template <typename R, typename ... Args>
+struct FunctionPtrBase<R(Args...)> {
+public:
+	R operator()(Args ... args) const;
+};
+
+template <typename R, typename ... Args>
+struct FunctionPtrBase<R(Args...) noexcept> {
+public:
+	R operator()(Args ... args) const noexcept;
+};
+
 }
+
+template <func_impl::UnqualifiedFunction F>
+class FunctionPtr;
 
 #define GENERATE(cvr, nxcpt)\
 template <typename Ret, typename Obj, typename ... Args, Ret (Obj::*m)(Args...) cvr nxcpt>\
 struct StaticMemFn<m> {\
     using ObjType = Obj cvr;\
+    friend class FunctionPtr<Ret(Args...) nxcpt>;\
+private:\
     ObjType& self;\
+public:\
     StaticMemFn(func_impl::StaticMemFnAddRefT<ObjType> obj) : self(obj) {}\
     Ret operator ()(Args ... args) const nxcpt {\
         return (static_cast<func_impl::StaticMemFnAddRefT<ObjType>>(self).*m)(args...);\
@@ -179,15 +228,14 @@ GENERATE_VARIANT(RRefV | VolatileV, volatile&&)
 GENERATE_VARIANT(RRefV | ConstV | VolatileV, const volatile&&)
 #undef GENERATE_VARIANT
 
-template <typename F>
-class FunctionPtr;
-
-template <typename R, typename ... Args>
-class FunctionPtr<R(Args...)> {
+template <func_impl::UnqualifiedFunction T>
+class FunctionPtr : public func_impl::FunctionPtrBase<T> {
 public:
-	using fn = R(Args...);
+	using fn = T;
 	using fptr = fn*;
-	using sfptr = R(*)(void*, Args...);
+	using sfn = func_impl::AddVoidArgT<T>;
+	using sfptr = sfn*;
+	friend class func_impl::FunctionPtrBase<T>;
 private:
 	sfptr stateful;
 	union {
@@ -205,35 +253,27 @@ public:
 	{}
 	template <auto m>
 	requires (
-		requires (void* ptr, Args...args) {
-			{ func_impl::ExtractMember<fn, m>::Function(ptr, args...) } -> std::same_as<R>;
+		requires {
+			{ func_impl::ExtractMember<fn, m>::Function } -> std::convertible_to<sfn&>;
 		}
 	)
 	constexpr FunctionPtr(const StaticMemFn<m>& memfn) :
 		stateful(func_impl::ExtractMember<fn, m>::Function),
 		state(std::addressof(memfn.self))
 	{}
-	template <std::invocable<Args...> C>
+	template <typename C>
 	requires (
-		requires (C c, Args...args) {
-			{ c(args...) } -> std::same_as<R>;
-		} &&
-		!std::is_function_v<std::remove_cvref_t<C>> &&
+		!std::same_as<std::remove_cvref_t<C>, FunctionPtr<T>> &&
 		!func_impl::IsMemFnToFuncV<std::remove_cvref_t<C>> &&
-		!std::same_as<std::remove_cvref_t<C>, FunctionPtr<R(Args...)>>
+		!std::is_function_v<std::remove_cvref_t<C>> &&
+		requires {
+			{ func_impl::ExtractCallable<fn, C>::Function } -> std::convertible_to<sfn&>;
+		}
 	)
 	constexpr FunctionPtr(C&& callable) :
 		stateful(func_impl::ExtractCallable<fn, C>::Function),
 		state((void*)std::addressof(callable))
 	{}
-	R operator()(Args ... args) const
-	{
-		if (stateful) {
-			return stateful(state, std::forward<Args>(args)...);
-		} else {
-			return stateless(std::forward<Args>(args)...);
-		}
-	}
 	bool is_stateful() const noexcept
 	{ return stateful; }
 	sfptr get_stateful_function() const noexcept
@@ -247,6 +287,32 @@ public:
 		return stateful || stateless;
 	}
 };
+
+namespace func_impl {
+
+template <typename R, typename ... Args>
+R FunctionPtrBase<R(Args...)>::operator()(Args ... args) const
+{
+	auto self = static_cast<const FunctionPtr<R(Args...)>*>(this);
+	if (self->stateful) {
+		return self->stateful(self->state, args...);
+	} else {
+		return self->stateless(args...);
+	}
+}
+
+template <typename R, typename ... Args>
+R FunctionPtrBase<R(Args...) noexcept>::operator()(Args ... args) const noexcept
+{
+	auto self = static_cast<const FunctionPtr<R(Args...) noexcept>*>(this);
+	if (self->stateful) {
+		return self->stateful(self->state, args...);
+	} else {
+		return self->stateless(args...);
+	}
+}
+
+}
 
 } // namespace dse::util
 
