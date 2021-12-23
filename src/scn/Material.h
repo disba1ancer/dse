@@ -9,18 +9,28 @@
 #define SCN_MATERIAL_H_
 
 #include "math/vec.h"
+#include "ITextureDataProvider.h"
+#include <cstdint>
 
 namespace dse {
 namespace scn {
 
 class Material {
-public:
-	Material(math::vec4 color = {1.f, 0.f, 1.f});
-	math::vec4 getColor() const;
-	void setColor(math::vec4 color);
-
-private:
 	math::vec4 color;
+	ITextureDataProvider* texture;
+	std::uint32_t version;
+public:
+	Material(ITextureDataProvider* texture, math::vec4 color);
+	Material(ITextureDataProvider* texture);
+	Material(math::vec4 color);
+	Material();
+	auto GetColor() const -> math::vec4;
+	void SetColor(math::vec4 color);
+	auto GetTexture() const -> ITextureDataProvider*;
+	void SetTexture(ITextureDataProvider* texture);
+	auto GetVersion() -> std::uint32_t;
+private:
+	void IncrementVersion();
 };
 
 } /* namespace scn */

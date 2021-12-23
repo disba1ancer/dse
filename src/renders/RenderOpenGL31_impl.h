@@ -14,8 +14,10 @@
 #include "glwrp/Context.h"
 #include "glwrp/VAO.h"
 #include <map>
+#include <unordered_map>
 #include "gl31/MeshInstance.h"
 #include "gl31/ObjectInstance.h"
+#include "gl31/MaterialInstance.h"
 #include "glwrp/Program.h"
 #include "glwrp/Buffer.h"
 #include "glwrp/Sampler.h"
@@ -25,6 +27,7 @@
 #include "glwrp/RenderBuffer.h"
 #include "dse_config.h"
 #include "core/ThreadPool.h"
+#include "gl31/TextureInstance.h"
 
 namespace dse::renders {
 
@@ -37,14 +40,15 @@ class RenderOpenGL31_impl {
 	glwrp::VAO vao;
 	scn::Scene* scene = nullptr;
 	scn::Camera* camera = nullptr;
-	std::map<scn::IMesh*, gl31::MeshInstance> meshes;
-	std::map<scn::Object*, gl31::ObjectInstance> objects;
+	std::unordered_map<scn::ITextureDataProvider*, gl31::TextureInstance> textures;
+	std::unordered_map<scn::Material*, gl31::MaterialInstance> materials;
+	std::unordered_map<scn::IMesh*, gl31::MeshInstance> meshes;
+	std::unordered_map<scn::Object*, gl31::ObjectInstance> objects;
 	glwrp::VertexBuffer vbo;
 	glwrp::Program fragmentProg;
 	glwrp::Program drawProg;
 	gl::GLint fragWindowSizeUniform = 0;
 	gl::GLint drawWindowSizeUniform = 0;
-	gl::GLint matColorUnifrom = 0;
 	unsigned width = 1, height = 1;
 #ifdef DSE_MULTISAMPLE
 	glwrp::FrameBuffer renderFBOMSAA = 0;
@@ -56,12 +60,13 @@ class RenderOpenGL31_impl {
 	glwrp::Texture2D depthBuffer = 0;
 	glwrp::Texture2D pendingTexture = 0;
 	glwrp::UniformBuffer cameraUBO = 0;
+	glwrp::UniformBuffer emptyMaterialUBO = 0;
 	glwrp::Sampler postProcColor = 0;
 	glwrp::Sampler postProcDepth = 0;
 	glwrp::Sampler drawDiffuse = 0;
 	util::FunctionPtr<void()> renderCallback;
 	std::atomic_bool requested = false;
-	std::map<scn::IMesh*, gl31::MeshInstance>::iterator cleanupPointer;
+	std::unordered_map<scn::IMesh*, gl31::MeshInstance>::iterator cleanupPointer;
 
 	void OnPaint(os::WndEvtDt);
 	void OnResize(os::WndEvtDt, int width, int height, os::WindowShowCommand);
@@ -71,10 +76,9 @@ class RenderOpenGL31_impl {
 	void SetupCamera();
 	void DrawPostprocess();
 	void FillInstances();
-	auto GetMeshInstance(scn::IMesh* mesh) -> gl31::MeshInstance*;
-	void ReloadInstance(gl31::ObjectInstance& objInst);
 	void OnSceneChanged(scn::SceneChangeEventType act, scn::Object* obj);
 	void CleanupMeshes();
+	void DrawScene();
 public:
 	RenderOpenGL31_impl(os::Window& wnd);
 	~RenderOpenGL31_impl() = default;
@@ -85,6 +89,10 @@ public:
 	void Render(const util::FunctionPtr<void()>& cb);
 	void SetScene(dse::scn::Scene& scene);
 	void SetCamera(dse::scn::Camera& camera);
+	auto GetObjectInstance(scn::Object* object) -> gl31::ObjectInstance*;
+	auto GetMeshInstance(scn::IMesh* mesh, bool withAcquire = false) -> gl31::MeshInstance*;
+	auto GetMaterialInstance(scn::Material* material, bool withAcquire = false) -> gl31::MaterialInstance*;
+	auto GetTextureInstance(scn::ITextureDataProvider* texture, bool withAcquire = false) -> gl31::TextureInstance*;
 private:
 	void PrepareSamplers();
 };

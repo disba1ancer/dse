@@ -51,6 +51,8 @@ set (DSE_CORE_SRCS
     src/os/Window.cpp
     src/os/Window.h
     src/os/WindowShowCommand.h
+    src/scn/BasicBitmapLoader.cpp
+    src/scn/BasicBitmapLoader.h
     src/scn/Camera.cpp
     src/scn/Camera.h
     src/scn/Cube.cpp
@@ -78,12 +80,18 @@ set (DSE_CORE_SRCS
     src/renders/glwrp/TrvMvOnlyRes.h
     src/renders/glwrp/VAO.h
     src/renders/gl31/binds.h
+    src/renders/gl31/MaterialInstance.h
+    src/renders/gl31/MaterialInstance.cpp
     src/renders/gl31/MeshInstance.cpp
     src/renders/gl31/MeshInstance.h
     src/renders/gl31/ObjectInstance.cpp
     src/renders/gl31/ObjectInstance.h
+    src/renders/gl31/RefCounted.h
+    src/renders/gl31/RefCounted.cpp
     src/renders/gl31/Scene.cpp
     src/renders/gl31/Scene.h
+    src/renders/gl31/TextureInstance.cpp
+    src/renders/gl31/TextureInstance.h
     src/renders/RenderOpenGL31.cpp
     src/renders/RenderOpenGL31.h
     src/renders/RenderOpenGL31_impl.cpp

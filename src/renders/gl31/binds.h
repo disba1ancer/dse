@@ -29,13 +29,15 @@ inline constexpr auto attachment(OutputParams unit) {
 
 enum UniformIndices {
 	ObjectInstanceBind,
-	CameraBind
+	CameraBind,
+	MaterialBind
+};
+
+struct ObjectMaterialUniform {
+	alignas(alignof(float) * 4) math::vec4 color;
 };
 
 struct ObjectInstanceUniform {
-//	alignas(alignof(float) * 4) math::vec3 iPos;
-//	alignas(alignof(float) * 4) math::vec4 qRot;
-//	alignas(alignof(float) * 4) math::vec3 scale;
 	alignas(alignof(float) * 4) math::mat3x4 transform;
 };
 

@@ -14,65 +14,74 @@ namespace scn {
 
 Object::Object(IMesh* mesh, math::vec3 pos, math::vec4 qRot, math::vec3 scale) :
 	pos(pos),
+	version(1),
 	qRot(qRot),
 	scale(scale),
 	mesh(mesh)
 {}
 
-IMesh* Object::getMesh() const {
+IMesh* Object::GetMesh() const {
 	return mesh;
 }
 
-void Object::setMesh(IMesh* mesh) {
+void Object::SetMesh(IMesh* mesh) {
 	this->mesh = mesh;
-	++this->version;
+	materials.clear();
+	IncrementVersion();
 }
 
-math::vec3 Object::getPos() const {
+math::vec3 Object::GetPos() const {
 	return pos;
 }
 
-void Object::setPos(const math::vec3 &pos) {
+void Object::SetPos(const math::vec3 &pos) {
 	this->pos = pos;
-	++this->version;
+	IncrementVersion();
 }
 
-math::vec4 Object::getQRot() const {
+math::vec4 Object::GetQRot() const {
 	return qRot;
 }
 
-void Object::setQRot(const math::vec4 &rot) {
+void Object::SetQRot(const math::vec4 &rot) {
 	qRot = rot;
-	++this->version;
+	IncrementVersion();
 }
 
-math::vec3 Object::getScale() const {
+math::vec3 Object::GetScale() const {
 	return scale;
 }
 
-void Object::setScale(const math::vec3 &scale) {
+void Object::SetScale(const math::vec3 &scale) {
 	this->scale = scale;
-	++this->version;
+	IncrementVersion();
 }
 
-unsigned Object::getVersion() const {
+unsigned Object::GetVersion() const {
 	return version;
 }
 
-void Object::setMaterial(unsigned materialSlot, Material *mat) {
-	if (mesh) {
-		if (materials.empty()) {
-			materials.resize(mesh->getMeshParameters().submeshCount);
-		}
-		if (materialSlot < materials.size()) {
-			materials[materialSlot] = mat;
-			++version;
-		}
+void Object::SetMaterial(unsigned materialSlot, Material *mat) {
+	if (mat) {
+		materials[materialSlot] = mat;
+	} else {
+		materials.erase(materialSlot);
 	}
+	IncrementVersion();
 }
 
-Material* Object::getMaterial(unsigned materialSlot) {
-	return (materials.size() > materialSlot ? materials[materialSlot] : nullptr);
+Material* Object::GetMaterial(unsigned materialSlot) {
+	auto it = materials.find(materialSlot);
+	if (it == materials.end()) {
+		return nullptr;
+	}
+	return it->second;
+}
+
+void Object::IncrementVersion()
+{
+	bool t = !++version;
+	version += t;
 }
 
 } /* namespace scn */

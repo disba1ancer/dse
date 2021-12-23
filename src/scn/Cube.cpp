@@ -10,8 +10,11 @@
 #include <iterator>
 #include <array>
 
+namespace dse {
+namespace scn {
+
 namespace {
-static const auto vertices = std::to_array<dse::scn::IMesh::vertex, 24>({
+static const auto vertices = std::to_array<dse::scn::IMesh::vertex>({
 		{{ 1, -1, -1}, { 1, 0, 0}, {0, 1, 0}, {0, 0}, 0},//+x
 		{{ 1, -1,  1}, { 1, 0, 0}, {0, 1, 0}, {0, 1}, 0},//1
 		{{ 1,  1, -1}, { 1, 0, 0}, {0, 1, 0}, {1, 0}, 0},//2
@@ -42,7 +45,7 @@ static const auto vertices = std::to_array<dse::scn::IMesh::vertex, 24>({
 		{{ 1, -1, -1}, {0, 0, -1}, {1, 0, 0}, {1, 0}, 0},//22
 		{{ 1,  1, -1}, {0, 0, -1}, {1, 0, 0}, {1, 1}, 0} //23
 });
-static const auto elements = std::to_array<std::uint32_t, 36>({
+static const auto elements = std::to_array<std::uint32_t>({
 		 2,  1,  0,  1,  2,  3,//+x
 		 4,  5,  6,  7,  6,  5,//-x
 		10,  9,  8,  9, 10, 11,//+y
@@ -50,33 +53,43 @@ static const auto elements = std::to_array<std::uint32_t, 36>({
 		18, 17, 16, 17, 18, 19,//+z
 		20, 21, 22, 23, 22, 21,//-z
 });
+static const auto subranges = std::to_array<IMesh::submesh_range>({
+		{0, 36},//+x
+//		{6, 12},//-x
+//		{12, 18},//+y
+//		{18, 24},//-y
+//		{24, 30},//+z
+//		{30, 36},//-z
+});
 }
 
-namespace dse {
-namespace scn {
-
-IMesh::mesh_parameters Cube::getMeshParameters() {
-	return {std::size(vertices), std::size(elements), 1};
+void Cube::LoadMeshParameters(mesh_parameters* parameters, util::FunctionPtr<void ()> callback)
+{
+	*parameters = { std::size(vertices), std::size(elements), std::size(subranges) };
+	callback();
 }
 
-unsigned dse::scn::Cube::getVersion() {
-	return 0;
+void Cube::LoadSubmeshRanges(submesh_range* ranges, util::FunctionPtr<void ()> callback)
+{
+	std::copy(std::begin(subranges), std::end(subranges), ranges);
+	callback();
 }
 
-void Cube::loadVerticesRange(IMesh::vertex *vertexBuffer,
-		uint32_t startVertex, uint32_t vertexCount) {
-	//std::memcpy(vertexBuffer, std::begin(vertices) + startVertex, sizeof(IMesh::vertex) * vertexCount);
-	std::copy(std::begin(vertices) + startVertex, std::begin(vertices) + startVertex + vertexCount , vertexBuffer);
+void Cube::LoadVertices(vertex* vertexBuffer, util::FunctionPtr<void ()> callback)
+{
+	std::copy(std::begin(vertices), std::end(vertices), vertexBuffer);
+	callback();
 }
 
-void Cube::loadElementsRange(uint32_t *elementBuffer, uint32_t startElement,
-		uint32_t elementCount) {
-	//std::memcpy(elementBuffer, std::begin(elements) + startElement, sizeof(std::uint32_t) * elementCount);
-	std::copy(std::begin(elements) + startElement, std::begin(elements) + startElement + elementCount, elementBuffer);
+void Cube::LoadElements(uint32_t* elementBuffer, util::FunctionPtr<void ()> callback)
+{
+	std::copy(std::begin(elements), std::end(elements), elementBuffer);
+	callback();
 }
 
-dse::scn::IMesh::submesh_range Cube::getSubmeshRange([[maybe_unused]] uint32_t submeshIndex) {
-	return {0, std::size(elements)};
+unsigned Cube::GetVersion()
+{
+	return 1;
 }
 
 } /* namespace scn */

@@ -13,32 +13,41 @@
 #include "renders/glwrp/VAO.h"
 #include "renders/glwrp/Buffer.h"
 #include <vector>
+#include "RefCounted.h"
+#include <atomic>
 
 namespace dse::renders::gl31 {
 
-class MeshInstance {
+class MeshInstance : public RefCounted {
 	scn::IMesh* mesh;
 	unsigned lastVersion;
 	std::vector<scn::IMesh::submesh_range> submeshRanges;
 	glwrp::VAO vao;
 	glwrp::VertexBuffer vbo;
 	glwrp::ElementBuffer ibo;
-	std::size_t refcount;
+	std::atomic_int readyStatus;
+	scn::IMesh::mesh_parameters meshParameters;
+	std::vector<scn::IMesh::vertex> vertexData;
+	std::vector<std::uint32_t> elementData;
 public:
 	MeshInstance(scn::IMesh* mesh);
-	auto getMesh() const -> scn::IMesh*;
-	bool isReady();
-	auto getVAO() -> glwrp::VAO&;
-	auto getVBO() -> glwrp::VertexBuffer&;
-	auto getIBO() -> glwrp::ElementBuffer&;
-	auto getSubmeshCount() -> std::size_t;
-	auto getSubmeshRange(size_t n) -> scn::IMesh::submesh_range;
-	void AddRef();
-	void Release();
-	bool isNoRefs();
+	auto GetMesh() const -> scn::IMesh*;
+	bool IsReady();
+	auto GetVAO() -> glwrp::VAO&;
+	auto GetVBO() -> glwrp::VertexBuffer&;
+	auto GetIBO() -> glwrp::ElementBuffer&;
+	auto GetSubmeshCount() -> std::size_t;
+	auto GetSubmeshRange(size_t n) -> scn::IMesh::submesh_range;
 	struct Deleter {
 		void operator()(MeshInstance* inst) const;
 	};
+private:
+	void BeginLoad();
+	void LoadRanges();
+	void LoadVertices();
+	void LoadElements();
+	void BuffersReady();
+	void UploadBuffers();
 };
 
 } /* namespace dse::renders::gl31 */

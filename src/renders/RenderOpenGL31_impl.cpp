@@ -7,6 +7,7 @@
 
 #include <array>
 #include <cstdio>
+#include <cstring>
 #include <glbinding/gl31/gl.h>
 #include <glbinding/gl31ext/gl.h>
 #include "RenderOpenGL31_impl.h"
@@ -107,40 +108,11 @@ void dse::renders::RenderOpenGL31_impl::DrawPostprocess() {
 	glDepthFunc(GL_LESS);
 }
 
-void dse::renders::RenderOpenGL31_impl::ReloadInstance(gl31::ObjectInstance& objInst) {
-	auto meshInst = objInst.mesh.get();
-	if (meshInst == nullptr || meshInst->getMesh() != objInst.object->getMesh()) {
-		auto mi = GetMeshInstance(objInst.object->getMesh());
-		if (mi) mi->AddRef();
-		objInst.mesh.reset(mi);
-	}
-	ObjectInstanceUniform uniforms;
-	auto rotScale = math::transpose(math::matFromQuat(objInst.object->getQRot()));
-	auto vPos = objInst.object->getPos();
-	auto vScale = objInst.object->getScale();
-	rotScale[0] *= vScale;
-	rotScale[1] *= vScale;
-	rotScale[2] *= vScale;
-	uniforms.transform = { math::vec4
-		{rotScale[0].x(), rotScale[0].y(), rotScale[0].z(), vPos.x()},
-		{rotScale[1].x(), rotScale[1].y(), rotScale[1].z(), vPos.y()},
-		{rotScale[2].x(), rotScale[2].y(), rotScale[2].z(), vPos.z()}
-	};
-	if (objInst.ubo == 0) {
-		objInst.ubo = {};
-		glBufferData(objInst.ubo.target, sizeof(uniforms), nullptr, GL_DYNAMIC_DRAW);
-	}
-	objInst.ubo.bind();
-	glBufferSubData(objInst.ubo.target, 0, sizeof(uniforms), &uniforms);
-	objInst.lastVersion = objInst.object->getVersion();
-}
-
 void RenderOpenGL31_impl::OnSceneChanged(scn::SceneChangeEventType act, scn::Object* obj) {
 	switch (act) {
 		case decltype(act)::ObjectCreate: {
 			auto& inst = objects[obj];
-			inst.object = obj;
-			inst.lastVersion = obj->getVersion() - 1;
+			inst = gl31::ObjectInstance(obj);
 		} break;
 		case decltype(act)::ObjectDestroy: {
 			objects.erase(obj);
@@ -148,7 +120,8 @@ void RenderOpenGL31_impl::OnSceneChanged(scn::SceneChangeEventType act, scn::Obj
 	}
 }
 
-void RenderOpenGL31_impl::CleanupMeshes() {
+void RenderOpenGL31_impl::CleanupMeshes()
+{
 	auto end = meshes.end();
 	if (cleanupPointer == end) {
 		cleanupPointer = meshes.begin();
@@ -162,33 +135,135 @@ void RenderOpenGL31_impl::CleanupMeshes() {
 	}
 }
 
-void RenderOpenGL31_impl::FillInstances() {
-	for (auto& object : (scene->objects())) {
-		auto& objInst = objects[&object];
-		objInst.object = &object;
-		ReloadInstance(objInst);
+void RenderOpenGL31_impl::DrawScene()
+{
+	glBindSampler(TextureUnits::DrawDiffuse, drawDiffuse);
+	glActiveTexture(texture(TextureUnits::DrawDiffuse));
+	pendingTexture.bind();
+	glUseProgram(drawProg);
+//	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	if (!camera) {
+		return;
 	}
-	scnChangeCon = scene->subscribeChangeEvent(util::StaticMemFn<&RenderOpenGL31_impl::OnSceneChanged>(*this));
+	SetupCamera();
+	if (!scene) {
+		return;
+	}
+	for (auto& obj : scene->objects()) {
+		auto inst = GetObjectInstance(&obj);
+		inst->CheckAndSync(this);
+		auto mesh = inst->GetMeshInstance();
+		if (!mesh) {
+			continue;
+		}
+		if (!mesh->IsReady()) {
+			continue;
+		}
+		glBindVertexArray(mesh->GetVAO());
+		auto& ubo = inst->GetUBO();
+		glBindBufferBase(ubo.target, UniformIndices::ObjectInstanceBind, ubo);
+		auto subCount = mesh->GetSubmeshCount();
+		for (std::size_t i = 0; i < subCount; ++i) {
+			auto [start, end] = mesh->GetSubmeshRange(i);
+			auto materialInst = inst->GetMaterialInstance(this, i);
+			if (materialInst) {
+				materialInst->CheckAndSync(this);
+				auto& matUbo = materialInst->GetUBO();
+				glBindBufferBase(matUbo.target, UniformIndices::MaterialBind, matUbo);
+				auto textureInst = materialInst->GetDiffuseTextureInstance(this);
+				glActiveTexture(texture(gl31::DrawDiffuse));
+				if (textureInst == nullptr || !textureInst->IsReady()) {
+					pendingTexture.bind();
+				} else {
+					textureInst->GetTexture().bind();
+				}
+			} else {
+				glBindBufferBase(emptyMaterialUBO.target, UniformIndices::MaterialBind, emptyMaterialUBO);
+				glActiveTexture(texture(gl31::DrawDiffuse));
+				pendingTexture.bind();
+			}
+			glDrawElements(GL_TRIANGLES, end - start, GL_UNSIGNED_INT, reinterpret_cast<void*>(start * sizeof(std::uint32_t)));
+		}
+	}
 }
 
-auto RenderOpenGL31_impl::GetMeshInstance(scn::IMesh* mesh) -> gl31::MeshInstance* {
-	if (mesh) {
-		auto i = meshes.find(mesh);
-		if (i == meshes.end()) {
-			auto [i, r] = meshes.emplace(
-				std::piecewise_construct,
-				std::make_tuple(mesh),
-				std::make_tuple(mesh)
-			);
-			if (!r) {
-				throw std::bad_alloc();
-			} else {
-				return &(i->second);
-			}
-		}
-		return &(i->second);
+void RenderOpenGL31_impl::FillInstances()
+{
+	for (auto& object : (scene->objects())) {
+		auto& objInst = objects[&object];
+		objInst = gl31::ObjectInstance(this, &object);
 	}
-	return nullptr;
+//	scnChangeCon = scene->subscribeChangeEvent(util::StaticMemFn<&RenderOpenGL31_impl::OnSceneChanged>(*this));
+}
+
+auto RenderOpenGL31_impl::GetMeshInstance(scn::IMesh* mesh, bool withAcquire) -> gl31::MeshInstance*
+{
+	gl31::MeshInstance* result;
+	if (!mesh) return nullptr;
+	auto it = meshes.find(mesh);
+	if (it == meshes.end()) {
+		auto [it2, emplaceResult] = meshes.emplace(
+			std::piecewise_construct,
+			std::make_tuple(mesh),
+			std::make_tuple(mesh)
+		);
+		if (!emplaceResult) {
+			throw std::bad_alloc();
+		}
+		it = it2;
+	}
+	result = &(it->second);
+	if (withAcquire) {
+		result->AddRef();
+	}
+	return result;
+}
+
+auto RenderOpenGL31_impl::GetMaterialInstance(scn::Material* material, bool withAcquire) -> gl31::MaterialInstance*
+{
+	gl31::MaterialInstance* result;
+	if (!material) return nullptr;
+	auto it = materials.find(material);
+	if (it == materials.end()) {
+		auto [it2, emplaceResult] = materials.emplace(
+			std::piecewise_construct,
+			std::make_tuple(material),
+			std::make_tuple(material)
+		);
+		if (!emplaceResult) {
+			throw std::bad_alloc();
+		}
+		it = it2;
+	}
+	result = &(it->second);
+	if (withAcquire) {
+		result->AddRef();
+	}
+	return result;
+}
+
+auto RenderOpenGL31_impl::GetTextureInstance(
+	scn::ITextureDataProvider* texture, bool withAcquire
+) -> gl31::TextureInstance* {
+	gl31::TextureInstance* result;
+	if (!texture) return nullptr;
+	auto it = textures.find(texture);
+	if (it == textures.end()) {
+		auto [it2, emplaceResult] = textures.emplace(
+			std::piecewise_construct,
+			std::make_tuple(texture),
+			std::make_tuple(texture)
+		);
+		if (!emplaceResult) {
+			throw std::bad_alloc();
+		}
+		it = it2;
+	}
+	result = &(it->second);
+	if (withAcquire) {
+		result->AddRef();
+	}
+	return result;
 }
 
 void RenderOpenGL31_impl::OnPaint(os::WndEvtDt) {
@@ -198,48 +273,14 @@ void RenderOpenGL31_impl::OnPaint(os::WndEvtDt) {
 	glBindFramebuffer(GL_FRAMEBUFFER, renderFBO);
 #endif
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	glBindSampler(TextureUnits::DrawDiffuse, drawDiffuse);
-	glActiveTexture(texture(TextureUnits::DrawDiffuse));
-	pendingTexture.bind();
-	glUseProgram(drawProg);
-//	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-	if (camera) {
-		SetupCamera();
-		if (scene) {
-			if (objects.empty()) {
-				FillInstances();
-			}
-			for (auto& [obj, inst] : objects) {
-				if (inst.lastVersion != obj->getVersion()) {
-					ReloadInstance(inst);
-				}
-				if (inst.mesh) {
-					auto& mesh = inst.mesh;
-					if (mesh) {
-						if (mesh->isReady()) {
-							glBindVertexArray(mesh->getVAO());
-							glBindBufferBase(inst.ubo.target, UniformIndices::ObjectInstanceBind, inst.ubo);
-							auto subCount = mesh->getSubmeshCount();
-							for (std::size_t i = 0; i < subCount; ++i) {
-								auto [start, count] = mesh->getSubmeshRange(i);
-								auto material = obj->getMaterial(i);
-								if (material) {
-									glUniform4fv(matColorUnifrom, 1, (material->getColor()).elements);
-								} else {
-									glUniform4f(matColorUnifrom, 1.f, 0.f, 1.f, 0.f);
-								}
-								glDrawElements(GL_TRIANGLES, count, GL_UNSIGNED_INT, reinterpret_cast<void*>(start));
-							}
-						}
-					}
-				}
-			}
-		}
-	}
+
+	DrawScene();
 	DrawPostprocess();
+
 	context.SwapBuffers();
 
 	CleanupMeshes();
+
 	swal::Wnd(wnd->GetSysData().hWnd).ValidateRect();
 	if (requested.load(std::memory_order_acquire)) {
 		auto pool = core::ThreadPool::GetCurrentPool();
@@ -266,7 +307,7 @@ RenderOpenGL31_impl::RenderOpenGL31_impl(os::Window& wnd) : wnd(&wnd),
 	for (int i = 0; i < numExts; ++i) {
 		auto extName = reinterpret_cast<const char*>(glGetStringi(GL_EXTENSIONS, i));
 		for (auto& data : reqGLExts) {
-			if (!(data.avail || strcmp(data.name, extName))) {
+			if (!(data.avail || std::strcmp(data.name, extName))) {
 				data.avail = true;
 				++availExtsNum;
 			}
@@ -331,7 +372,7 @@ void RenderOpenGL31_impl::Render(const util::FunctionPtr<void()>& cb) {
 #ifdef _WIN32
 	auto hWnd = wnd->GetSysData().hWnd;
 	InvalidateRect(hWnd, nullptr, FALSE);
-	//UpdateWindow(hWnd);
+//	UpdateWindow(hWnd);
 #endif
 }
 
@@ -378,13 +419,19 @@ void RenderOpenGL31_impl::PrepareShaders() {
 	glUniformBlockBinding(drawProg, objectInstanceBlockIndex, UniformIndices::ObjectInstanceBind);
 	auto cameraBlockIndex = drawProg.getUniformBlockIndex("Camera");
 	glUniformBlockBinding(drawProg, cameraBlockIndex, UniformIndices::CameraBind);
+	auto materialBlockIndex = drawProg.getUniformBlockIndex("Material");
+	glUniformBlockBinding(drawProg, materialBlockIndex, UniformIndices::MaterialBind);
 	cameraUBO = {};
 	cameraUBO.bind();
 	glBufferData(cameraUBO.target, sizeof(CameraUniform), nullptr, GL_DYNAMIC_DRAW);
 	glBindBufferBase(cameraUBO.target, UniformIndices::CameraBind, cameraUBO);
 
+	gl31::ObjectMaterialUniform emptyMaterial;
+	emptyMaterial.color = {1.f, 0.f, 1.f, 0.f};
+	emptyMaterialUBO.bind();
+	glBufferData(emptyMaterialUBO.target, sizeof(emptyMaterial), &emptyMaterial, GL_DYNAMIC_DRAW);
+
 	drawWindowSizeUniform = glGetUniformLocation(drawProg, "windowSize");
-	matColorUnifrom = glGetUniformLocation(drawProg, "matColor");
 	glUseProgram(drawProg);
 	glUniform2f(drawWindowSizeUniform, 0, 0);
 	glUniform1i(glGetUniformLocation(drawProg, "diffuse"), TextureUnits::DrawDiffuse);
@@ -426,6 +473,23 @@ void RenderOpenGL31_impl::RebuildSrgbFrameBuffer() {
 
 void RenderOpenGL31_impl::SetCamera(dse::scn::Camera &camera) {
 	this->camera = &camera;
+}
+
+auto RenderOpenGL31_impl::GetObjectInstance(scn::Object* object) -> gl31::ObjectInstance*
+{
+	auto it = objects.find(object);
+	if (it == objects.end()) {
+		auto [it2, result] = objects.emplace(
+			std::piecewise_construct,
+			std::make_tuple(object),
+			std::make_tuple(this, object)
+		);
+		if (!result) {
+			throw std::bad_alloc();
+		}
+		it = it2;
+	}
+	return &(it->second);
 }
 
 } /* namespace dse::renders */

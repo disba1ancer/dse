@@ -13,87 +13,145 @@
 
 using namespace gl31;
 
+namespace {
+
+enum {
+	Ready,
+	Pending,
+	UploadReady
+};
+
+}
+
 namespace dse::renders::gl31 {
 
-MeshInstance::MeshInstance(scn::IMesh* mesh) : mesh(mesh), lastVersion(0), vao(0), vbo(0), ibo(0), refcount(0) {
+MeshInstance::MeshInstance(scn::IMesh* mesh) :
+	mesh(mesh),
+	lastVersion(0),
+	vao(0),
+	vbo(0),
+	ibo(0),
+	readyStatus(0)
+{
 	if (!mesh) {
-		std::runtime_error("Mesh can not be nullptr");
+		throw std::runtime_error("Mesh can not be nullptr");
 	}
 }
 
-auto MeshInstance::getMesh() const -> scn::IMesh* {
+auto MeshInstance::GetMesh() const -> scn::IMesh*
+{
 	return mesh;
 }
 
-bool MeshInstance::isReady() {
-	if (!vao || lastVersion != mesh->getVersion()) {
-		auto [vertCount, elemCount, submCount] = mesh->getMeshParameters();
-		std::vector<scn::IMesh::vertex> vertexData(vertCount);
-		std::vector<std::uint32_t> elementData(elemCount);
-		submCount = std::max(submCount, std::uint32_t(1));
-		submeshRanges.resize(submCount);
-		if (submCount == 1) {
-			submeshRanges[0] = { 0, elemCount };
-		} else {
-			for (unsigned i = 0; i < submCount; ++i) {
-				submeshRanges[i] = mesh->getSubmeshRange(i);
+bool MeshInstance::IsReady()
+{
+	switch (readyStatus.load(std::memory_order_acquire)) {
+		case Ready: {
+			if (vao && lastVersion == mesh->GetVersion()) {
+				return true;
 			}
-		}
-		vao = {};
-		vbo = {};
-		ibo = {};
-		mesh->loadVerticesRange(vertexData.data(), 0, vertCount);
-		mesh->loadElementsRange(elementData.data(), 0, elemCount);
-		glBufferData(vbo.target, vertCount * sizeof(scn::IMesh::vertex), vertexData.data(), GL_STATIC_DRAW);
-		glBufferData(ibo.target, elemCount * sizeof(std::uint32_t), elementData.data(), GL_STATIC_DRAW);
-		glEnableVertexAttribArray(InputParams::Position);
-		glEnableVertexAttribArray(InputParams::Normal);
-		glEnableVertexAttribArray(InputParams::Tangent);
-		glEnableVertexAttribArray(InputParams::UV);
-		glVertexAttribPointer(InputParams::Position, 3, GL_FLOAT, GL_FALSE, sizeof(scn::IMesh::vertex), reinterpret_cast<void*>(offsetof(scn::IMesh::vertex, pos)));
-		glVertexAttribPointer(InputParams::Normal, 3, GL_FLOAT, GL_FALSE, sizeof(scn::IMesh::vertex), reinterpret_cast<void*>(offsetof(scn::IMesh::vertex, norm)));
-		glVertexAttribPointer(InputParams::Tangent, 3, GL_FLOAT, GL_FALSE, sizeof(scn::IMesh::vertex), reinterpret_cast<void*>(offsetof(scn::IMesh::vertex, tang)));
-		glVertexAttribPointer(InputParams::UV, 2, GL_FLOAT, GL_FALSE, sizeof(scn::IMesh::vertex), reinterpret_cast<void*>(offsetof(scn::IMesh::vertex, uv)));
-		lastVersion = mesh->getVersion();
+			BeginLoad();
+			if (readyStatus.load(std::memory_order_acquire) == Pending) {
+				return false;
+			}
+		} [[fallthrough]];
+		case UploadReady: {
+			UploadBuffers();
+			return readyStatus.load(std::memory_order_acquire) == Ready;
+		} break;
 	}
-	return true;
+	return false;
 }
 
-auto MeshInstance::getVAO() -> glwrp::VAO& {
+auto MeshInstance::GetVAO() -> glwrp::VAO&
+{
 	return vao;
 }
 
-auto MeshInstance::getVBO() -> glwrp::VertexBuffer& {
+auto MeshInstance::GetVBO() -> glwrp::VertexBuffer&
+{
 	return vbo;
 }
 
-auto MeshInstance::getIBO() -> glwrp::ElementBuffer& {
+auto MeshInstance::GetIBO() -> glwrp::ElementBuffer&
+{
 	return ibo;
 }
 
-auto MeshInstance::getSubmeshCount() -> std::size_t {
+auto MeshInstance::GetSubmeshCount() -> std::size_t
+{
 	return submeshRanges.size();
 }
 
-auto MeshInstance::getSubmeshRange(size_t n) -> scn::IMesh::submesh_range {
+auto MeshInstance::GetSubmeshRange(size_t n) -> scn::IMesh::submesh_range
+{
 	return submeshRanges[n];
 }
 
-void MeshInstance::AddRef() {
-	++refcount;
+void MeshInstance::BeginLoad()
+{
+	readyStatus.store(Pending, std::memory_order_relaxed);
+	mesh->LoadMeshParameters(
+		&meshParameters,
+		util::StaticMemFn<&MeshInstance::LoadRanges>(*this)
+	);
 }
 
-void MeshInstance::Release() {
-	if (refcount) {
-		--refcount;
-	}
+void MeshInstance::LoadRanges()
+{
+	vertexData.resize(meshParameters.verticesCount);
+	elementData.resize(meshParameters.elementsCount);
+	submeshRanges.resize(meshParameters.submeshCount);
+	mesh->LoadSubmeshRanges(
+		submeshRanges.data(),
+		util::StaticMemFn<&MeshInstance::LoadVertices>(*this)
+	);
 }
 
-bool MeshInstance::isNoRefs() {
-	return refcount == 0 ;
+void MeshInstance::LoadVertices()
+{
+	mesh->LoadVertices(
+		vertexData.data(),
+		util::StaticMemFn<&MeshInstance::LoadElements>(*this)
+	);
 }
 
-void MeshInstance::Deleter::operator()(MeshInstance* inst) const {
+void MeshInstance::LoadElements()
+{
+	mesh->LoadElements(
+		elementData.data(),
+		util::StaticMemFn<&MeshInstance::BuffersReady>(*this)
+	);
+}
+
+void MeshInstance::BuffersReady()
+{
+	readyStatus.store(UploadReady, std::memory_order_release);
+}
+
+void MeshInstance::UploadBuffers()
+{
+	vao = {};
+	vbo = {};
+	ibo = {};
+	glBufferData(vbo.target, vertexData.size() * sizeof(scn::IMesh::vertex), vertexData.data(), GL_STATIC_DRAW);
+	glBufferData(ibo.target, elementData.size() * sizeof(std::uint32_t), elementData.data(), GL_STATIC_DRAW);
+	glEnableVertexAttribArray(InputParams::Position);
+	glEnableVertexAttribArray(InputParams::Normal);
+	glEnableVertexAttribArray(InputParams::Tangent);
+	glEnableVertexAttribArray(InputParams::UV);
+	glVertexAttribPointer(InputParams::Position, 3, GL_FLOAT, GL_FALSE, sizeof(scn::IMesh::vertex), reinterpret_cast<void*>(offsetof(scn::IMesh::vertex, pos)));
+	glVertexAttribPointer(InputParams::Normal, 3, GL_FLOAT, GL_FALSE, sizeof(scn::IMesh::vertex), reinterpret_cast<void*>(offsetof(scn::IMesh::vertex, norm)));
+	glVertexAttribPointer(InputParams::Tangent, 3, GL_FLOAT, GL_FALSE, sizeof(scn::IMesh::vertex), reinterpret_cast<void*>(offsetof(scn::IMesh::vertex, tang)));
+	glVertexAttribPointer(InputParams::UV, 2, GL_FLOAT, GL_FALSE, sizeof(scn::IMesh::vertex), reinterpret_cast<void*>(offsetof(scn::IMesh::vertex, uv)));
+	vertexData.clear();
+	elementData.clear();
+	lastVersion = mesh->GetVersion();
+	readyStatus.store(Ready, std::memory_order_release);
+}
+
+void MeshInstance::Deleter::operator()(MeshInstance* inst) const
+{
 	inst->Release();
 }
 

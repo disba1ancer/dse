@@ -9,7 +9,9 @@ layout(std140) uniform Camera {
     mat4 viewProj;
     vec4 pos;
 } camera;
-uniform vec4 matColor;
+layout(std140) uniform Material {
+    vec4 color;
+} material;
 uniform sampler2D diffuse;
 
 out vec4 fragColor;
@@ -22,7 +24,7 @@ vec4 defaultTexture(vec2 uv) {
 void main() {
     vec4 lightCol = vec4(1.f, 1.f, .75f, 1.f);
     vec3 lightDir = normalize(vec3(1.f, 1.f, -1.f));
-    vec4 diffuseCol = mix(texture(diffuse, fUV), vec4(matColor.rgb, 1.f), matColor.a);
+    vec4 diffuseCol = mix(texture(diffuse, fUV), vec4(material.color.rgb, 1.f), material.color.a);
     vec3 viewDir = normalize(camera.pos.xyz - vWorldPos);
     float brightness = dot(fNorm, -lightDir);
     vec3 specDir = 2 * fNorm * brightness + lightDir;

@@ -45,7 +45,7 @@ void ThreadPool_win32::Schedule(const Task& task) {
 		taskCount = thrData.taskQueue.size();
 	}
 	//condvar.notify_all();
-	if (slpThrds.load(std::memory_order_relaxed) && taskCount > 1) {
+	if (slpThrds.load(std::memory_order_relaxed) /*&& taskCount > 1*/) {
 		slpThrds.store(false, std::memory_order_relaxed);
 		WakeupThreads();
 	}
@@ -142,30 +142,28 @@ void ThreadPool_win32::HandleMessages() {
 }
 
 void ThreadPool_win32::TrySteal(ThreadData& thrData) {
-	bool lckQueues = false;
-	for (;;) {
+	while (true) {
 		for (auto& thrData2 : threadsData) {
 			if (&thrData != &thrData2) {
 				if (thrData2.mtx.try_lock()) {
 					std::scoped_lock lck(std::adopt_lock, thrData2.mtx);
 					auto beg = thrData2.taskQueue.begin();
-					auto end = beg + thrData2.taskQueue.size() / 2;
+					auto size = thrData2.taskQueue.size();
+					auto end = beg + size / 2;
 					if (beg != end) {
 						thrData.taskQueue.insert(thrData.taskQueue.end(), beg, end);
+						thrData2.taskQueue.erase(beg, end);
 						return;
 					}
 				} else {
-					lckQueues = true;
+					util::unlock_guard lck(thrData.mtx);
+					HandleSystem(thrData);
+					goto restartSteal;
 				}
 			}
 		}
-		if (lckQueues) {
-			util::unlock_guard lck(thrData.mtx);
-			HandleSystem(thrData);
-			lckQueues = false;
-		} else {
-			return;
-		}
+		return;
+		restartSteal:;
 	}
 }
 

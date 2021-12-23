@@ -11,14 +11,30 @@
 #include <memory>
 #include "scn/Object.h"
 #include "MeshInstance.h"
+#include "MaterialInstance.h"
+#include <cstdint>
+
+namespace dse::renders {
+class RenderOpenGL31_impl;
+}
 
 namespace dse::renders::gl31 {
 
-struct ObjectInstance {
+class ObjectInstance {
 	scn::Object* object;
 	std::unique_ptr<MeshInstance, MeshInstance::Deleter> mesh;
-	glwrp::UniformBuffer ubo{false};
-	unsigned lastVersion;
+	glwrp::UniformBuffer ubo;
+	std::uint32_t lastVersion;
+	std::unordered_map<unsigned, std::unique_ptr<MaterialInstance, MaterialInstance::Deleter>> materials;
+public:
+	ObjectInstance();
+	ObjectInstance(scn::Object* object);
+	ObjectInstance(RenderOpenGL31_impl* render, scn::Object* object);
+	void Reload(RenderOpenGL31_impl* render);
+	void CheckAndSync(RenderOpenGL31_impl* render);
+	auto GetMeshInstance() const -> MeshInstance*;
+	auto GetMaterialInstance(RenderOpenGL31_impl* render, unsigned index) -> MaterialInstance*;
+	auto GetUBO() -> glwrp::UniformBuffer&;
 };
 
 } /* namespace dse::renders::gl31 */

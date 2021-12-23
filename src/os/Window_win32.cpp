@@ -116,13 +116,13 @@ void Window_win32::show(WindowShowCommand command) {
 			break;
 	}
 	auto style = wnd.GetLongPtr(GWL_STYLE);
-	if (command == WindowShowCommand::ShowFullScreen && !(style & WS_POPUP)) {
-		style |= WS_POPUP;
+	if (command == WindowShowCommand::ShowFullScreen && (style & WS_OVERLAPPEDWINDOW)) {
+//		style |= WS_POPUP;
 		style &= ~WS_OVERLAPPEDWINDOW;
 		wnd.SetLongPtr(GWL_STYLE, style);
 		wnd.SetPos(HWND_TOPMOST, 0, 0, 0, 0, SP::NoMove | SP::NoSize | SP::FrameChanged);
-	} else if(style & WS_POPUP) {
-		style &= ~WS_POPUP;
+	} else if(!(style & WS_OVERLAPPEDWINDOW)) {
+//		style &= ~WS_POPUP;
 		style |= WS_OVERLAPPEDWINDOW;
 		wnd.SetLongPtr(GWL_STYLE, style);
 		wnd.SetPos(HWND_TOPMOST, 0, 0, 0, 0, SP::NoMove | SP::NoSize | SP::NoZOrder | SP::FrameChanged);
