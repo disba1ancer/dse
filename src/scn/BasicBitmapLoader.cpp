@@ -1,4 +1,5 @@
 #include "BasicBitmapLoader.h"
+#include "core/ThreadPool.h"
 
 namespace {
 	struct BitmapHeader {
@@ -68,28 +69,43 @@ namespace {
 
 namespace dse::scn {
 
-BasicBitmapLoader::BasicBitmapLoader(const char8_t* file) :
+BasicBitmapLoader::BasicBitmapLoader(core::ThreadPool& pool, const char8_t* file) :
     width(0),
     height(0),
     format(PixelFormat::Unsupported),
     redShift(16), greenShift(8), blueShift(0), alphaShift(24), redLength(8), greenLength(8), blueLength(8), alphaLength(8)
 {
-	if (file == nullptr | file[0] == '\0') {
+	if (file == nullptr || file[0] == '\0') {
 		return;
 	}
-	bitmapFile = std::ifstream((const char*)file, std::ios::in | std::ios::binary);
+	bitmapFile = { pool, file, core::OpenMode::Read };
 }
 
 void BasicBitmapLoader::LoadParameters(TextureParameters* parameters, util::FunctionPtr<void ()> onReady)
 {
+	util::StartDetached(LoadParametersInternal(parameters, onReady));
+}
+
+void BasicBitmapLoader::LoadData(void* recvBuffer, unsigned lod, util::FunctionPtr<void ()> onReady)
+{
+	util::StartDetached(LoadDataInternal(recvBuffer, lod, onReady));
+}
+
+unsigned BasicBitmapLoader::GetVersion()
+{
+	return 1;
+}
+
+util::Task<void> BasicBitmapLoader::LoadParametersInternal(TextureParameters* parameters, util::FunctionPtr<void ()> onReady)
+{
 	if (format == Unsupported) {
 		std::uint_least16_t sign;
-		bitmapFile.read(reinterpret_cast<char*>(&sign), sizeof(sign));
+		co_await bitmapFile.ReadAsync(reinterpret_cast<std::byte*>(&sign), sizeof(sign));
 		if ((sign & 0xFFFF) != 0x4D42) {
 			throw std::runtime_error("Bitmap signature error");
 		}
 		BitmapMeta bitmapMeta;
-		bitmapFile.read(reinterpret_cast<char*>(&bitmapMeta), sizeof(bitmapMeta));
+		co_await bitmapFile.ReadAsync(reinterpret_cast<std::byte*>(&bitmapMeta), sizeof(bitmapMeta));
 		if (bitmapMeta.info.height < 0) {
 			throw std::runtime_error("Negative height not supported");
 		}
@@ -102,7 +118,7 @@ void BasicBitmapLoader::LoadParameters(TextureParameters* parameters, util::Func
 			format = RGBA8sRGB;
 			if (bitmapMeta.info.compression == BMCOMPR_BITFIELDS) {
 				ColorMasks clMasks;
-				bitmapFile.read(reinterpret_cast<char*>(&clMasks), sizeof(clMasks));
+				co_await bitmapFile.ReadAsync(reinterpret_cast<std::byte*>(&clMasks), sizeof(clMasks));
 				maskToShift(clMasks.redMask, redShift, redLength);
 				maskToShift(clMasks.greenMask, greenShift, greenLength);
 				maskToShift(clMasks.blueMask, blueShift, blueLength);
@@ -123,35 +139,38 @@ void BasicBitmapLoader::LoadParameters(TextureParameters* parameters, util::Func
 	onReady();
 }
 
-void BasicBitmapLoader::LoadData(void* recvBuffer, unsigned lod, util::FunctionPtr<void ()> onReady)
+util::Task<void> BasicBitmapLoader::LoadDataInternal(void* recvBuffer, unsigned lod, util::FunctionPtr<void ()> onReady)
 {
-	bitmapFile.seekg(pixelsPos);
+	bitmapFile.Seek(pixelsPos);
 	switch (format) {
 	case BGR8sRGB: {
-		size_t dataSize = 3 * width + (width % 4 ? 4 - (width % 4) : 0);
-		dataSize *= height;
-		bitmapFile.read(static_cast<char*>(recvBuffer), dataSize);
+		size_t dataSize = (3 * size_t(width) + 3) & ~3U;
+		auto buffer = static_cast<std::byte*>(recvBuffer) + dataSize * height;
+		for (int i = height; i > 0; --i) {
+			buffer -= dataSize;
+			co_await bitmapFile.ReadAsync(buffer, dataSize);
+		}
 	} break;
 	case RGBA8sRGB: {
-		auto buffer = static_cast<unsigned char*>(recvBuffer);
-		uint_least32_t pixel;
-		for (auto i = 0U; i < static_cast<unsigned>(std::abs(width * height)); ++i, buffer += 4) {
-			bitmapFile.read(reinterpret_cast<char*>(&pixel), sizeof(pixel));
-			buffer[3] = applyShiftLength(pixel, alphaShift, alphaLength, 0);
-			buffer[2] = applyShiftLength(pixel, blueShift, blueLength, 0);
-			buffer[1] = applyShiftLength(pixel, greenShift, greenLength, 0);
-			buffer[0] = applyShiftLength(pixel, redShift, redLength, 0);
+		size_t dataSize = 4 * size_t(width);
+		auto buffer = static_cast<std::byte*>(recvBuffer) + dataSize * height;
+		for (int i = height; i > 0; --i) {
+			uint32_t pixel;
+			buffer -= dataSize;
+			auto linePtr = reinterpret_cast<unsigned char*>(buffer);
+			for (int j = 0; j < width; ++j, linePtr += 4) {
+				co_await bitmapFile.ReadAsync(reinterpret_cast<std::byte*>(&pixel), 4);
+				linePtr[3] = applyShiftLength(pixel, alphaShift, alphaLength, 0);
+				linePtr[2] = applyShiftLength(pixel, blueShift, blueLength, 0);
+				linePtr[1] = applyShiftLength(pixel, greenShift, greenLength, 0);
+				linePtr[0] = applyShiftLength(pixel, redShift, redLength, 0);
+			}
 		}
 	} break;
 	default:
 		throw std::runtime_error("Internal error: invalid format");
 	}
 	onReady();
-}
-
-unsigned BasicBitmapLoader::GetVersion()
-{
-	return 1;
 }
 
 } // namespace dse::scn

@@ -117,7 +117,7 @@ void Context::SwapBuffers() {
 
 void Context::enableVSync(int val) {
 	vsync = val;
-	wglSwapIntervalEXT(0);
+//	wglSwapIntervalEXT(val);
 }
 
 auto Context::getProcAddress(const char *name) -> void(*)() {
@@ -161,6 +161,7 @@ Context::ContextOwner Context::makeContext(swal::WindowDC &dc, ContextVersion ve
 		WGL_CONTEXT_MAJOR_VERSION_ARB, major,
 		WGL_CONTEXT_MINOR_VERSION_ARB, minor,
 		WGL_CONTEXT_FLAGS_ARB, int(flags),//WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB,
+//		WGL_CONTEXT_PROFILE_MASK_ARB, WGL_CONTEXT_CORE_PROFILE_BIT_ARB,
 		0, 0
 	};
 	return swal::winapi_call(wglCreateContextAttribsARB(dc, 0, contextAtributes));

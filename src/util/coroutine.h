@@ -91,11 +91,11 @@ using ReturnFromTupleT = typename ReturnFromTuple<T>::Type;
 
 template <typename S>
 requires (
-	std::same_as<typename SenderTraits<S>::template ErrorTypes<TypeTupleHelper>, TypeTupleHelper<std::exception_ptr>>
+	std::same_as<typename SenderTraits<S>::ErrorType, std::exception_ptr>
 )
 class SenderAwaiter {
 	using ReturnedValue = typename SenderTraits<S>::template ValueTypes<std::tuple>;
-	using OpState = std::invoke_result_t<decltype(Connect), std::remove_cvref_t<S>&&, SenderAwaiterRecv<ReturnedValue>&&>;
+	using OpState = TagInvokeResultT<TagT<Connect>, std::remove_cvref_t<S>&&, SenderAwaiterRecv<ReturnedValue>&&>;
 	std::variant<std::remove_cvref_t<S>, OpState> sndropstate;
 	ReturnedValue value;
 	std::exception_ptr eptr;
@@ -133,13 +133,13 @@ struct Task;
 namespace impl {
 
 template <typename T>
+struct TaskSpec;
+
+template <typename T>
 class TaskAwaiter;
 
 template <typename Ret, typename Recv>
 class TaskOpstate;
-
-template <typename Ret, typename Recv>
-void dse_TagInvoke(TagT<Start>, TaskOpstate<Ret, Recv>&);
 
 template <typename T>
 struct TaskBase;
@@ -163,7 +163,7 @@ struct CoroReceiver<void> {
 
 template <typename T>
 struct PromiseTypeBase {
-    friend Task<T>;
+    friend TaskSpec<T>;
     friend TaskBase<T>;
     friend FinalAwaiter<T>;
 private:
@@ -181,7 +181,7 @@ public:
 
 template <>
 struct PromiseTypeBase<void> {
-    friend Task<void>;
+    friend TaskSpec<void>;
     friend TaskBase<void>;
     friend FinalAwaiter<void>;
 private:
@@ -199,7 +199,7 @@ public:
 
 template <typename T>
 struct PromiseTypeBase<T&> {
-    friend Task<T&>;
+    friend TaskSpec<T&>;
     friend TaskBase<T&>;
     friend FinalAwaiter<T&>;
 private:
@@ -217,7 +217,7 @@ public:
 
 template <typename T>
 struct PromiseTypeBase<T&&> {
-    friend Task<T&&>;
+    friend TaskSpec<T&&>;
     friend TaskBase<T&&>;
     friend FinalAwaiter<T&&>;
 private:
@@ -281,12 +281,12 @@ public:
 template <typename T>
 struct TaskBase<T>::PromiseType : PromiseTypeBase<T> {
     friend class TaskAwaiter<T>;
-    friend class FinalAwaiter<T>;
+    friend struct FinalAwaiter<T>;
     template <typename Ret, typename Recv>
     friend void dse_TagInvoke(TagT<Start>, TaskOpstate<Ret, Recv>&);
     auto get_return_object() -> Task<T>
     {
-        return { Task<T>::Handle::from_promise(*this) };
+        return { TaskSpec<T>::Handle::from_promise(*this) };
     }
     auto initial_suspend() -> std::suspend_always
     {
@@ -343,14 +343,12 @@ struct FinalAwaiter {
     {}
 };
 
-}
-
 template <typename T>
-struct Task : impl::TaskBase<T> {
-    using TaskBase = impl::TaskBase<T>;
+struct TaskSpec : TaskBase<T> {
+    using TaskBase = TaskBase<T>;
     using promise_type = typename TaskBase::PromiseType;
     friend promise_type;
-    Task(std::coroutine_handle<promise_type> handle) :
+    TaskSpec(std::coroutine_handle<promise_type> handle) :
         TaskBase(handle)
     {}
     T Result()
@@ -361,11 +359,11 @@ struct Task : impl::TaskBase<T> {
 };
 
 template <>
-struct Task<void> : impl::TaskBase<void> {
-    using TaskBase = impl::TaskBase<void>;
+struct TaskSpec<void> : TaskBase<void> {
+    using TaskBase = TaskBase<void>;
     using promise_type = typename TaskBase::PromiseType;
     friend promise_type;
-    Task(std::coroutine_handle<promise_type> handle) :
+    TaskSpec(std::coroutine_handle<promise_type> handle) :
         TaskBase(handle)
     {}
     void Result()
@@ -375,11 +373,11 @@ struct Task<void> : impl::TaskBase<void> {
 };
 
 template <typename T>
-struct Task<T&> : impl::TaskBase<T&> {
-    using TaskBase = impl::TaskBase<T&>;
+struct TaskSpec<T&> : TaskBase<T&> {
+    using TaskBase = TaskBase<T&>;
     using promise_type = typename TaskBase::PromiseType;
     friend promise_type;
-    Task(std::coroutine_handle<promise_type> handle) :
+    TaskSpec(std::coroutine_handle<promise_type> handle) :
         TaskBase(handle)
     {}
     T& Result()
@@ -390,17 +388,39 @@ struct Task<T&> : impl::TaskBase<T&> {
 };
 
 template <typename T>
-struct Task<T&&> : impl::TaskBase<T&&> {
-    using TaskBase = impl::TaskBase<T&&>;
+struct TaskSpec<T&&> : TaskBase<T&&> {
+    using TaskBase = TaskBase<T&&>;
     using promise_type = typename TaskBase::PromiseType;
     friend promise_type;
-    Task(std::coroutine_handle<promise_type> handle) :
+    TaskSpec(std::coroutine_handle<promise_type> handle) :
         TaskBase(handle)
     {}
     T&& Result()
     {
         this->ThrowIfExcept();
         return static_cast<T&&>(std::get<1>(this->handle.promise().value).get());
+    }
+};
+
+}
+
+template <typename T>
+struct Task : impl::TaskSpec<T> {
+    Task(std::coroutine_handle<typename impl::TaskSpec<T>::promise_type> handle) :
+        impl::TaskSpec<T>(handle)
+    {}
+    friend void dse_TagInvoke(TagT<StartDetached>, Task<T>&& task)
+    {
+        auto handle = task.handle;
+        task.handle = {};
+        handle.resume();
+    }
+
+    template <typename Recv>
+    auto dse_TagInvoke(util::TagT<util::Connect>, Task&& sndr, Recv&& recv)
+    -> impl::TaskOpstate<T, Recv>
+    {
+        return { std::move(sndr), std::forward<Recv>(recv) };
     }
 };
 
@@ -445,51 +465,62 @@ template <typename T>
 struct SenderTraits<Task<T>> {
 	template <template<typename ...> typename TT>
 	using ValueTypes = TT<T>;
-	template <template<typename ...> typename TT>
-	using ErrorTypes = TT<std::exception_ptr>;
+	using ErrorType = std::exception_ptr;
 	static constexpr bool SendsDone = false;
 };
 
 namespace impl {
 
 template <typename Ret, typename Recv>
-class TaskOpstate : CoroReceiver<Ret> {
+struct TaskOpstateBase : CoroReceiver<Ret> {
 	Task<Ret> task;
 	Recv receiver;
 	void SetValue(Ret&& val) override
 	{
-		util::SetValue(std::move(receiver), val);
+		util::SetValue(std::move(this->receiver), val);
 	}
+public:
+	TaskOpstateBase(Task<Ret>&& task, Recv&& receiver) :
+		task(std::move(task)),
+		receiver(std::forward<Recv>(receiver))
+	{}
+};
+
+template <typename Recv>
+struct TaskOpstateBase<void, Recv> : CoroReceiver<void> {
+	Task<void> task;
+	Recv receiver;
+	void SetValue() override
+	{
+		util::SetValue(std::move(this->receiver));
+	}
+public:
+	TaskOpstateBase(Task<void>&& task, Recv&& receiver) :
+		task(std::move(task)),
+		receiver(std::forward<Recv>(receiver))
+	{}
+};
+
+template <typename Ret, typename Recv>
+class TaskOpstate : TaskOpstateBase<Ret, Recv> {
 	void SetError(std::exception_ptr&& e) override
 	{
-		util::SetError(std::move(receiver), std::move(e));
+		util::SetError(std::move(this->receiver), std::move(e));
 	}
 	void SetDone() override
 	{}
 public:
 	TaskOpstate(Task<Ret>&& task, Recv&& receiver) :
-		task(std::move(task)),
-		receiver(std::move(receiver))
+		TaskOpstateBase<Ret, Recv>(std::move(task), std::forward<Recv>(receiver))
 	{}
-	friend void dse_TagInvoke<>(util::TagT<util::Start>, TaskOpstate<Ret, Recv>& sndr);
+	friend void dse_TagInvoke(util::TagT<util::Start>, TaskOpstate<Ret, Recv>& sndr) {
+		auto handle = sndr.task.handle;
+		auto& promise = handle.promise();
+		promise.rsm = static_cast<CoroReceiver<Ret>*>(&sndr);
+		handle.resume();
+	}
 };
 
-template <typename Ret, typename Recv>
-void dse_TagInvoke(util::TagT<util::Start>, TaskOpstate<Ret, Recv>& sndr)
-{
-	auto handle = sndr.task.handle;
-	auto& promise = handle.promise();
-	promise.rsm = static_cast<CoroReceiver<Ret>*>(&sndr);
-	handle.resume();
-}
-
-}
-
-template <typename Ret, typename Recv>
-auto dse_TagInvoke(util::TagT<util::Connect>, Task<Ret>&& sndr, Recv&& recv)
--> impl::TaskOpstate<Ret, Recv>
-{
-	return { std::move(sndr), std::move(recv) };
 }
 
 }

@@ -66,8 +66,7 @@ class RenderSender {
 public:
 	template <template<typename ...> typename Tuple>
 	using ValueTypes = Tuple<>;
-	template <template<typename ...> typename Tuple>
-	using ErrorTypes = Tuple<std::exception_ptr>;
+	using ErrorType = std::exception_ptr;
 	static constexpr bool SendsDone = false;
 	RenderSender(RenderOpenGL31& render) : render(render)
 	{}

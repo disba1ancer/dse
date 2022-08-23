@@ -78,7 +78,7 @@ int main(int argc, char* argv[])
 auto mainTask(Window& window, RenderOpenGL31& render) -> dse::util::Task<void>
 {
 	using namespace dse::math;
-	File file(thrPool, u8"test.txt", OpenMode::READ);
+	File file(thrPool, u8"test.txt", OpenMode::Read);
 	std::byte buf[4096];
 	if (file.IsValid()) {
 		auto [transfered, error] = co_await file.ReadAsync(buf, std::size(buf));
@@ -91,7 +91,7 @@ auto mainTask(Window& window, RenderOpenGL31& render) -> dse::util::Task<void>
 	Camera cam;
 	Scene scene;
 	Cube cubeMesh;
-	BasicBitmapLoader texture(u8"assets/textures/wall_test.bmp");
+	BasicBitmapLoader texture(thrPool, u8"assets/textures/wall_test.bmp");
 	Material mat(&texture, dse::math::vec4{.2f, .8f, .4f, .0f});
 	auto cube1 = scene.createObject(Object(&cubeMesh));
 	auto cube2 = scene.createObject(Object(&cubeMesh));
@@ -132,7 +132,9 @@ auto mainTask(Window& window, RenderOpenGL31& render) -> dse::util::Task<void>
 			if (cmd == KeyboardKeyState::UP) sdspd -= speed;
 			break;
 		case 27:
-			thrPool.Stop();
+			if (cmd == KeyboardKeyState::DOWN) {
+				thrPool.Stop();
+			}
 			break;
 		default:
 			std::printf("%i %i\n", static_cast<int>(cmd), key);
@@ -187,7 +189,7 @@ auto mainTask(Window& window, RenderOpenGL31& render) -> dse::util::Task<void>
 			lastSecondEnd += std::chrono::seconds(1);
 		}
 //			lastFrameEnd = cur;
-		auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(curDur);
+		auto ms = std::chrono::duration_cast<std::chrono::microseconds>(curDur);
 		auto count = ms.count();
 		std::printf("                \r%lli\r", count);
 		while (std::chrono::steady_clock::now() < lastFrameEnd) ;

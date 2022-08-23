@@ -30,8 +30,30 @@ struct ITextureDataProvider {
 		PixelFormat format;
 		unsigned lodCount;
 	};
-
+	/**
+	 * @brief LoadParameters
+	 * Loads texture parameters asynchronously
+	 * @param parameters
+	 * Pointer to a structure to be filled with texture parameters
+	 * @param onReady
+	 * Callback to be called after filling in parameters.
+	 * @note
+	 * The thread on which the callback will be called is implementation-defined
+	 */
 	virtual void LoadParameters(TextureParameters* parameters, util::FunctionPtr<void()> onReady) = 0;
+	/**
+	 * @brief LoadData
+	 * Loads texture data for single level of detail asynchronously
+	 * @param recvBuffer
+	 * Pointer to a buffer to be filled with texture data
+	 * @param lod
+	 * The level of detail to be loaded
+	 * @param onReady
+	 * Callback to be called after filling in parameters.
+	 * @note
+	 * The thread on which the callback will be called is implementation-defined.
+	 * Size of buffer to be filled defined by texture parameters.
+	 */
 	virtual void LoadData(void* recvBuffer, unsigned lod, util::FunctionPtr<void()> onReady) = 0;
 	virtual auto GetVersion() -> unsigned = 0;
 	~ITextureDataProvider() = default;

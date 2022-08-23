@@ -33,12 +33,12 @@ std::wstring convertFilePath(std::u8string_view filepath) {
 
 DWORD modeToAccess(OpenMode mode) {
 	DWORD result = 0;
-	if (static_cast<unsigned>(mode & OpenMode::READ) != 0) {
+	if (static_cast<unsigned>(mode & OpenMode::Read) != 0) {
 		result += FILE_READ_DATA;
 	}
-	if (static_cast<unsigned>(mode & OpenMode::WRITE) != 0) {
+	if (static_cast<unsigned>(mode & OpenMode::Write) != 0) {
 		result += FILE_WRITE_DATA;
-	} else if (static_cast<unsigned>(mode & OpenMode::APPEND) != 0) {
+	} else if (static_cast<unsigned>(mode & OpenMode::Append) != 0) {
 		result += FILE_APPEND_DATA;
 	}
 	return result;
@@ -46,9 +46,9 @@ DWORD modeToAccess(OpenMode mode) {
 
 swal::CreateMode modeToCreateMode(OpenMode mode) {
 	typedef swal::CreateMode CM;
-	if ((mode & (OpenMode::READ | OpenMode::WRITE | OpenMode::APPEND)) == OpenMode::READ) mode |= OpenMode::EXISTING;
+	if ((mode & (OpenMode::Read | OpenMode::Write | OpenMode::Append)) == OpenMode::Read) mode |= OpenMode::Existing;
 	static const CM modeMap[] = { CM::OpenAlways, CM::CreateAlways, CM::OpenExisting, CM::TruncateExisting };
-	return modeMap[ static_cast<unsigned>(mode & (OpenMode::CLEAR | OpenMode::EXISTING)) >> 3 ];
+	return modeMap[ static_cast<unsigned>(mode & (OpenMode::Clear | OpenMode::Existing)) >> 3 ];
 }
 
 swal::File open(std::u8string_view filepath, OpenMode mode) {

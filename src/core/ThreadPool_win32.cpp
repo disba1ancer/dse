@@ -119,9 +119,17 @@ auto ThreadPool_win32::GetCurrentTask() -> const Task& {
 }
 
 void ThreadPool_win32::ThrEntry(size_t dataIdx) {
-	threadsData[dataIdx].currentPool = this;
-	thrDataPtr = &(threadsData[dataIdx]);
-	Join();
+	try {
+		threadsData[dataIdx].currentPool = this;
+		thrDataPtr = &(threadsData[dataIdx]);
+		Join();
+	} catch (std::exception& e) {
+		std::cerr << "Error in thread " << dataIdx << ": " << e.what();
+		std::terminate();
+	} catch (...) {
+		std::cerr << "Error in thread " << dataIdx << ": Exception with unknown base class";
+		std::terminate();
+	}
 }
 
 void ThreadPool_win32::HandleMessages() {

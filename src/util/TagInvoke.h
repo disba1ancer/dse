@@ -27,21 +27,42 @@ using TagTypeT = tag_type<T>;
 
 }
 
-template <typename Cpo, typename ... Args>
-requires (!impl::InstanceOfV<Cpo, impl::tag_type>)
-auto dse_TagInvoke(const Cpo&, Args&& ... args)
--> decltype(dse_TagInvoke(impl::TagTypeT<Cpo>{}, std::forward<Args>(args)...))
-{
-    return dse_TagInvoke(impl::TagTypeT<Cpo>{}, std::forward<Args>(args)...);
+//template <typename Cpo, typename ... Args>
+//requires (!impl::InstanceOfV<Cpo, impl::tag_type>)
+//auto dse_TagInvoke(const Cpo&, Args&& ... args)
+//-> decltype(dse_TagInvoke(impl::TagTypeT<Cpo>{}, std::forward<Args>(args)...))
+//{
+//    return dse_TagInvoke(impl::TagTypeT<Cpo>{}, std::forward<Args>(args)...);
+//}
+
+inline namespace tag_invoke_ns {
+
+inline constexpr struct dse_TagInvokeT {
+    template <typename Cpo, typename ... Args>
+    auto operator()(Cpo cpo, Args&& ... args) const
+    -> decltype(dse_TagInvoke(cpo, std::forward<Args>(args)...))
+    {
+        return dse_TagInvoke(cpo, std::forward<Args>(args)...);
+    }
+} dse_TagInvoke;
+
 }
 
-template <auto t>
+template <auto& t>
 struct Tag {
-    using Type = const impl::TagTypeT<std::remove_cvref_t<decltype(t)>>&;
+    using Type = std::decay_t<decltype(t)>;
 };
 
-template <auto t>
+template <auto& t>
 using TagT = typename Tag<t>::Type;
+
+template <typename Tag, typename ... Args>
+using TagInvokeResultT = std::invoke_result_t<decltype(dse_TagInvoke), Tag, Args...>;
+
+template <typename Tag, typename ... Args>
+struct TagInvokeResult {
+    using Type = TagInvokeResultT<Tag, Args...>;
+};
 
 }
 

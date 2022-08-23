@@ -28,11 +28,11 @@ typedef File_win32 IOTarget_impl;
 #endif
 
 enum class OpenMode : unsigned {
-	READ = 0x1U,
-	WRITE = 0x2U,
-	APPEND = 0x4U,
-	CLEAR = 0x8U, // clear file contents when opened
-	EXISTING = 0x10U, // open only existing
+	Read = 0x1U,
+	Write = 0x2U,
+	Append = 0x4U,
+	Clear = 0x8U, // clear file contents when opened
+	Existing = 0x10U, // open only existing
 };
 
 enum class StPoint {
@@ -111,8 +111,7 @@ class FileSender {
 public:
 	template <template<typename ...> typename T>
 	using ValueTypes = T<std::size_t, std::error_code>;
-	template <template<typename ...> typename T>
-	using ErrorTypes = T<std::exception_ptr>;
+	using ErrorType = std::exception_ptr;
 	static constexpr bool SendsDone = false;
 	FileSender(File *file, FileOpBufT<op> buf[], std::size_t size) :
 		file(file), buf(buf), size(size)

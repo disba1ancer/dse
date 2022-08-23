@@ -1,5 +1,0 @@
-[submodule "swal"]
-	path = swal
-	url = git@github.com:disba1ancer/swal.git
-[submodule "swal/"]
-	url = https://github.com/disba1ancer/swal.git
