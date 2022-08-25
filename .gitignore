@@ -1,7 +1,9 @@
 /*
-!src
 !config
-!rc_win32
+!headers
+!core
+!ogl31rbe
+!demo
 
 !CMakeLists.txt
 !LICENSE

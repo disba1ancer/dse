@@ -1,0 +1,61 @@
+add_library(core SHARED)
+
+target_link_libraries(core PUBLIC headers)
+target_link_libraries(core PRIVATE Threads::Threads swal::swal)
+
+target_include_directories(core PUBLIC
+    include
+)
+
+target_sources(core PUBLIC
+    include/dse/core/BasicBitmapLoader.h
+    include/dse/core/Camera.h
+    include/dse/core/Cube.h
+    include/dse/core/File.h
+    include/dse/core/IMesh.h
+    include/dse/core/ITextureDataProvider.h
+    include/dse/core/KeyboardKeyState.h
+    include/dse/core/Material.h
+    include/dse/core/Object.h
+    include/dse/core/Scene.h
+    include/dse/core/ThreadPool.h
+    include/dse/core/Window.h
+    include/dse/core/WindowShowCommand.h
+    include/dse/core/errors.h
+    include/dse/core/mcursor.h
+    include/dse/renders/RenderOpenGL31.h
+)
+
+target_sources(core PRIVATE
+    BasicBitmapLoader.cpp
+    Camera.cpp
+    Cube.cpp
+    File.cpp
+    Material.cpp
+    Object.cpp
+    Scene.cpp
+    ThreadPool.cpp
+    Window.cpp
+    errors.cpp
+    mcursor.cpp
+)
+
+if (${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
+target_sources(core PUBLIC
+    include/dse/core/PaintEventData_win32.h
+    include/dse/core/WindowData_win32.h
+    include/dse/core/WindowEventData_win32.h
+    include/dse/core/win32.h
+)
+
+target_sources(core PRIVATE
+    File_win32.cpp
+    File_win32.h
+    ThreadPool_win32.cpp
+    ThreadPool_win32.h
+    Window_win32.cpp
+    Window_win32.h
+    errors_win32.cpp
+    errors_win32.h
+)
+endif()
