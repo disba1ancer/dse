@@ -1,7 +1,9 @@
+find_package(Threads REQUIRED)
+
 add_library(core SHARED)
 
 target_link_libraries(core PUBLIC headers)
-target_link_libraries(core PRIVATE Threads::Threads swal::swal)
+target_link_libraries(core PRIVATE Threads::Threads)
 
 target_include_directories(core PUBLIC
     include
@@ -41,6 +43,8 @@ target_sources(core PRIVATE
 )
 
 if (${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
+FetchContent_MakeAvailable(swal)
+target_link_libraries(core PRIVATE swal::swal)
 target_sources(core PUBLIC
     include/dse/core/PaintEventData_win32.h
     include/dse/core/WindowData_win32.h

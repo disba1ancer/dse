@@ -1,3 +1,9 @@
+FetchContent_MakeAvailable(glbinding)
+FetchContent_MakeAvailable(gl_registry)
+FetchContent_MakeAvailable(egl_registry)
+find_package(Threads REQUIRED)
+find_package(OpenGL REQUIRED)
+
 set(DSE_BUILT_IN_SHADERS
     gl31/draw.frag
     gl31/draw.vert
@@ -22,16 +28,17 @@ WORKING_DIRECTORY
 
 add_custom_target(ogl31shaders SOURCES gl31/pack_shaders_to_cpp.cmake ${DSE_BUILT_IN_SHADERS})
 
-add_library(ogl31rbe SHARED)
+add_library(ogl31video SHARED)
 
-target_include_directories(ogl31rbe PRIVATE
-    ../include_gl
+target_include_directories(ogl31video PRIVATE
+    ${egl_registry_SOURCE_DIR}/api
+    ${gl_registry_SOURCE_DIR}/api
     ${CMAKE_CURRENT_BINARY_DIR}/generated
 )
 
-target_link_libraries(ogl31rbe PRIVATE core glbinding::glbinding Threads::Threads OpenGL::GL)
+target_link_libraries(ogl31video PRIVATE core glbinding::glbinding Threads::Threads OpenGL::GL)
 
-target_sources(ogl31rbe PRIVATE
+target_sources(ogl31video PRIVATE
     ${CMAKE_CURRENT_BINARY_DIR}/generated/dse_shaders/gl31.cpp
     ${CMAKE_CURRENT_BINARY_DIR}/generated/dse_shaders/gl31.h
     RenderOpenGL31.cpp
@@ -67,5 +74,6 @@ target_sources(ogl31rbe PRIVATE
 )
 
 if (${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
-    target_link_libraries(ogl31rbe PRIVATE dwmapi swal::swal)
+    FetchContent_MakeAvailable(swal)
+    target_link_libraries(ogl31video PRIVATE dwmapi swal::swal)
 endif()

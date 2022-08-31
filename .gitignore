@@ -2,7 +2,7 @@
 !config
 !headers
 !core
-!ogl31rbe
+!ogl31video
 !demo
 
 !CMakeLists.txt

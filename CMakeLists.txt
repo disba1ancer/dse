@@ -23,11 +23,16 @@ FetchContent_Declare(
     GIT_TAG 28d32d9bbc72aedf815f18113b0bd3aa7b354108
     FIND_PACKAGE_ARGS
 )
-
-find_package(Threads REQUIRED)
-find_package(OpenGL REQUIRED)
-
-FetchContent_MakeAvailable(swal glbinding)
+FetchContent_Declare(
+    gl_registry
+    GIT_REPOSITORY https://github.com/KhronosGroup/OpenGL-Registry
+    GIT_TAG main
+)
+FetchContent_Declare(
+    egl_registry
+    GIT_REPOSITORY https://github.com/KhronosGroup/EGL-Registry
+    GIT_TAG main
+)
 
 set(DSE_CXX_GNU $<COMPILE_LANG_AND_ID:CXX,GNU>)
 set(DSE_CXX_MSVC $<COMPILE_LANG_AND_ID:CXX,MSVC>)
@@ -57,5 +62,5 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR}/generated)
 
 add_subdirectory(headers)
 add_subdirectory(core)
-add_subdirectory(ogl31rbe)
+add_subdirectory(ogl31video)
 add_subdirectory(demo)
