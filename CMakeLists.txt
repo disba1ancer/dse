@@ -9,7 +9,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-add_definitions(-DUNICODE -D_WIN32_WINNT=0x0A00)
+add_definitions(-DUNICODE=1 -D_UNICODE=1 -D_WIN32_WINNT=0x0A00)
 
 include(FetchContent)
 FetchContent_Declare(

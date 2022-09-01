@@ -10,11 +10,12 @@
 
 #include <dse/math/vec.h>
 #include "Window.h"
+#include "detail/impexp.h"
 
 namespace dse::core {
 
-void setMouseCursorPos(const math::ivec2& pos);
-void SetMouseCursorPosWndRel(const math::ivec2& pos, Window& wnd);
+void API_DSE_CORE setMouseCursorPos(const math::ivec2& pos);
+void API_DSE_CORE SetMouseCursorPosWndRel(const math::ivec2& pos, Window& wnd);
 
 } // namespace dse::core
 

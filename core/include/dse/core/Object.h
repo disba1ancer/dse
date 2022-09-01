@@ -12,13 +12,14 @@
 #include <vector>
 #include <unordered_map>
 #include <cstdint>
+#include "detail/impexp.h"
 
 namespace dse::core {
 
 class IMesh;
 class Material;
 
-class Object {
+class API_DSE_CORE Object {
 	math::vec3 pos;
 	std::uint32_t version;
 	math::vec4 qRot;

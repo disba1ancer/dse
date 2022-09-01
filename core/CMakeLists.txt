@@ -5,6 +5,8 @@ add_library(core SHARED)
 target_link_libraries(core PUBLIC headers)
 target_link_libraries(core PRIVATE Threads::Threads)
 
+target_compile_definitions(core PRIVATE DSE_CORE_EXPORT=1)
+
 target_include_directories(core PUBLIC
     include
 )
@@ -23,6 +25,7 @@ target_sources(core PUBLIC
     include/dse/core/ThreadPool.h
     include/dse/core/Window.h
     include/dse/core/WindowShowCommand.h
+    include/dse/core/detail/impexp.h
     include/dse/core/errors.h
     include/dse/core/mcursor.h
     include/dse/renders/RenderOpenGL31.h

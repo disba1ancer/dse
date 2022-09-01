@@ -12,6 +12,7 @@
 #include <thread>
 #include <dse/util/pimpl.h>
 #include <dse/util/functional.h>
+#include "detail/impexp.h"
 
 namespace dse::core {
 
@@ -33,7 +34,7 @@ enum class PoolCaps {
 
 class IAsyncIO;
 
-class ThreadPool : public util::pimpl<ThreadPool, ThreadPool_impl> {
+class API_DSE_CORE ThreadPool : public util::pimpl<ThreadPool, ThreadPool_impl> {
 public:
 	typedef std::size_t TaskId;
 	typedef std::function<void()> TaskHandler;

@@ -5,10 +5,11 @@
 #include "ITextureDataProvider.h"
 #include <dse/util/coroutine.h>
 #include <dse/core/File.h>
+#include "detail/impexp.h"
 
 namespace dse::core {
 
-class BasicBitmapLoader : public ITextureDataProvider
+class API_DSE_CORE BasicBitmapLoader : public ITextureDataProvider
 {
 public:
 	BasicBitmapLoader(ThreadPool& pool, const char8_t* file = nullptr);

@@ -16,6 +16,7 @@
 #include <dse/util/execution.h>
 #include "errors.h"
 #include "ThreadPool.h"
+#include "detail/impexp.h"
 
 namespace dse::core {
 
@@ -126,7 +127,7 @@ public:
 
 }
 
-class File {
+class API_DSE_CORE File {
 public:
 	using FilePos = std::uint_least64_t;
 	using FileOff = std::int_least64_t;

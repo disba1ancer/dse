@@ -13,6 +13,7 @@
 #include <dse/notifier/notifier.h>
 #include "KeyboardKeyState.h"
 #include <dse/math/vec.h>
+#include "detail/impexp.h"
 
 namespace dse::core {
 
@@ -33,7 +34,7 @@ typedef PaintEventData_win32 PaintEventData;
 typedef const WindowEventData& WndEvtDt;
 typedef const PaintEventData& PntEvtDt;
 
-class Window {
+class API_DSE_CORE Window {
 	std::unique_ptr<Window_impl> impl;
 public:
 	Window();

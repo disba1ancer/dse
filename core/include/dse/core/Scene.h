@@ -13,6 +13,7 @@
 #include <dse/util/ProxyIterator.h>
 #include <dse/util/ProxyContainer.h>
 #include <dse/notifier/notifier.h>
+#include "detail/impexp.h"
 
 namespace dse::core {
 
@@ -21,7 +22,7 @@ enum class SceneChangeEventType {
 	ObjectDestroy
 };
 
-class Scene {
+class API_DSE_CORE Scene {
 	std::list<Object> m_objects;
 public:
 	typedef void(ChangeEvent)(SceneChangeEventType, Object*);

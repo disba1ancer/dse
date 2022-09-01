@@ -14,6 +14,13 @@
 #include <dse/core/Camera.h>
 #include <dse/util/functional.h>
 #include <dse/util/execution.h>
+#include <dse/core/detail/impexp.h>
+
+#ifdef DSE_OGL31VIDEO_EXPORT
+#define API_DSE_OGL31VIDEO API_EXPORT_DSE
+#else
+#define API_DSE_OGL31VIDEO API_IMPORT_DSE
+#endif
 
 namespace dse::ogl31rbe {
 
@@ -25,7 +32,7 @@ class RenderSender;
 
 }
 
-class RenderOpenGL31 {
+class API_DSE_OGL31VIDEO RenderOpenGL31 {
 	std::unique_ptr<RenderOpenGL31_impl> impl;
 public:
 	RenderOpenGL31(core::Window& wnd);
@@ -80,7 +87,7 @@ public:
 
 }
 
-inline auto RenderOpenGL31::Render()
+inline auto API_EXPORT_DSE RenderOpenGL31::Render()
 -> oglimpl::RenderSender
 {
 	return { *this };

@@ -2,6 +2,7 @@
 #define DSE_CORE_ERRORS_H
 
 #include <system_error>
+#include "detail/impexp.h"
 
 namespace dse::core {
 
@@ -10,8 +11,8 @@ enum class errc {
 	generic
 };
 
-auto make_error_code(errc err) noexcept -> std::error_code;
-auto make_error_condition(errc err) noexcept -> std::error_condition;
+auto API_DSE_CORE make_error_code(errc err) noexcept -> std::error_code;
+auto API_DSE_CORE make_error_condition(errc err) noexcept -> std::error_condition;
 
 }
 

@@ -78,7 +78,7 @@ requires(\
 constexpr auto operator op(const vec<left_t, size>& left, const vec<right_t, size>& right) {\
 	return impl::bin_op_impl(\
 		left, right,\
-		*[](const std::remove_cvref_t<left_t>& left, const std::remove_cvref_t<right_t>& right) { return left op right; },\
+		*+[](const std::remove_cvref_t<left_t>& left, const std::remove_cvref_t<right_t>& right) { return left op right; },\
 		std::make_index_sequence<size>{}\
 	);\
 }\
@@ -93,7 +93,7 @@ requires(\
 constexpr auto operator op(const vec<left_t, size>& left, const right_t& right) {\
 	return impl::bin_op_impl(\
 		left, right,\
-		*[](const std::remove_cvref_t<left_t>& left, const right_t& right) { return left op right; },\
+		*+[](const std::remove_cvref_t<left_t>& left, const right_t& right) { return left op right; },\
 		std::make_index_sequence<size>{}\
 	);\
 }\
@@ -108,7 +108,7 @@ requires(\
 constexpr auto operator op(const left_t& left, const vec<right_t, size>& right) {\
 	return impl::bin_op_impl(\
 		left, right,\
-		*[](const left_t& left, const std::remove_cvref_t<right_t>& right) { return left op right; },\
+		*+[](const left_t& left, const std::remove_cvref_t<right_t>& right) { return left op right; },\
 		std::make_index_sequence<size>{}\
 	);\
 }\
@@ -138,7 +138,7 @@ requires(\
 )\
 {\
 	for (std::size_t i = 0; i < size; ++i) {\
-		left[i] op##= right[i];\
+		left[i] op##= right;\
 	}\
 	return left;\
 }

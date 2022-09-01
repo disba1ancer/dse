@@ -11,10 +11,11 @@
 #include <dse/math/vec.h>
 #include "ITextureDataProvider.h"
 #include <cstdint>
+#include "detail/impexp.h"
 
 namespace dse::core {
 
-class Material {
+class API_DSE_CORE Material {
 	math::vec4 color;
 	ITextureDataProvider* texture;
 	std::uint32_t version;

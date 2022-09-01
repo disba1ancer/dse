@@ -9,10 +9,11 @@
 #define DSE_CORE_CUBE_H_
 
 #include "IMesh.h"
+#include "detail/impexp.h"
 
 namespace dse::core {
 
-class Cube final : public IMesh {
+class API_DSE_CORE Cube final : public IMesh {
 public:
 	Cube() = default;
 	~Cube() = default;

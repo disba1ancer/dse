@@ -6,7 +6,7 @@
 
 namespace dse::util {
 
-template <auto m>
+template <auto m, typename = decltype(m)>
 struct StaticMemFn;
 
 namespace func_impl {
@@ -46,7 +46,7 @@ struct ExtractMember;
 
 #define GENERATE(cvr, nxcpt)\
 template <typename Ret, typename Obj, typename ... Args, Ret(Obj::*m)(Args...) cvr nxcpt>\
-struct ExtractMember<Ret(Args...), m> {\
+struct ExtractMember<Ret(Args...) cvr nxcpt, m> {\
     static Ret Function(void* obj, Args ... args) nxcpt\
     {\
         return (static_cast<StaticMemFnAddRefT<Obj cvr>>(*static_cast<Obj*>(obj)).*m)(args...);\
@@ -138,7 +138,7 @@ class FunctionPtr;
 
 #define GENERATE(cvr, nxcpt)\
 template <typename Ret, typename Obj, typename ... Args, Ret (Obj::*m)(Args...) cvr nxcpt>\
-struct StaticMemFn<m> {\
+struct StaticMemFn<m, Ret (Obj::*)(Args...) nxcpt> {\
     using ObjType = Obj cvr;\
     friend class FunctionPtr<Ret(Args...) nxcpt>;\
 private:\

@@ -9,10 +9,11 @@
 #define DSE_CORE_CAMERA_H_
 
 #include <dse/math/vec.h>
+#include "detail/impexp.h"
 
 namespace dse::core {
 
-class Camera {
+class API_DSE_CORE Camera {
 	math::vec3 pos;
 	float aspect;
 	math::vec4 qRot;

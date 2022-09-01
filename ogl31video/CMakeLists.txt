@@ -30,6 +30,8 @@ add_custom_target(ogl31shaders SOURCES gl31/pack_shaders_to_cpp.cmake ${DSE_BUIL
 
 add_library(ogl31video SHARED)
 
+target_compile_definitions(ogl31video PRIVATE DSE_OGL31VIDEO_EXPORT=1)
+
 target_include_directories(ogl31video PRIVATE
     ${egl_registry_SOURCE_DIR}/api
     ${gl_registry_SOURCE_DIR}/api
