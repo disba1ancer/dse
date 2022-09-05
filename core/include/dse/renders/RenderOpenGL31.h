@@ -64,7 +64,7 @@ public:
 	{}
 	friend void dse_TagInvoke(util::TagT<util::Start>, RenderOpstate& opstate)
 	{
-		opstate.render.Render(util::StaticMemFn<&RenderOpstate::EndCallback>(opstate));
+		opstate.render.Render({opstate, util::fnTag<&RenderOpstate::EndCallback>});
 	}
 };
 
@@ -87,7 +87,7 @@ public:
 
 }
 
-inline auto API_EXPORT_DSE RenderOpenGL31::Render()
+inline auto API_DSE_OGL31VIDEO RenderOpenGL31::Render()
 -> oglimpl::RenderSender
 {
 	return { *this };

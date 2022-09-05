@@ -18,7 +18,8 @@ auto getWindowHandle(dse::core::Window* window) -> swal::Wnd {
 }
 }
 
-using dse::util::StaticMemFn;
+using dse::util::FunctionPtr;
+using dse::util::fnTag;
 
 void CustomPainter::paint(dse::core::WndEvtDt data) {
 	auto wnd = swal::Wnd(data.hWnd);
@@ -32,7 +33,7 @@ void CustomPainter::paint(dse::core::WndEvtDt data) {
 }
 
 CustomPainter::CustomPainter(dse::core::Window &wnd) : wnd(&wnd),
-	paintCon(wnd.SubscribePaintEvent(StaticMemFn<&CustomPainter::paint>(*this))) {
+	paintCon(wnd.SubscribePaintEvent(FunctionPtr(*this, fnTag<&CustomPainter::paint>))) {
 }
 
 void CustomPainter::invalidate() {

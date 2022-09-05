@@ -28,6 +28,7 @@ target_sources(core PUBLIC
     include/dse/core/detail/impexp.h
     include/dse/core/errors.h
     include/dse/core/mcursor.h
+    include/dse/core/status.h
     include/dse/renders/RenderOpenGL31.h
 )
 
@@ -43,6 +44,7 @@ target_sources(core PRIVATE
     Window.cpp
     errors.cpp
     mcursor.cpp
+    status.cpp
 )
 
 if (${CMAKE_SYSTEM_NAME} STREQUAL "Windows")

@@ -42,12 +42,12 @@ enum class StPoint {
 	END,
 };
 
-class IOTargetDelete {
+class API_DSE_CORE IOTargetDelete {
 public:
 	void operator()(IOTarget_impl* obj);
 };
 
-class File;
+class API_DSE_CORE File;
 
 namespace impl {
 
@@ -164,9 +164,9 @@ template <impl::FileOp op, typename R>
 void impl::dse_TagInvoke(util::TagT<util::Start>, FileOpstate<op, R>& opstate)
 {
 	if constexpr (op == FileOp::Read) {
-		opstate.file->ReadAsync(opstate.buf, opstate.size, util::StaticMemFn<&FileOpstate<op, R>::callback>(opstate));
+		opstate.file->ReadAsync(opstate.buf, opstate.size, util::FunctionPtr(opstate, util::fnTag<&FileOpstate<op, R>::callback>));
 	} else {
-		opstate.file->WriteAsync(opstate.buf, opstate.size, util::StaticMemFn<&FileOpstate<op, R>::callback>(opstate));
+		opstate.file->WriteAsync(opstate.buf, opstate.size, util::FunctionPtr(opstate, util::fnTag<&FileOpstate<op, R>::callback>));
 	}
 }
 

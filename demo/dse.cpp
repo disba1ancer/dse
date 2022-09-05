@@ -38,7 +38,6 @@ using dse::core::KeyboardKeyState;
 using dse::core::WndEvtDt;
 using dse::core::PntEvtDt;
 using dse::ogl31rbe::RenderOpenGL31;
-using dse::util::StaticMemFn;
 using dse::core::Cube;
 using dse::core::Scene;
 using dse::core::Object;
@@ -78,7 +77,7 @@ int main(int argc, char* argv[])
 auto mainTask(Window& window, RenderOpenGL31& render) -> dse::util::Task<void>
 {
 	using namespace dse::math;
-	File file(thrPool, u8"test.txt", OpenMode::Read);
+	/*File file(thrPool, u8"test.txt", OpenMode::Read);
 	std::byte buf[4096];
 	if (file.IsValid()) {
 		auto [transfered, error] = co_await file.ReadAsync(buf, std::size(buf));
@@ -86,7 +85,7 @@ auto mainTask(Window& window, RenderOpenGL31& render) -> dse::util::Task<void>
 	} else {
 		std::printf("%s%s\n", "ERROR: ", file.Status().message().data());
 	}
-	std::fflush(stdout);
+	std::fflush(stdout);*/
 
 	Camera cam;
 	Scene scene;

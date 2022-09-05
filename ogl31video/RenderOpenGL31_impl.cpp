@@ -296,8 +296,8 @@ void dse::ogl31rbe::RenderOpenGL31_impl::PrepareSamplers() {
 }
 
 RenderOpenGL31_impl::RenderOpenGL31_impl(core::Window& wnd) : wnd(&wnd),
-		paintCon(wnd.SubscribePaintEvent(util::StaticMemFn<&RenderOpenGL31_impl::OnPaint>(*this))),
-		sizeCon(wnd.SubscribeResizeEvent(util::StaticMemFn<&RenderOpenGL31_impl::OnResize>(*this))),
+		paintCon(wnd.SubscribePaintEvent(util::FunctionPtr{*this, util::fnTag<&RenderOpenGL31_impl::OnPaint>})),
+		sizeCon(wnd.SubscribeResizeEvent(util::FunctionPtr{*this, util::fnTag<&RenderOpenGL31_impl::OnResize>})),
 		context(wnd, glwrp::ContextVersion::gl31, glwrp::ContextFlags::Debug),
 		cleanupPointer(meshes.end())
 {

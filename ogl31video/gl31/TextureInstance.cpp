@@ -73,7 +73,7 @@ void TextureInstance::BeginLoad()
 {
 	textureProvider->LoadParameters(
 		&textureParameters,
-		util::StaticMemFn<&TextureInstance::LoadTexture>(*this)
+		{*this, util::fnTag<&TextureInstance::LoadTexture>}
 	);
 }
 
@@ -88,7 +88,7 @@ void TextureInstance::LoadTexture()
 	std::size_t size = std::size_t((std::abs(textureParameters.width) * format->pixelSize + 3) & (~3)) *
 		std::abs(textureParameters.height) * std::abs(textureParameters.depth);
 	textureData.resize(size);
-	textureProvider->LoadData(textureData.data(), 0, util::StaticMemFn<&TextureInstance::TextureReady>(*this));
+	textureProvider->LoadData(textureData.data(), 0, {*this, util::fnTag<&TextureInstance::TextureReady>});
 }
 
 void TextureInstance::TextureReady()

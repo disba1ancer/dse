@@ -14,13 +14,13 @@ enum class errc {
 auto API_DSE_CORE make_error_code(errc err) noexcept -> std::error_code;
 auto API_DSE_CORE make_error_condition(errc err) noexcept -> std::error_condition;
 
-}
+} // namespace dse::core
 
 namespace std {
 
 template <>
 struct is_error_code_enum<::dse::core::errc> : true_type {};
 
-} // namespace dse::core
+}
 
 #endif // DSE_CORE_ERRORS_H

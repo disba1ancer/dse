@@ -3,6 +3,17 @@
 
 #include <utility>
 
+namespace dse::tag_invoke_impl {
+
+template <typename Cpo, typename ... Args>
+auto dse_TagInvoke_helper(Cpo cpo, Args&& ... args)
+-> decltype(dse_TagInvoke(cpo, std::forward<Args>(args)...))
+{
+    return dse_TagInvoke(cpo, std::forward<Args>(args)...);
+}
+
+}
+
 namespace dse::util {
 
 namespace impl {
@@ -40,9 +51,9 @@ inline namespace tag_invoke_ns {
 inline constexpr struct dse_TagInvokeT {
     template <typename Cpo, typename ... Args>
     auto operator()(Cpo cpo, Args&& ... args) const
-    -> decltype(dse_TagInvoke(cpo, std::forward<Args>(args)...))
+    -> decltype((tag_invoke_impl::dse_TagInvoke_helper)(cpo, std::forward<Args>(args)...))
     {
-        return dse_TagInvoke(cpo, std::forward<Args>(args)...);
+        return (tag_invoke_impl::dse_TagInvoke_helper)(cpo, std::forward<Args>(args)...);
     }
 } dse_TagInvoke;
 

@@ -93,7 +93,7 @@ void MeshInstance::BeginLoad()
 	readyStatus.store(Pending, std::memory_order_relaxed);
 	mesh->LoadMeshParameters(
 		&meshParameters,
-		util::StaticMemFn<&MeshInstance::LoadRanges>(*this)
+		{*this, util::fnTag<&MeshInstance::LoadRanges>}
 	);
 }
 
@@ -104,7 +104,7 @@ void MeshInstance::LoadRanges()
 	submeshRanges.resize(meshParameters.submeshCount);
 	mesh->LoadSubmeshRanges(
 		submeshRanges.data(),
-		util::StaticMemFn<&MeshInstance::LoadVertices>(*this)
+		{*this, util::fnTag<&MeshInstance::LoadVertices>}
 	);
 }
 
@@ -112,7 +112,7 @@ void MeshInstance::LoadVertices()
 {
 	mesh->LoadVertices(
 		vertexData.data(),
-		util::StaticMemFn<&MeshInstance::LoadElements>(*this)
+		{*this, util::fnTag<&MeshInstance::LoadElements>}
 	);
 }
 
@@ -120,7 +120,7 @@ void MeshInstance::LoadElements()
 {
 	mesh->LoadElements(
 		elementData.data(),
-		util::StaticMemFn<&MeshInstance::BuffersReady>(*this)
+		{*this, util::fnTag<&MeshInstance::BuffersReady>}
 	);
 }
 
