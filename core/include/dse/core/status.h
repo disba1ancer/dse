@@ -84,8 +84,8 @@ struct StatusProviderVTBL {
 
 template <typename T>
 const IStatusProviderVTBL StatusProviderVTBL<T>::vtbl = {
-    util::func_impl::ReplaceThisTypeByPtr<static_cast<NameFuncRef<T>*>(util::func_impl::ToExplicitThis<static_cast<NameMemFunc<T>>(&T::Name)>::Function), const IStatusProvider>::Function,
-    util::func_impl::ReplaceThisTypeByPtr<static_cast<MessageFuncRef<T>*>(util::func_impl::ToExplicitThis<static_cast<MessageMemFunc<T>>(&T::Message)>::Function), const IStatusProvider>::Function
+    util::function_ptr_impl::ReplaceThisTypeByPtr<static_cast<NameFuncRef<T>*>(util::function_ptr_impl::ToExplicitThis<static_cast<NameMemFunc<T>>(&T::Name)>::Function), const IStatusProvider>::Function,
+    util::function_ptr_impl::ReplaceThisTypeByPtr<static_cast<MessageFuncRef<T>*>(util::function_ptr_impl::ToExplicitThis<static_cast<MessageMemFunc<T>>(&T::Message)>::Function), const IStatusProvider>::Function
 };
 
 template <typename T>

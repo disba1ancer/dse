@@ -55,9 +55,9 @@ ThreadPool thrPool;
 
 auto mainTask(Window& window, RenderOpenGL31& render) -> dse::util::Task<void>;
 
-void selfCycle() {
+void selfCycle(void*) {
 	std::printf("cycle\n");
-	thrPool.Schedule(selfCycle);
+	thrPool.Schedule({nullptr, selfCycle});
 }
 
 int main(int argc, char* argv[])

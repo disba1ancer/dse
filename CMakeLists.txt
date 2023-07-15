@@ -34,14 +34,15 @@ FetchContent_Declare(
     GIT_TAG main
 )
 
-set(DSE_CXX_GNU $<COMPILE_LANG_AND_ID:CXX,GNU>)
-set(DSE_CXX_MSVC $<COMPILE_LANG_AND_ID:CXX,MSVC>)
+set(DSE_COMPILER ${CMAKE_CXX_COMPILER_ID})
 
-if(${DSE_CXX_GNU})
-    add_compile_options(-pedantic -Wall -Wextra -Wconversion -fcoroutines)
+if(${DSE_COMPILER} STREQUAL "Clang")
+    set(DSE_COMPILER ${CMAKE_CXX_COMPILER_FRONTEND_VARIANT})
 endif()
 
-if(${DSE_CXX_MSVC})
+if(${DSE_COMPILER} STREQUAL "GNU")
+    add_compile_options(-pedantic -Wall -Wextra -Wconversion -fcoroutines)
+elseif(${DSE_COMPILER} STREQUAL "MSVC")
     add_compile_options(/W3)
 endif()
 

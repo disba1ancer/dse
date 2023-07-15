@@ -1,25 +1,25 @@
 #ifndef DSE_UTIL_COROUTINE_H
 #define DSE_UTIL_COROUTINE_H
 
-// Hack for Qt Creator from https://bugreports.qt.io/browse/QTCREATORBUG-24634?focusedCommentId=565543&page=com.atlassian.jira.plugin.system.issuetabpanels:comment-tabpanel#comment-565543
-// Bypass GCC / MSVC coroutine guards when using clang code model
-#if defined(__GNUC__) && defined(__clang__) && !defined(__cpp_impl_coroutine)
-#define __cpp_impl_coroutine true
-#elif defined(_MSC_VER) && defined(__clang__) && !defined(__cpp_lib_coroutine)
-#define __cpp_lib_coroutine true
-#endif
-// Clang requires coroutine types in std::experimental
+//// Hack for Qt Creator from https://bugreports.qt.io/browse/QTCREATORBUG-24634?focusedCommentId=565543&page=com.atlassian.jira.plugin.system.issuetabpanels:comment-tabpanel#comment-565543
+//// Bypass GCC / MSVC coroutine guards when using clang code model
+//#if defined(__GNUC__) && defined(__clang__) && !defined(__cpp_impl_coroutine)
+//#define __cpp_impl_coroutine true
+//#elif defined(_MSC_VER) && defined(__clang__) && !defined(__cpp_lib_coroutine)
+//#define __cpp_lib_coroutine true
+//#endif
+//// Clang requires coroutine types in std::experimental
 
 #include <coroutine>
 
-#if defined(__clang__)
-namespace std::experimental {
-using std::coroutine_traits;
-using std::coroutine_handle;
-using std::suspend_always;
-using std::suspend_never;
-}
-#endif
+//#if defined(__clang__)
+//namespace std::experimental {
+//using std::coroutine_traits;
+//using std::coroutine_handle;
+//using std::suspend_always;
+//using std::suspend_never;
+//}
+//#endif
 
 #include <tuple>
 #include <variant>
