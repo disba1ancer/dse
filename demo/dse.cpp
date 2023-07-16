@@ -165,8 +165,8 @@ auto mainTask(Window& window, RenderOpenGL31& render) -> dse::util::Task<void>
 			cam.setPos(cam.getPos() + vecrotquat(movement, cam.getRot()));
 		}
 		constexpr float sens = 30.f / 65536.f;
-		pitch = std::clamp(pitch - moffset.y() * sens, 0.f, PI);
-		yaw -= moffset.x() * sens;
+		pitch = std::clamp(pitch - float(moffset.y()) * sens, 0.f, PI);
+		yaw -= float(moffset.x()) * sens;
 		auto pitchHalf = pitch * .5f;
 		auto yawHalf = yaw * .5f;
 		auto camrot = qmul(vec4{ 0, 0, std::sin(yawHalf), std::cos(yawHalf) }, vec4{ std::sin(pitchHalf), 0, 0, std::cos(pitchHalf) });
