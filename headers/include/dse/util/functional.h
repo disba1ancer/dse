@@ -32,63 +32,37 @@ template <typename T>
 using StaticMemFnAddRefT = typename StaticMemFnAddRef<T>::Type;
 
 template <typename T>
-struct RemovePointerEx_impl {
+struct RemovePointerExImpl {
     using Type = T;
 };
 
 template <typename T>
-struct RemovePointerEx_impl<T*> {
+struct RemovePointerExImpl<T*> {
     using Type = T;
 };
 
 template <typename T, typename Cls>
-struct RemovePointerEx_impl<T Cls::*> {
+struct RemovePointerExImpl<T Cls::*> {
     using Type = T;
 };
 
 template <typename T>
-struct RemovePointerEx : RemovePointerEx_impl<std::remove_cv_t<T>> {};
+struct RemovePointerEx : RemovePointerExImpl<std::remove_cv_t<T>> {};
 
 template <typename T>
 using RemovePointerExT = typename RemovePointerEx<T>::Type;
 
-template <typename T>
-struct IsNoExcept;
-
-#define GENERATE(cvr)\
-template <typename Ret, typename ... Args>\
-struct IsNoExcept<Ret(Args...) cvr> : std::false_type {};\
-template <typename Ret, typename ... Args>\
-struct IsNoExcept<Ret(Args...) cvr noexcept> : std::true_type {};
-
-GENERATE(DSE_UTIL_FUNCTIONAL_NONE)
-GENERATE(const)
-GENERATE(volatile)
-GENERATE(const volatile)
-GENERATE(&)
-GENERATE(const&)
-GENERATE(volatile&)
-GENERATE(const volatile&)
-GENERATE(&&)
-GENERATE(const&&)
-GENERATE(volatile&&)
-GENERATE(const volatile&&)
-#undef GENERATE
-
-template <typename T>
-constexpr auto IsNoExceptV = IsNoExcept<T>::value;
-
-template <typename F>
+template <typename F, typename Tag = ThisTag>
 struct GetThisQualifiers;
 
 #define GENERATE(cvr)\
-template <typename Ret, typename ... Args>\
-struct GetThisQualifiers<Ret(Args...) cvr noexcept> {\
+template <typename Ret, typename ... Args, typename Tag>\
+struct GetThisQualifiers<Ret(Args...) cvr noexcept, Tag> {\
     using Type = ThisTag cvr;\
 };\
-template <typename Ret, typename ... Args>\
-struct GetThisQualifiers<Ret(Args...) cvr> {\
-    using Type = ThisTag cvr;\
+template <typename Ret, typename ... Args, typename Tag>\
+struct GetThisQualifiers<Ret(Args...) cvr, Tag> {\
+    using Type = Tag cvr;\
 };
 
 GENERATE(DSE_UTIL_FUNCTIONAL_NONE)
@@ -105,8 +79,8 @@ GENERATE(volatile&&)
 GENERATE(const volatile&&)
 #undef GENERATE
 
-template <typename F>
-using GetThisQualifiersT = typename GetThisQualifiers<F>::Type;
+template <typename F, typename Tag = ThisTag>
+using GetThisQualifiersT = typename GetThisQualifiers<F, Tag>::Type;
 
 template <typename F>
 struct RemoveThisQualifiers;
@@ -218,6 +192,26 @@ struct AddNoExcept {
 
 template <typename F>
 using AddNoExceptT = typename AddNoExcept<F>::Type;
+
+template <typename F>
+struct IsNoExceptImpl;
+
+template <typename Ret, typename ... Args>
+struct IsNoExceptImpl<Ret(Args...)> : std::false_type {};
+template <typename Ret, typename ... Args>
+struct IsNoExceptImpl<Ret(Args...) noexcept> : std::true_type {};
+
+template <typename F>
+struct IsNoExcept;
+
+template <typename F>
+struct IsNoExcept {
+    using Pure = RemoveThisQualifiersT<F>;
+    static constexpr auto value = IsNoExceptImpl<Pure>::value;
+};
+
+template <typename T>
+constexpr auto IsNoExceptV = IsNoExcept<T>::value;
 
 template <typename F>
 struct ReturnTypeImpl;
@@ -595,14 +589,12 @@ public:
         function(function_ptr_impl::ExtractCallable<fn, C>::Function)
     {}
     template <typename ... Args>
-    requires (
-        std::invocable<fn, Args...>
-    )
+    requires (std::invocable<fn, Args...>)
     Ret operator()(Args&& ... args) const noexcept(function_ptr_impl::IsNoExceptV<fn>)
     {
         return function(object, std::forward<Args>(args)...);
     }
-    constexpr operator FunctionPtr<fnx>()
+    constexpr operator FunctionPtr<fnx>() const
     {
         return { object, function };
     }
