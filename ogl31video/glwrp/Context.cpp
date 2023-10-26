@@ -12,8 +12,8 @@
 #include "Context.h"
 
 #ifdef _WIN32
-#include <dwmapi.h>
 #include <dse/core/WindowData_win32.h>
+#include <dwmapi.h>
 #endif
 
 namespace dse::ogl31rbe::glwrp {
@@ -85,7 +85,7 @@ Context::ContextOwner::~ContextOwner() {
 thread_local Context* Context::currentContext = nullptr;
 
 Context::Context(core::Window& wnd, ContextVersion ver, ContextFlags flags) : dc(swal::Wnd(wnd.GetSysData().hWnd).GetDC()) {
-	if (ver == ContextVersion::legacy) {
+    if (ver == ContextVersion::legacy) {
 		glrc = makeLegacyContext(dc);
 	} else {
 		if (!(wglChoosePixelFormatARB && wglCreateContextAttribsARB)) {
@@ -156,12 +156,18 @@ Context::ContextOwner Context::makeContext(swal::WindowDC &dc, ContextVersion ve
 	if (pfd.dwFlags & (PFD_GENERIC_FORMAT | PFD_GENERIC_ACCELERATED)) throw std::runtime_error("Pixel format not accelerated");
 	swal::winapi_call(SetPixelFormat(dc, format, nullptr));
 	auto [major, minor] = getVersion(ver);
+	int profileMask = 0;
+	int profileMaskName = 0;
+	if (major >= 3 && minor >= 2) {
+		profileMask = WGL_CONTEXT_CORE_PROFILE_BIT_ARB;
+		profileMaskName = WGL_CONTEXT_PROFILE_MASK_ARB;
+	}
 	int contextAtributes[] =
 	{
 		WGL_CONTEXT_MAJOR_VERSION_ARB, major,
 		WGL_CONTEXT_MINOR_VERSION_ARB, minor,
 		WGL_CONTEXT_FLAGS_ARB, int(flags),//WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB,
-//		WGL_CONTEXT_PROFILE_MASK_ARB, WGL_CONTEXT_CORE_PROFILE_BIT_ARB,
+		profileMaskName, profileMask,
 		0, 0
 	};
 	return swal::winapi_call(wglCreateContextAttribsARB(dc, 0, contextAtributes));

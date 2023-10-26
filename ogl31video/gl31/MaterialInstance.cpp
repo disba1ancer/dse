@@ -35,29 +35,38 @@ void MaterialInstance::Reload(RenderOpenGL31_impl* render)
     if (texture) {
         diffuseInstance.reset(render->GetTextureInstance(texture, true));
     }
+    texture = material->GetNormalMap();
+    if (texture) {
+        normalMapInstance.reset(render->GetTextureInstance(texture, true));
+    }
     lastVersion = material->GetVersion();
 }
 
 void MaterialInstance::CheckAndSync(RenderOpenGL31_impl* render)
 {
-	if (ubo == 0 || lastVersion != material->GetVersion()) {
-		Reload(render);
-	}
+    if (ubo == 0 || lastVersion != material->GetVersion()) {
+        Reload(render);
+    }
 }
 
 bool MaterialInstance::IsInstanceOf(core::Material* material) const
 {
-	return material == this->material;
+    return material == this->material;
 }
 
 auto MaterialInstance::GetUBO() -> glwrp::UniformBuffer&
 {
-	return ubo;
+    return ubo;
 }
 
 auto MaterialInstance::GetDiffuseTextureInstance(RenderOpenGL31_impl* render) -> TextureInstance*
 {
-	return diffuseInstance.get();
+    return diffuseInstance.get();
+}
+
+auto MaterialInstance::GetNormalmapInstance(RenderOpenGL31_impl *render) -> TextureInstance*
+{
+    return normalMapInstance.get();
 }
 
 void MaterialInstance::Deleter::operator()(MaterialInstance* inst) const

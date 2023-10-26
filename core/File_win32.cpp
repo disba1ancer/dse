@@ -103,7 +103,7 @@ auto File_win32::Read(std::byte buf[], std::size_t size) -> impl::FileOpResult {
 	DWORD lastTransfered = 0;
 	try {
 		handle.Read(buf, (DWORD)size, *this);
-		lastError = win32_errc(ERROR_SUCCESS);
+        lastError = win32_errc(ERROR_SUCCESS);
 	} catch (std::system_error& err) {
 		SetLastError(err);
 	}
@@ -121,22 +121,6 @@ auto File_win32::Read(std::byte buf[], std::size_t size) -> impl::FileOpResult {
 	}
 	eof = (lastError == win32_errc(ERROR_HANDLE_EOF));
 	return { lastTransfered, lastError };
-	/*error = !ReadFile(handle, buf, size, nullptr, &ovl.ovl);
-	lastError = GetLastError();
-	if (error && lastError != ERROR_IO_PENDING) {
-		lastTransfered = 0;
-	} else {
-		error = !GetOverlappedResult(handle, &ovl.ovl, &lastTransfered, TRUE);
-		lastError = GetLastError();
-		if (!error) {
-			incPtr(lastTransfered);
-		} else {
-			if (lastError == ERROR_HANDLE_EOF) {
-				error = false;
-				eof = true;
-			}
-		}
-	}*/
 }
 
 auto File_win32::Write(const std::byte buf[], std::size_t size) -> impl::FileOpResult {
@@ -147,7 +131,7 @@ auto File_win32::Write(const std::byte buf[], std::size_t size) -> impl::FileOpR
 	DWORD lastTransfered = 0;
 	try {
 		handle.Write(buf, (DWORD)size, *this);
-		lastError = win32_errc(ERROR_SUCCESS);
+        lastError = win32_errc(ERROR_SUCCESS);
 	} catch (std::system_error& err) {
 		SetLastError(err);
 	}
@@ -164,17 +148,6 @@ auto File_win32::Write(const std::byte buf[], std::size_t size) -> impl::FileOpR
 		}
 	}
 	return { lastTransfered, lastError };
-	/*error = !WriteFile(handle, buf, size, nullptr, &ovl.ovl);
-	lastError = GetLastError();
-	if (error && lastError != ERROR_IO_PENDING) {
-		lastTransfered = 0;
-	} else {
-		error = !GetOverlappedResult(handle, &ovl.ovl, &lastTransfered, TRUE);
-		lastError = GetLastError();
-		if (!error) {
-			incPtr(lastTransfered);
-		}
-	}*/
 }
 
 void File_win32::Complete(DWORD transfered, DWORD error) {
@@ -225,22 +198,15 @@ void File_win32::ReadAsync(std::byte buf[], std::size_t size, const File::Callba
 	OVERLAPPED::OffsetHigh = pos >> std::numeric_limits<DWORD>::digits;
 	this->cb = cb;
 	try {
-		handle.Read(buf, (DWORD)size, *this);
-		lastError = win32_errc(ERROR_SUCCESS);
+        handle.Read(buf, (DWORD)size, *this);
+        lastError = win32_errc(ERROR_SUCCESS);
 	} catch (std::system_error& err) {
 		SetLastError(err);
-		if (lastError == win32_errc(ERROR_IO_PENDING)) {
-			++references;
-		}
 	}
+    if (lastError == win32_errc(ERROR_IO_PENDING)) {
+        ++references;
+    }
 	eof = lastError == win32_errc(ERROR_HANDLE_EOF);
-	/*auto result = ReadFile(handle, buf, size, nullptr, &ovl.ovl);
-	lastError = GetLastError();
-	error = (!result && lastError != ERROR_IO_PENDING);
-	references += !error;
-	error = (error && lastError != ERROR_HANDLE_EOF);
-	eof = lastError == ERROR_HANDLE_EOF;
-	lastTransfered *= (!error);*/
 }
 
 void File_win32::WriteAsync(const std::byte buf[], std::size_t size, const File::Callback& cb) {
@@ -251,18 +217,13 @@ void File_win32::WriteAsync(const std::byte buf[], std::size_t size, const File:
 	this->cb = cb;
 	try {
 		handle.Write(buf, (DWORD)size, *this);
-		lastError = win32_errc(ERROR_SUCCESS);
+        lastError = win32_errc(ERROR_SUCCESS);
 	} catch (std::system_error& err) {
 		SetLastError(err);
-		if (lastError == win32_errc(ERROR_IO_PENDING)) {
-			++references;
-		}
 	}
-//	auto result = WriteFile(handle, buf, size, nullptr, this);
-//	lastError = GetLastError();
-//	error = (!result && lastError != ERROR_IO_PENDING);
-//	references += !error;
-//	lastTransfered *= (!error);
+    if (lastError == win32_errc(ERROR_IO_PENDING)) {
+        ++references;
+    }
 }
 
 bool File_win32::IsBusy() {

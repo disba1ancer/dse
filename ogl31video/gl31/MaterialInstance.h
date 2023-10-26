@@ -18,6 +18,7 @@ class MaterialInstance : public RefCounted {
     std::uint32_t lastVersion;
     glwrp::UniformBuffer ubo;
     std::unique_ptr<TextureInstance, TextureInstance::Deleter> diffuseInstance;
+    std::unique_ptr<TextureInstance, TextureInstance::Deleter> normalMapInstance;
 public:
     MaterialInstance(core::Material* material);
     MaterialInstance(RenderOpenGL31_impl* render, core::Material* material);
@@ -27,6 +28,7 @@ public:
     bool IsInstanceOf(core::Material* material) const;
     auto GetUBO() -> glwrp::UniformBuffer&;
     auto GetDiffuseTextureInstance(RenderOpenGL31_impl* render) -> TextureInstance*;
+    auto GetNormalmapInstance(RenderOpenGL31_impl* render) -> TextureInstance*;
     struct Deleter {
         void operator()(MaterialInstance* inst) const;
     };

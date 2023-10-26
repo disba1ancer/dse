@@ -16,9 +16,9 @@ using namespace gl31;
 namespace {
 
 enum {
-	Ready,
-	Pending,
-	UploadReady
+    Ready,
+    Pending,
+    UploadReady
 };
 
 }
@@ -26,133 +26,135 @@ enum {
 namespace dse::ogl31rbe::gl31 {
 
 MeshInstance::MeshInstance(core::IMesh* mesh) :
-	mesh(mesh),
-	lastVersion(0),
-	vao(0),
-	vbo(0),
-	ibo(0),
-	readyStatus(0)
+    mesh(mesh),
+    lastVersion(0),
+    vao(0),
+    vbo(0),
+    ibo(0),
+    readyStatus(0)
 {
-	if (!mesh) {
-		throw std::runtime_error("Mesh can not be nullptr");
-	}
+    if (!mesh) {
+        throw std::runtime_error("Mesh can not be nullptr");
+    }
 }
 
 auto MeshInstance::GetMesh() const -> core::IMesh*
 {
-	return mesh;
+    return mesh;
 }
 
 bool MeshInstance::IsReady()
 {
-	switch (readyStatus.load(std::memory_order_acquire)) {
-		case Ready: {
-			if (vao && lastVersion == mesh->GetVersion()) {
-				return true;
-			}
-			BeginLoad();
-			if (readyStatus.load(std::memory_order_acquire) == Pending) {
-				return false;
-			}
-		} [[fallthrough]];
-		case UploadReady: {
-			UploadBuffers();
-			return readyStatus.load(std::memory_order_acquire) == Ready;
-		} break;
-	}
-	return false;
+    switch (readyStatus.load(std::memory_order_acquire)) {
+        case Ready: {
+            if (vao && lastVersion == mesh->GetVersion()) {
+                return true;
+            }
+            BeginLoad();
+            if (readyStatus.load(std::memory_order_acquire) == Pending) {
+                return false;
+            }
+        } [[fallthrough]];
+        case UploadReady: {
+            UploadBuffers();
+            return readyStatus.load(std::memory_order_acquire) == Ready;
+        } break;
+    }
+    return false;
 }
 
 auto MeshInstance::GetVAO() -> glwrp::VAO&
 {
-	return vao;
+    return vao;
 }
 
 auto MeshInstance::GetVBO() -> glwrp::VertexBuffer&
 {
-	return vbo;
+    return vbo;
 }
 
 auto MeshInstance::GetIBO() -> glwrp::ElementBuffer&
 {
-	return ibo;
+    return ibo;
 }
 
 auto MeshInstance::GetSubmeshCount() -> std::size_t
 {
-	return submeshRanges.size();
+    return submeshRanges.size();
 }
 
 auto MeshInstance::GetSubmeshRange(size_t n) -> core::IMesh::submesh_range
 {
-	return submeshRanges[n];
+    return submeshRanges[n];
 }
 
 void MeshInstance::BeginLoad()
 {
-	readyStatus.store(Pending, std::memory_order_relaxed);
-	mesh->LoadMeshParameters(
-		&meshParameters,
-		{*this, util::fnTag<&MeshInstance::LoadRanges>}
-	);
+    readyStatus.store(Pending, std::memory_order_relaxed);
+    mesh->LoadMeshParameters(
+        &meshParameters,
+        {*this, util::fnTag<&MeshInstance::LoadRanges>}
+    );
 }
 
 void MeshInstance::LoadRanges()
 {
-	vertexData.resize(meshParameters.verticesCount);
-	elementData.resize(meshParameters.elementsCount);
-	submeshRanges.resize(meshParameters.submeshCount);
-	mesh->LoadSubmeshRanges(
-		submeshRanges.data(),
-		{*this, util::fnTag<&MeshInstance::LoadVertices>}
-	);
+    vertexData.resize(meshParameters.verticesCount);
+    elementData.resize(meshParameters.elementsCount);
+    submeshRanges.resize(meshParameters.submeshCount);
+    mesh->LoadSubmeshRanges(
+        submeshRanges.data(),
+        {*this, util::fnTag<&MeshInstance::LoadVertices>}
+    );
 }
 
 void MeshInstance::LoadVertices()
 {
-	mesh->LoadVertices(
-		vertexData.data(),
-		{*this, util::fnTag<&MeshInstance::LoadElements>}
-	);
+    mesh->LoadVertices(
+        vertexData.data(),
+        {*this, util::fnTag<&MeshInstance::LoadElements>}
+    );
 }
 
 void MeshInstance::LoadElements()
 {
-	mesh->LoadElements(
-		elementData.data(),
-		{*this, util::fnTag<&MeshInstance::BuffersReady>}
-	);
+    mesh->LoadElements(
+        elementData.data(),
+        {*this, util::fnTag<&MeshInstance::BuffersReady>}
+    );
 }
 
 void MeshInstance::BuffersReady()
 {
-	readyStatus.store(UploadReady, std::memory_order_release);
+    readyStatus.store(UploadReady, std::memory_order_release);
 }
 
 void MeshInstance::UploadBuffers()
 {
-	vao = {};
-	vbo = {};
-	ibo = {};
-	glBufferData(vbo.target, vertexData.size() * sizeof(core::IMesh::vertex), vertexData.data(), GL_STATIC_DRAW);
-	glBufferData(ibo.target, elementData.size() * sizeof(std::uint32_t), elementData.data(), GL_STATIC_DRAW);
-	glEnableVertexAttribArray(InputParams::Position);
-	glEnableVertexAttribArray(InputParams::Normal);
-	glEnableVertexAttribArray(InputParams::Tangent);
-	glEnableVertexAttribArray(InputParams::UV);
-	glVertexAttribPointer(InputParams::Position, 3, GL_FLOAT, GL_FALSE, sizeof(core::IMesh::vertex), reinterpret_cast<void*>(offsetof(core::IMesh::vertex, pos)));
-	glVertexAttribPointer(InputParams::Normal, 3, GL_FLOAT, GL_FALSE, sizeof(core::IMesh::vertex), reinterpret_cast<void*>(offsetof(core::IMesh::vertex, norm)));
-	glVertexAttribPointer(InputParams::Tangent, 3, GL_FLOAT, GL_FALSE, sizeof(core::IMesh::vertex), reinterpret_cast<void*>(offsetof(core::IMesh::vertex, tang)));
-	glVertexAttribPointer(InputParams::UV, 2, GL_FLOAT, GL_FALSE, sizeof(core::IMesh::vertex), reinterpret_cast<void*>(offsetof(core::IMesh::vertex, uv)));
-	vertexData.clear();
-	elementData.clear();
-	lastVersion = mesh->GetVersion();
-	readyStatus.store(Ready, std::memory_order_release);
+    vao = {};
+    vbo = {};
+    ibo = {};
+    glBufferData(vbo.target, vertexData.size() * sizeof(core::IMesh::vertex), vertexData.data(), GL_STATIC_DRAW);
+    glBufferData(ibo.target, elementData.size() * sizeof(std::uint32_t), elementData.data(), GL_STATIC_DRAW);
+    glEnableVertexAttribArray(InputParams::Position);
+    glEnableVertexAttribArray(InputParams::Normal);
+    glEnableVertexAttribArray(InputParams::Tangent);
+    glEnableVertexAttribArray(InputParams::UV);
+    glEnableVertexAttribArray(InputParams::BTangSign);
+    glVertexAttribPointer(InputParams::Position, 3, GL_FLOAT, GL_FALSE, sizeof(core::IMesh::vertex), reinterpret_cast<void*>(offsetof(core::IMesh::vertex, pos)));
+    glVertexAttribPointer(InputParams::Normal, 3, GL_FLOAT, GL_FALSE, sizeof(core::IMesh::vertex), reinterpret_cast<void*>(offsetof(core::IMesh::vertex, norm)));
+    glVertexAttribPointer(InputParams::Tangent, 3, GL_FLOAT, GL_FALSE, sizeof(core::IMesh::vertex), reinterpret_cast<void*>(offsetof(core::IMesh::vertex, tang)));
+    glVertexAttribPointer(InputParams::UV, 2, GL_FLOAT, GL_FALSE, sizeof(core::IMesh::vertex), reinterpret_cast<void*>(offsetof(core::IMesh::vertex, uv)));
+    glVertexAttribPointer(InputParams::BTangSign, 1, GL_FLOAT, GL_FALSE, sizeof(core::IMesh::vertex), reinterpret_cast<void*>(offsetof(core::IMesh::vertex, bTangSign)));
+    vertexData.clear();
+    elementData.clear();
+    lastVersion = mesh->GetVersion();
+    readyStatus.store(Ready, std::memory_order_release);
 }
 
 void MeshInstance::Deleter::operator()(MeshInstance* inst) const
 {
-	inst->Release();
+    inst->Release();
 }
 
 } /* namespace dse::ogl31rbe::gl31 */

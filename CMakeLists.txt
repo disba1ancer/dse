@@ -16,6 +16,7 @@ FetchContent_Declare(
     swal
     GIT_REPOSITORY https://github.com/disba1ancer/swal.git
     GIT_TAG master
+    FIND_PACKAGE_ARGS
 )
 FetchContent_Declare(
     glbinding
@@ -42,6 +43,7 @@ endif()
 
 if(${DSE_COMPILER} STREQUAL "GNU")
     add_compile_options(-pedantic -Wall -Wextra -Wconversion -fcoroutines)
+    message(STATUS GNU)
 elseif(${DSE_COMPILER} STREQUAL "MSVC")
     add_compile_options(/W3)
 endif()

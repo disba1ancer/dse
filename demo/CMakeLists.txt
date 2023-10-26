@@ -20,3 +20,5 @@ target_sources(demo PRIVATE
     rc_win32/res.rc
 )
 endif()
+
+install(TARGETS demo)

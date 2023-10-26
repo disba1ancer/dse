@@ -32,69 +32,71 @@
 namespace dse::ogl31rbe {
 
 class RenderOpenGL31_impl {
-	core::Window* wnd;
-	notifier::connection<core::Window::PaintHandler> paintCon;
-	notifier::connection<core::Window::ResizeHandler> sizeCon;
-	notifier::connection<core::Scene::ChangeEvent> scnChangeCon;
-	glwrp::Context context;
-	glwrp::VAO vao;
-	core::Scene* scene = nullptr;
-	core::Camera* camera = nullptr;
-	std::unordered_map<core::ITextureDataProvider*, gl31::TextureInstance> textures;
-	std::unordered_map<core::Material*, gl31::MaterialInstance> materials;
-	std::unordered_map<core::IMesh*, gl31::MeshInstance> meshes;
-	std::unordered_map<core::Object*, gl31::ObjectInstance> objects;
-	glwrp::VertexBuffer vbo;
-	glwrp::Program fragmentProg;
-	glwrp::Program drawProg;
-	gl::GLint fragWindowSizeUniform = 0;
-	gl::GLint drawWindowSizeUniform = 0;
-	unsigned width = 1, height = 1;
-#ifdef DSE_MULTISAMPLE
-	glwrp::FrameBuffer renderFBOMSAA = 0;
-	glwrp::RenderBuffer colorBufferMSAA = 0;
-	glwrp::RenderBuffer depthBufferMSAA = 0;
-#endif
-	glwrp::FrameBuffer renderFBO = 0;
-	glwrp::Texture2D colorBuffer = 0;
-	glwrp::Texture2D depthBuffer = 0;
-	glwrp::Texture2D pendingTexture = 0;
-	glwrp::UniformBuffer cameraUBO = 0;
-	glwrp::UniformBuffer emptyMaterialUBO = 0;
-	glwrp::Sampler postProcColor = 0;
-	glwrp::Sampler postProcDepth = 0;
-	glwrp::Sampler drawDiffuse = 0;
-	util::FunctionPtr<void()> renderCallback;
-	std::atomic_bool requested = false;
-	std::unordered_map<core::IMesh*, gl31::MeshInstance>::iterator cleanupPointer;
-
-	void OnPaint(core::WndEvtDt);
-	void OnResize(core::WndEvtDt, int width, int height, core::WindowShowCommand);
-	void RebuildSrgbFrameBuffer();
-	void PrepareShaders();
-	void RebuildViewport(unsigned width, unsigned height);
-	void SetupCamera();
-	void DrawPostprocess();
-	void FillInstances();
-	void OnSceneChanged(core::SceneChangeEventType act, core::Object* obj);
-	void CleanupMeshes();
-	void DrawScene();
+    void OnPaint(core::WndEvtDt);
+    void OnResize(core::WndEvtDt, int width, int height, core::WindowShowCommand);
+    void RebuildSrgbFrameBuffer();
+    void PrepareShaders();
+    void RebuildViewport(unsigned width, unsigned height);
+    void SetupCamera();
+    void DrawPostprocess();
+    void FillInstances();
+    void OnSceneChanged(core::SceneChangeEventType act, core::Object* obj);
+    void CleanupMeshes();
+    void DrawScene();
+    auto DrawTypeToGL(core::IMesh::Draw drawType) -> gl::GLenum;
+    void PrepareSamplers();
 public:
-	RenderOpenGL31_impl(core::Window& wnd);
-	~RenderOpenGL31_impl() = default;
-	RenderOpenGL31_impl(const RenderOpenGL31_impl &other) = delete;
-	RenderOpenGL31_impl(RenderOpenGL31_impl &&other) = delete;
-	RenderOpenGL31_impl& operator=(const RenderOpenGL31_impl &other) = delete;
-	RenderOpenGL31_impl& operator=(RenderOpenGL31_impl &&other) = delete;
-	void Render(const util::FunctionPtr<void()>& cb);
-	void SetScene(dse::core::Scene& scene);
-	void SetCamera(dse::core::Camera& camera);
-	auto GetObjectInstance(core::Object* object) -> gl31::ObjectInstance*;
-	auto GetMeshInstance(core::IMesh* mesh, bool withAcquire = false) -> gl31::MeshInstance*;
-	auto GetMaterialInstance(core::Material* material, bool withAcquire = false) -> gl31::MaterialInstance*;
-	auto GetTextureInstance(core::ITextureDataProvider* texture, bool withAcquire = false) -> gl31::TextureInstance*;
+    RenderOpenGL31_impl(core::Window& wnd);
+    ~RenderOpenGL31_impl() = default;
+    RenderOpenGL31_impl(const RenderOpenGL31_impl &other) = delete;
+    RenderOpenGL31_impl(RenderOpenGL31_impl &&other) = delete;
+    RenderOpenGL31_impl& operator=(const RenderOpenGL31_impl &other) = delete;
+    RenderOpenGL31_impl& operator=(RenderOpenGL31_impl &&other) = delete;
+    void Render(const util::FunctionPtr<void()>& cb);
+    void SetScene(dse::core::Scene& scene);
+    void SetCamera(dse::core::Camera& camera);
+    auto GetObjectInstance(core::Object* object) -> gl31::ObjectInstance*;
+    auto GetMeshInstance(core::IMesh* mesh, bool withAcquire = false) -> gl31::MeshInstance*;
+    auto GetMaterialInstance(core::Material* material, bool withAcquire = false) -> gl31::MaterialInstance*;
+    auto GetTextureInstance(core::ITextureDataProvider* texture, bool withAcquire = false) -> gl31::TextureInstance*;
 private:
-	void PrepareSamplers();
+    core::Window* wnd;
+    notifier::connection<core::Window::PaintHandler> paintCon;
+    notifier::connection<core::Window::ResizeHandler> sizeCon;
+    notifier::connection<core::Scene::ChangeEvent> scnChangeCon;
+    glwrp::Context context;
+    glwrp::VAO vao;
+    core::Scene* scene = nullptr;
+    core::Camera* camera = nullptr;
+    std::unordered_map<core::ITextureDataProvider*, gl31::TextureInstance> textures;
+    std::unordered_map<core::Material*, gl31::MaterialInstance> materials;
+    std::unordered_map<core::IMesh*, gl31::MeshInstance> meshes;
+    std::unordered_map<core::Object*, gl31::ObjectInstance> objects;
+    glwrp::VertexBuffer vbo;
+    glwrp::Program fragmentProg;
+    glwrp::Program drawProg;
+    gl::GLint fragWindowSizeUniform = 0;
+    gl::GLint drawWindowSizeUniform = 0;
+    unsigned width = 1, height = 1;
+#ifdef DSE_MULTISAMPLE
+    glwrp::FrameBuffer renderFBOMSAA = 0;
+    glwrp::RenderBuffer colorBufferMSAA = 0;
+    glwrp::RenderBuffer depthBufferMSAA = 0;
+#endif
+    glwrp::FrameBuffer renderFBO = 0;
+    glwrp::Texture2D colorBuffer = 0;
+    glwrp::Texture2D depthBuffer = 0;
+    glwrp::Texture2D pendingTexture = 0;
+    glwrp::Texture2D defaultNormalMap = 0;
+    glwrp::UniformBuffer cameraUBO = 0;
+    glwrp::UniformBuffer emptyMaterialUBO = 0;
+    glwrp::Sampler postProcColor = 0;
+    glwrp::Sampler postProcDepth = 0;
+    glwrp::Sampler drawDiffuse = 0;
+    glwrp::Sampler drawNormal = 0;
+    util::FunctionPtr<void()> renderCallback;
+    std::atomic_bool requested = false;
+    std::unordered_map<core::IMesh*, gl31::MeshInstance>::iterator cleanupPointer;
 };
 
 } /* namespace dse::ogl31rbe */

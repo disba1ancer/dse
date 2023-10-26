@@ -16,45 +16,46 @@
 namespace dse::ogl31rbe::gl31 {
 
 enum InputParams {
-	Position, Normal, Tangent, UV
+    Position, Normal, Tangent, UV, BTangSign
 };
 
 enum OutputParams {
-	FragmentColor
+    FragmentColor
 };
 
 inline constexpr auto attachment(OutputParams unit) {
-	return ::gl::GL_COLOR_ATTACHMENT0 + unit;
+    return ::gl::GL_COLOR_ATTACHMENT0 + unit;
 }
 
 enum UniformIndices {
-	ObjectInstanceBind,
-	CameraBind,
-	MaterialBind
+    ObjectInstanceBind,
+    CameraBind,
+    MaterialBind
 };
 
 struct ObjectMaterialUniform {
-	alignas(alignof(float) * 4) math::vec4 color;
+    alignas(alignof(float) * 4) math::vec4 color;
 };
 
 struct ObjectInstanceUniform {
-	alignas(alignof(float) * 4) math::mat3x4 transform;
+    alignas(alignof(float) * 4) math::mat3x4 transform;
 };
 
 struct CameraUniform {
-	alignas(alignof(float) * 4) math::mat4 viewProj;
-	alignas(alignof(float) * 4) math::vec4 pos;
+    alignas(alignof(float) * 4) math::mat4 viewProj;
+    alignas(alignof(float) * 4) math::vec4 pos;
 };
 
 enum TextureUnits {
-	NullImageUnit,
-	PostProcColor,
-	PostProcDepth,
-	DrawDiffuse = 1,
+    NullImageUnit,
+    PostProcColor,
+    PostProcDepth,
+    DrawDiffuse = 1,
+    DrawNormalMap,
 };
 
 inline constexpr auto texture(TextureUnits unit) {
-	return ::gl::GL_TEXTURE0 + unit;
+    return ::gl::GL_TEXTURE0 + unit;
 }
 
 } /* namespace dse::ogl31rbe::gl31 */

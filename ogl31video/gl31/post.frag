@@ -1,4 +1,4 @@
-out vec4 fragColor;
+out vec4 outColor;
 uniform vec2 windowSize;
 uniform sampler2D colorBuffer;
 uniform sampler2DShadow depthBuffer;
@@ -22,16 +22,5 @@ vec4 ltos(vec4 c) {
 }
 
 void main() {
-//    vec2 uv = gl_FragCoord.xy / windowSize;
-//    /*float col = .5;
-//
-//    if (all(greaterThan(uv, vec2(.25))) && all(lessThan(uv, vec2(.75)))) {
-//
-//        float u = (uv.x - .25) * 2.;
-//        col = mod(gl_FragCoord.y - .5, 2.) == .0 ? u : 1. - u;
-//    }
-//    fragColor = vec4(vec3(col), 1.);*/
-//    fragColor = vec4(uv, .0f, 1.f);
-//    //fragColor = vec4(ltos(fragColor.rgb), fragColor.a);
-    fragColor = ltos(texelFetch(colorBuffer, ivec2(gl_FragCoord.xy), 0));
+    outColor = ltos(texelFetch(colorBuffer, ivec2(gl_FragCoord.xy), 0));
 }

@@ -28,7 +28,7 @@ WORKING_DIRECTORY
 
 add_custom_target(ogl31shaders SOURCES gl31/pack_shaders_to_cpp.cmake ${DSE_BUILT_IN_SHADERS})
 
-add_library(ogl31video SHARED)
+add_library(ogl31video STATIC)
 
 target_compile_definitions(ogl31video PRIVATE DSE_OGL31VIDEO_EXPORT=1)
 
@@ -79,3 +79,6 @@ if (${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
     FetchContent_MakeAvailable(swal)
     target_link_libraries(ogl31video PRIVATE dwmapi swal::swal)
 endif()
+
+install(TARGETS ogl31video)
+install(IMPORTED_RUNTIME_ARTIFACTS glbinding::glbinding)

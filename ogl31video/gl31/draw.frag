@@ -2,7 +2,8 @@ in vec3 fNorm;
 in vec3 fTang;
 in vec3 fBitang;
 in vec2 fUV;
-in vec3 vWorldPos;
+in vec3 viewDir;
+in vec3 lightDir;
 
 uniform vec2 windowSize;
 layout(std140) uniform Camera {
@@ -13,6 +14,7 @@ layout(std140) uniform Material {
     vec4 color;
 } material;
 uniform sampler2D diffuse;
+uniform sampler2D normalMap;
 
 out vec4 fragColor;
 
@@ -22,11 +24,17 @@ vec4 defaultTexture(vec2 uv) {
 }
 
 void main() {
-    vec4 lightCol = vec4(1.f, 1.f, .75f, 1.f);
-    vec3 lightDir = normalize(vec3(1.f, 1.f, -1.f));
-    vec4 diffuseCol = mix(texture(diffuse, fUV), vec4(material.color.rgb, 1.f), material.color.a);
-    vec3 viewDir = normalize(camera.pos.xyz - vWorldPos);
-    float brightness = dot(fNorm, -lightDir);
-    vec3 specDir = 2 * fNorm * brightness + lightDir;
-    fragColor = diffuseCol * vec4(.03125f, .03125f, .0625f, 1.f) + max(0.f, brightness) * lightCol * diffuseCol + pow(max(0.f, dot(specDir, viewDir)), 8.f) * lightCol * diffuseCol;
+    vec4 lightCol = vec4(1.f, 1.f, 1.f, 1.f);
+    vec4 diffuseCol = texture(diffuse, fUV);
+    diffuseCol = mix(material.color, diffuseCol, diffuseCol.a);
+    vec3 normal = normalize(texture(normalMap, fUV).xyz * 2.f - 1.f);
+    float normK = 1.f / sqrt(dot(fNorm, fNorm));
+    vec3 nLightDir = normalize(lightDir);
+    vec3 nViewDir = normalize(viewDir);
+    mat3 tbn = mat3(fTang * normK, fBitang * normK, fNorm * normK);
+    vec3 nNorm = tbn * normal;
+    float brightness = dot(nNorm, -nLightDir);
+    vec3 specDir = 2 * nNorm * brightness + nLightDir;
+    fragColor = diffuseCol * vec4(.03125f, .03125f, .0625f, 1.f) + max(0.f, brightness) * lightCol * diffuseCol + pow(max(0.f, dot(specDir, nViewDir)), 16.f) * lightCol * diffuseCol;
+    //fragColor = vec4(tbn[2] * .5f + .5f, 1.f);
 }

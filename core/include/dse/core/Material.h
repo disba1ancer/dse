@@ -16,21 +16,25 @@
 namespace dse::core {
 
 class API_DSE_CORE Material {
-	math::vec4 color;
-	ITextureDataProvider* texture;
-	std::uint32_t version;
+    math::vec4 color;
+    ITextureDataProvider* texture;
+    ITextureDataProvider* normalMap;
+    std::uint32_t version;
 public:
-	Material(ITextureDataProvider* texture, math::vec4 color);
-	Material(ITextureDataProvider* texture);
-	Material(math::vec4 color);
-	Material();
-	auto GetColor() const -> math::vec4;
-	void SetColor(math::vec4 color);
-	auto GetTexture() const -> ITextureDataProvider*;
-	void SetTexture(ITextureDataProvider* texture);
-	auto GetVersion() -> std::uint32_t;
+    Material(ITextureDataProvider* texture, math::vec4 color);
+    Material(ITextureDataProvider* texture);
+    Material(math::vec4 color);
+    Material();
+    auto GetColor() const -> math::vec4;
+    void SetColor(math::vec4 color);
+    auto GetTexture() const -> ITextureDataProvider*;
+    void SetTexture(ITextureDataProvider* texture);
+    auto GetVersion() -> std::uint32_t;
+    ITextureDataProvider *GetNormalMap() const;
+    void SetNormalMap(ITextureDataProvider *newNormalMap);
+
 private:
-	void IncrementVersion();
+    void IncrementVersion();
 };
 
 } /* namespace dse::core */

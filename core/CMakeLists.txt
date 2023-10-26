@@ -1,6 +1,6 @@
 find_package(Threads REQUIRED)
 
-add_library(core SHARED)
+add_library(core STATIC)
 
 target_link_libraries(core PUBLIC headers)
 target_link_libraries(core PRIVATE Threads::Threads)
@@ -22,12 +22,15 @@ target_sources(core PUBLIC
     include/dse/core/Material.h
     include/dse/core/Object.h
     include/dse/core/Scene.h
+    include/dse/core/Sphere.h
     include/dse/core/ThreadPool.h
     include/dse/core/Window.h
     include/dse/core/WindowShowCommand.h
     include/dse/core/detail/impexp.h
+    include/dse/core/detail/staticmod.h
     include/dse/core/errors.h
     include/dse/core/mcursor.h
+    include/dse/core/modloader.h
     include/dse/core/status.h
     include/dse/renders/RenderOpenGL31.h
 )
@@ -40,10 +43,12 @@ target_sources(core PRIVATE
     Material.cpp
     Object.cpp
     Scene.cpp
+    Sphere.cpp
     ThreadPool.cpp
     Window.cpp
     errors.cpp
     mcursor.cpp
+    modloader.cpp
     status.cpp
 )
 
@@ -68,3 +73,6 @@ target_sources(core PRIVATE
     errors_win32.h
 )
 endif()
+
+install(TARGETS core PUBLIC_HEADER)
+#install(EXPORT core NAMESPACE dse DESTINATION ./core)

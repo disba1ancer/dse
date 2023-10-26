@@ -1,10 +1,11 @@
 add_library(headers INTERFACE)
 
 target_include_directories(headers INTERFACE
-    include
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>
 )
 
-target_sources(headers PUBLIC
+target_sources(headers PRIVATE
     include/dse/math/constants.h
     include/dse/math/mat.h
     include/dse/math/qmath.h
@@ -31,3 +32,6 @@ target_sources(headers PUBLIC
     include/dse/util/spinlock.h
     include/dse/util/unlock_guard.h
 )
+
+install(TARGETS headers EXPORT headers)
+install(EXPORT headers NAMESPACE dse DESTINATION ./headers)
