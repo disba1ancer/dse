@@ -4,6 +4,7 @@
 !core
 !ogl31video
 !demo
+!samples
 
 !CMakeLists.txt
 !LICENSE
