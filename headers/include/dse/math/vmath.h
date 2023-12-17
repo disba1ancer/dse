@@ -168,27 +168,24 @@ requires (
 
 template <typename left_t, typename right_t, std::size_t size>
 requires(impl::same_storage_type<left_t, right_t>)
-constexpr bool operator !=(const vec<left_t, size>& left, const vec<right_t, size>& right) {
+constexpr bool operator ==(const vec<left_t, size>& left, const vec<right_t, size>& right) {
 	for (unsigned i = 0; i < size; ++i) {
 		if (left[i] != right[i]) {
-			return true;
+			return false;
 		}
 	}
-	return false;
+	return true;
 }
 
-template <typename left_t, typename right_t, std::size_t size>
-requires(impl::same_storage_type<left_t, right_t>)
-constexpr bool operator ==(const vec<left_t, size>& left, const vec<right_t, size>& other) {
-	return !(left != other);
+template <typename left_t, std::size_t size>
+constexpr auto abs(const vec<left_t, size>& a) -> vec<std::remove_cvref_t<left_t>, size> {
+    using std::abs;
+    vec<std::remove_cvref_t<left_t>, size> result;
+    for (std::size_t i = 0; i < size; ++i) {
+        result[i] = abs(a[i]);
+    }
+	return result;
 }
-
-//template <typename type_t, std::size_t size>
-//vec<type_t, size> operator *(const type_t& c, const vec<type_t, size>& v) {
-//	vec<type_t, size> result = v;
-//	result *= c;
-//	return result;
-//}
 
 template <typename left_t, typename right_t>
 requires(impl::same_storage_type<left_t, right_t>)
@@ -208,7 +205,63 @@ constexpr auto dot(const vec<left_t, size>& a, const vec<right_t, size>& b) {
 
 template <typename T, std::size_t size>
 constexpr vec<std::remove_cvref_t<T>, size> norm(const vec<T, size>& a) {
-	return a / std::sqrt(dot(a, a));
+    using namespace std;
+	return a / sqrt(dot(a, a));
+}
+
+template <typename T, std::size_t size>
+constexpr auto min(const vec<T, size>& a, const vec<T, size>& b) -> vec<T, size> {
+    using std::min;
+	vec<T, size> result{};
+	for (std::size_t i = 0; i < size; ++i) {
+		result[i] = min(a[i], b[i]);
+	}
+	return result;
+}
+
+template <typename T, std::size_t size>
+constexpr auto min(const vec<T, size>& a, const T& b) -> vec<T, size> {
+    using std::min;
+	vec<T, size> result{};
+	for (std::size_t i = 0; i < size; ++i) {
+		result[i] = min(a[i], b);
+	}
+	return result;
+}
+
+template <typename T, std::size_t size>
+constexpr auto min(const T& a, const vec<T, size>& b) -> vec<T, size> {
+	return min(b, a);
+}
+
+template <typename T, std::size_t size>
+constexpr auto max(const vec<T, size>& a, const vec<T, size>& b) -> vec<T, size> {
+    using std::max;
+	vec<T, size> result{};
+	for (std::size_t i = 0; i < size; ++i) {
+		result[i] = max(a[i], b[i]);
+	}
+	return result;
+}
+
+template <typename T, std::size_t size>
+constexpr auto max(const vec<T, size>& a, const T& b) -> vec<T, size> {
+    using std::max;
+	vec<T, size> result;
+	for (std::size_t i = 0; i < size; ++i) {
+		result[i] = max(a[i], b);
+	}
+	return result;
+}
+
+template <typename T, std::size_t size>
+constexpr auto max(const T& a, const vec<T, size>& b) -> vec<T, size> {
+	return max(b, a);
+}
+
+template <typename A, std::size_t size, typename B, typename C>
+constexpr auto clamp(const vec<A, size>& a, const B& b, const C& c) {
+	return min(max(a, b), c);
 }
 
 } // namespace dse::math

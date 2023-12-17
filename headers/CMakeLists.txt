@@ -6,6 +6,7 @@ target_include_directories(headers INTERFACE
 )
 
 target_sources(headers PRIVATE
+    include/dse/math/color.h
     include/dse/math/constants.h
     include/dse/math/mat.h
     include/dse/math/qmath.h

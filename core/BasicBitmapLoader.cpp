@@ -106,9 +106,9 @@ util::Task<void> BasicBitmapLoader::LoadParametersInternal(TextureParameters* pa
         }
         BitmapMeta bitmapMeta;
         co_await bitmapFile.ReadAsync(reinterpret_cast<std::byte*>(&bitmapMeta), sizeof(bitmapMeta));
-        if (bitmapMeta.info.height < 0) {
+        /*if (bitmapMeta.info.height < 0) {
             throw std::runtime_error("Negative height not supported");
-        }
+        }*/
         if (bitmapMeta.info.compression != BMCOMPR_RGB && bitmapMeta.info.compression != BMCOMPR_BITFIELDS) {
             throw std::runtime_error("Compression in not supported");
         }
@@ -161,7 +161,7 @@ util::Task<void> BasicBitmapLoader::LoadParametersInternal(TextureParameters* pa
         pixelsPos = bitmapMeta.header.bitmapDataStart;
     }
     parameters->width = width;
-    parameters->height = height;
+    parameters->height = std::abs(height);
     parameters->depth = 1;
     parameters->lodCount = 1;
     parameters->format = format;
@@ -188,10 +188,16 @@ util::Task<void> BasicBitmapLoader::LoadDataInternal(void* recvBuffer, unsigned 
     }
     size_t dataSize = bytePerPix * size_t(width) + 3;
     dataSize &= (dataSize ^ 3);
-    auto buffer = static_cast<std::byte*>(recvBuffer) + dataSize * height;
-    for (int i = height; i > 0; --i) {
-        buffer -= dataSize;
+    if (height < 0) {
+        dataSize *= -height;
+        auto buffer = static_cast<std::byte*>(recvBuffer);
         co_await bitmapFile.ReadAsync(buffer, dataSize);
+    } else {
+        auto buffer = static_cast<std::byte*>(recvBuffer) + dataSize * height;
+        for (int i = height; i > 0; --i) {
+            buffer -= dataSize;
+            co_await bitmapFile.ReadAsync(buffer, dataSize);
+        }
     }
     onReady();
 }

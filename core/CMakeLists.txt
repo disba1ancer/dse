@@ -16,8 +16,11 @@ target_sources(core PUBLIC
     include/dse/core/Camera.h
     include/dse/core/Cube.h
     include/dse/core/File.h
+    include/dse/core/FrameBuffer.h
     include/dse/core/IMesh.h
     include/dse/core/ITextureDataProvider.h
+    include/dse/core/Image.h
+    include/dse/core/ImageManipulator.h
     include/dse/core/KeyboardKeyState.h
     include/dse/core/Material.h
     include/dse/core/Object.h
@@ -40,6 +43,9 @@ target_sources(core PRIVATE
     Camera.cpp
     Cube.cpp
     File.cpp
+    FrameBuffer.cpp
+    Image.cpp
+    ImageManipulator.cpp
     Material.cpp
     Object.cpp
     Scene.cpp
@@ -65,6 +71,8 @@ target_sources(core PUBLIC
 target_sources(core PRIVATE
     File_win32.cpp
     File_win32.h
+    FrameBuffer_win32.cpp
+    FrameBuffer_win32.h
     ThreadPool_win32.cpp
     ThreadPool_win32.h
     Window_win32.cpp

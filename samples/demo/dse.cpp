@@ -69,9 +69,7 @@ int main(int argc, char* argv[])
     window.Show();
     SetMouseCursorPosWndRel(window.Size() / 2, window);
     auto r = mainTask(window, render);
-    thrPool.Schedule(dse::util::FunctionPtr<void()>(&r, [](void*p){
-        static_cast<decltype(r)*>(p)->Resume();
-    }));
+    thrPool.Schedule(r);
 //    thrPool.Schedule(selfCycle);
     return thrPool.Run(PoolCaps::UI);
 }

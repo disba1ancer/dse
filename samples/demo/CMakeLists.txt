@@ -7,8 +7,6 @@ target_link_options(demo PRIVATE
 
 target_sources(demo PRIVATE
     dse.cpp
-    CustomPainter.cpp
-    CustomPainter.h
 )
 
 if (${CMAKE_SYSTEM_NAME} STREQUAL "Windows")

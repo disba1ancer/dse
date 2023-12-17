@@ -101,28 +101,22 @@ GENERATE(-)
 
 #undef GENERATE
 
-template <typename left_t, typename right_t, std::size_t rows, std::size_t shared, std::size_t cols>
-auto operator*(const mat<left_t, shared, rows>& left, const mat<right_t, cols, shared>& right) {
-    using ret_t = decltype(std::remove_cvref_t<left_t>{} * std::remove_cvref_t<right_t>{});
-    mat<ret_t, shared, rows> result{};
-    for (std::size_t col = 0; col < cols; ++col) {
-        for (std::size_t row = 0; row < rows; ++row) {
-            for (std::size_t i = 0; i < shared; ++i) {
-                result[col][row] += left[i][row] * right[col][i];
-            }
-        }
-    }
-    return result;
-}
-
 template <typename left_t, typename right_t, std::size_t rows, std::size_t cols>
 auto operator*(const mat<left_t, cols, rows>& left, const vec<right_t, cols>& right) {
     using ret_t = decltype(std::remove_cvref_t<left_t>{} * std::remove_cvref_t<right_t>{});
     vec<ret_t, rows> result{};
-    for (std::size_t row = 0; row < rows; ++row) {
-        for (std::size_t i = 0; i < cols; ++i) {
-            result[row] += left[i][row] * right[i];
-        }
+    for (std::size_t i = 0; i < cols; ++i) {
+        result += left[i] * right[i];
+    }
+    return result;
+}
+
+template <typename left_t, typename right_t, std::size_t rows, std::size_t shared, std::size_t cols>
+auto operator*(const mat<left_t, shared, rows>& left, const mat<right_t, cols, shared>& right) {
+    using ret_t = decltype(std::remove_cvref_t<left_t>{} * std::remove_cvref_t<right_t>{});
+    mat<ret_t, cols, rows> result{};
+    for (std::size_t col = 0; col < cols; ++col) {
+        result[col] = left * right[col];
     }
     return result;
 }
