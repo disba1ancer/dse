@@ -195,7 +195,7 @@ void ImageManipulator::DrawRect(ivec2 pos, ivec2 size, int thickness, vec4 color
     DrawRectFilled({pos.x(), pos2.y()}, {size.x(), thickness}, color);
 }
 
-void ImageManipulator::DrawText(ivec2 pos, ivec2 size, char8_t *text, Image &font, ivec2 gSize)
+void ImageManipulator::DrawText(ivec2 pos, ivec2 size, const char8_t *text, Image &font, ivec2 gSize)
 {
     auto oldClipBegin = clipBegin;
     auto oldClipEnd = clipEnd;

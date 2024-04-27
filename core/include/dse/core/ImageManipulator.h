@@ -37,7 +37,7 @@ public:
                     math::ivec2 srcPos);
     void DrawRectFilled(math::ivec2 pos, math::ivec2 size, math::vec4 color);
     void DrawRect(math::ivec2 pos, math::ivec2 size, int thickness, math::vec4 color);
-    void DrawText(math::ivec2 pos, math::ivec2 size, char8_t* text, Image& font, math::ivec2 gCount);
+    void DrawText(math::ivec2 pos, math::ivec2 size, const char8_t* text, Image& font, math::ivec2 gCount);
     void DrawLine(math::ivec2 pos1, math::ivec2 pos2, math::vec4 color);
     auto ToRawColor(math::vec4 color) -> std::uint32_t;
     auto FromRawColor(std::uint32_t color) -> math::vec4;
