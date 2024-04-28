@@ -1,12 +1,13 @@
 #include <dse/core/status.h>
 #include <unordered_map>
 #include <unordered_set>
+#include "status_win32.h"
 
 namespace {
 
-using namespace dse::core;
+using namespace dse::core::status;
 
-class CoreStatusProvider : public IStatusProvider, public StatusProviderInit<CoreStatusProvider> {
+class CoreStatusProvider : public StatusProviderBase<CoreStatusProvider> {
 public:
     CoreStatusProvider();
     const char8_t* Name() const
@@ -14,14 +15,11 @@ public:
         return u8"CoreStatusProvider";
     }
     const char8_t* Message(int status) const {
-        auto statusc = static_cast<StatusEnum>(status);
+        auto statusc = static_cast<Code>(status);
         switch (statusc) {
-            case StatusEnum::Success:
-                return u8"Successful operation";
-            case StatusEnum::PendingOperation:
-                return u8"Operation in progress";
-            case StatusEnum::EndOfStream:
-                return u8"End of stream";
+#define DEFINE_STATUS(name, value, message) case Code::name: return message;
+#include <dse/core/statusdef.h>
+#undef DEFINE_STATUS
         }
         return nullptr;
     }
@@ -32,11 +30,12 @@ CoreStatusProvider::CoreStatusProvider()
 
 class StatusProviderRegistry {
     StatusProviderRegistry() :
-        maxFreeID(0)
+        maxFreeID(ReservedSourceIds)
     {
-        providers[GenerateFreeId()] = &coreProvider;
+        providers[SourceId] = &coreProvider;
+        providers[SystemSourceId] = &systemProvider;
     }
-    auto FindByID(unsigned providerID) -> std::unordered_map<unsigned, IStatusProvider*>::iterator
+    auto FindByID(unsigned providerID) -> std::unordered_map<unsigned, IProvider*>::iterator
     {
         return providers.find(providerID);
     }
@@ -51,14 +50,18 @@ class StatusProviderRegistry {
         return result;
     }
 public:
-    static StatusProviderRegistry instance;
-    unsigned Register(IStatusProvider* provider)
+    static auto Instance() -> StatusProviderRegistry&
+    {
+        static StatusProviderRegistry instance;
+        return instance;
+    }
+    unsigned Register(IProvider* provider)
     {
         auto result = GenerateFreeId();
         providers[result] = provider;
         return result;
     }
-    IStatusProvider* ProviderByID(unsigned providerID)
+    IProvider* ProviderByID(unsigned providerID)
     {
         auto it = FindByID(providerID);
         if (it == providers.end()) {
@@ -68,31 +71,31 @@ public:
     }
     void Unregister(unsigned providerID)
     {
+
         providers.erase(providerID);
         freeIDs.emplace(providerID);
     }
 private:
-    std::unordered_map<unsigned, IStatusProvider*> providers;
+    std::unordered_map<unsigned, IProvider*> providers;
     unsigned maxFreeID;
     std::unordered_set<unsigned> freeIDs;
     CoreStatusProvider coreProvider;
+    SystemStatusProvider systemProvider;
 };
 
-StatusProviderRegistry StatusProviderRegistry::instance;
-
 }
 
-API_DSE_CORE unsigned dse_core_RegisterStatusProvider(dse_core_IStatusProvider* provider)
+API_DSE_CORE unsigned dse_core_status_RegisterProvider(dse_core_status_IProvider* provider)
 {
-    return StatusProviderRegistry::instance.Register(provider);
+    return StatusProviderRegistry::Instance().Register(provider);
 }
 
-API_DSE_CORE dse_core_IStatusProvider* dse_core_ProviderByID(unsigned providerID)
+API_DSE_CORE dse_core_status_IProvider* dse_core_status_ProviderByID(unsigned providerID)
 {
-    return StatusProviderRegistry::instance.ProviderByID(providerID);
+    return StatusProviderRegistry::Instance().ProviderByID(providerID);
 }
 
-API_DSE_CORE void dse_core_UnregisterStatusProvider(unsigned providerID)
+API_DSE_CORE void dse_core_status_UnregisterProvider(unsigned providerID)
 {
-    StatusProviderRegistry::instance.Unregister(providerID);
+    StatusProviderRegistry::Instance().Unregister(providerID);
 }

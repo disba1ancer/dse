@@ -40,9 +40,9 @@ public:
 	using FilePos = File::FilePos;
 	using FileOff = File::FileOff;
 private:
-	std::error_code lastError;
+	int lastError;
 	swal::File handle;
-	swal::Event event {true, true};
+//	swal::Event event {true, true};
 	FilePos pos = 0; // be careful with positions and file sizes more than max value for FileOff (unreal large files)
 	bool eof = false;
 	File::Callback cb;
@@ -60,15 +60,15 @@ public:
 	auto Read(std::byte buf[], std::size_t size) -> impl::FileOpResult;
 	auto Write(const std::byte buf[], std::size_t size) -> impl::FileOpResult;
 	FilePos Tell() const;
-	auto Seek(FilePos pos) -> std::error_code;
-	auto Seek(FileOff offset, StPoint rel) -> std::error_code;
-	auto Resize() -> std::error_code;
+	auto Seek(FilePos pos) -> Status;
+	auto Seek(FileOff offset, StPoint rel) -> Status;
+	auto Resize() -> Status;
 	bool IsEOF() const;
-	void ReadAsync(std::byte buf[], std::size_t size, const File::Callback& cb);
-	void WriteAsync(const std::byte buf[], std::size_t size, const File::Callback& cb);
+	auto ReadAsync(std::byte buf[], std::size_t size, const File::Callback& cb) -> Status;
+	auto WriteAsync(const std::byte buf[], std::size_t size, const File::Callback& cb) -> Status;
 	bool IsBusy();
-	auto Cancel() -> std::error_code;
-	auto Status() const -> std::error_code;
+	auto Cancel() -> Status;
+    auto GetStatus() const -> Status;
 	void Release();
 private:
 	virtual void Complete(DWORD transfered, DWORD error) override;

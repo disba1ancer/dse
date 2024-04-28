@@ -70,7 +70,7 @@ File_win32::File_win32(ThreadPool& pool, std::u8string_view filepath, OpenMode m
 {
 	try {
 		handle = open(filepath, mode);
-		lastError = win32_errc(swal::last_error().value());
+		lastError = status::MakeSystem(swal::last_error().value());
 		GetImplFromPool(pool)->IOCPAttach(handle);
 //		IOCP_win32::instance.attach(this);
 	} catch (std::system_error& err) {
@@ -97,51 +97,51 @@ bool File_win32::IsValid() const {
 
 auto File_win32::Read(std::byte buf[], std::size_t size) -> impl::FileOpResult {
 	std::lock_guard lck(dataMtx);
-	OVERLAPPED::hEvent = reinterpret_cast<HANDLE>(reinterpret_cast<ULONG_PTR>(HANDLE(event)) | 1);
+	OVERLAPPED::hEvent = reinterpret_cast<HANDLE>(reinterpret_cast<ULONG_PTR>(HANDLE(threadpool_detail::thrEvent)) | 1);
 	OVERLAPPED::Offset = (DWORD)pos;
 	OVERLAPPED::OffsetHigh = pos >> std::numeric_limits<DWORD>::digits;
 	DWORD lastTransfered = 0;
 	try {
 		handle.Read(buf, (DWORD)size, *this);
-        lastError = win32_errc(ERROR_SUCCESS);
+        lastError = status::MakeSystem(ERROR_SUCCESS);
 	} catch (std::system_error& err) {
 		SetLastError(err);
 	}
 	if (
-		lastError == win32_errc(ERROR_SUCCESS) ||
-		lastError == win32_errc(ERROR_IO_PENDING)
+		lastError == status::SystemCode(ERROR_SUCCESS) ||
+		lastError == status::SystemCode(ERROR_IO_PENDING)
 	) {
 		try {
 			lastTransfered = handle.GetOverlappedResult(*this, true);
-			lastError = win32_errc(ERROR_SUCCESS);
+			lastError = status::MakeSystem(ERROR_SUCCESS);
 			IncPtr(lastTransfered);
 		} catch (std::system_error& err) {
 			SetLastError(err);
 		}
 	}
-	eof = (lastError == win32_errc(ERROR_HANDLE_EOF));
+	eof = (lastError == status::SystemCode(ERROR_HANDLE_EOF));
 	return { lastTransfered, lastError };
 }
 
 auto File_win32::Write(const std::byte buf[], std::size_t size) -> impl::FileOpResult {
 	std::lock_guard lck(dataMtx);
-	OVERLAPPED::hEvent = reinterpret_cast<HANDLE>(reinterpret_cast<ULONG_PTR>(event.operator HANDLE()) | 1);
+	OVERLAPPED::hEvent = reinterpret_cast<HANDLE>(reinterpret_cast<ULONG_PTR>(HANDLE(threadpool_detail::thrEvent)) | 1);
 	OVERLAPPED::Offset = (DWORD)pos;
 	OVERLAPPED::OffsetHigh = pos >> std::numeric_limits<DWORD>::digits;
 	DWORD lastTransfered = 0;
 	try {
 		handle.Write(buf, (DWORD)size, *this);
-        lastError = win32_errc(ERROR_SUCCESS);
+        lastError = status::MakeSystem(ERROR_SUCCESS);
 	} catch (std::system_error& err) {
 		SetLastError(err);
 	}
 	if (
-		lastError == win32_errc(ERROR_SUCCESS) ||
-		lastError == win32_errc(ERROR_IO_PENDING)
+		lastError == status::SystemCode(ERROR_SUCCESS) ||
+		lastError == status::SystemCode(ERROR_IO_PENDING)
 	) {
 		try {
 			lastTransfered = handle.GetOverlappedResult(*this, true);
-			lastError = win32_errc(ERROR_SUCCESS);
+			lastError = status::MakeSystem(ERROR_SUCCESS);
 			IncPtr(lastTransfered);
 		} catch (std::system_error& err) {
 			SetLastError(err);
@@ -154,7 +154,7 @@ void File_win32::Complete(DWORD transfered, DWORD error) {
 	File::Callback cb;
 	{
 		std::lock_guard lck(dataMtx);
-		lastError = win32_errc(error);
+		lastError = status::MakeSystem(error);
 		DWORD lastTransfered = transfered;
 		if (error == ERROR_SUCCESS) {
 			IncPtr(lastTransfered);
@@ -166,12 +166,12 @@ void File_win32::Complete(DWORD transfered, DWORD error) {
 		cb = std::move(this->cb);
 	}
 	if (cb) {
-		cb(transfered, std::error_code(error, win32_category::instance()));
+		cb(transfered, status::MakeSystem(error));
 	}
 	Release();
 }
 
-auto File_win32::Resize() -> std::error_code {
+auto File_win32::Resize() -> Status {
 	std::lock_guard lck(dataMtx);
 	LARGE_INTEGER li;
 	li.LowPart = (DWORD)pos;
@@ -179,7 +179,7 @@ auto File_win32::Resize() -> std::error_code {
 	try {
 		handle.SetPointerEx(li, swal::SetPointerModes::Begin);
 		handle.SetEndOfFile();
-		lastError = win32_errc(ERROR_SUCCESS);
+		lastError = status::MakeSystem(ERROR_SUCCESS);
 	} catch (std::system_error& err) {
 		SetLastError(err);
 	}
@@ -191,62 +191,62 @@ auto File_win32::Resize() -> std::error_code {
 	}*/
 }
 
-void File_win32::ReadAsync(std::byte buf[], std::size_t size, const File::Callback& cb) {
+auto File_win32::ReadAsync(std::byte buf[], std::size_t size, const File::Callback& cb) -> Status {
 	std::lock_guard lck(dataMtx);
-	OVERLAPPED::hEvent = event;
+	OVERLAPPED::hEvent = NULL;
 	OVERLAPPED::Offset = (DWORD)pos;
 	OVERLAPPED::OffsetHigh = pos >> std::numeric_limits<DWORD>::digits;
 	this->cb = cb;
 	try {
         handle.Read(buf, (DWORD)size, *this);
-        lastError = win32_errc(ERROR_SUCCESS);
+        lastError = status::MakeSystem(ERROR_SUCCESS);
 	} catch (std::system_error& err) {
 		SetLastError(err);
 	}
-    if (lastError == win32_errc(ERROR_IO_PENDING)) {
+    if (lastError == status::SystemCode(ERROR_IO_PENDING)) {
         ++references;
     }
-	eof = lastError == win32_errc(ERROR_HANDLE_EOF);
+	eof = lastError == status::SystemCode(ERROR_HANDLE_EOF);
 }
 
-void File_win32::WriteAsync(const std::byte buf[], std::size_t size, const File::Callback& cb) {
+auto File_win32::WriteAsync(const std::byte buf[], std::size_t size, const File::Callback& cb) -> Status {
 	std::lock_guard lck(dataMtx);
-	OVERLAPPED::hEvent = event;
+	OVERLAPPED::hEvent = NULL;
 	OVERLAPPED::Offset = (DWORD)pos;
 	OVERLAPPED::OffsetHigh = pos >> std::numeric_limits<DWORD>::digits;
 	this->cb = cb;
 	try {
 		handle.Write(buf, (DWORD)size, *this);
-        lastError = win32_errc(ERROR_SUCCESS);
+        lastError = status::MakeSystem(ERROR_SUCCESS);
 	} catch (std::system_error& err) {
 		SetLastError(err);
 	}
-    if (lastError == win32_errc(ERROR_IO_PENDING)) {
+    if (lastError == status::SystemCode(ERROR_IO_PENDING)) {
         ++references;
     }
 }
 
 bool File_win32::IsBusy() {
-	return event.WaitFor(0) != WAIT_OBJECT_0;
+//	return event.WaitFor(0) != WAIT_OBJECT_0;
 }
 
-auto File_win32::Cancel() -> std::error_code {
+auto File_win32::Cancel() -> Status {
 	std::lock_guard lck(dataMtx);
 	try {
 		handle.CancelIoEx();
-		lastError = win32_errc(ERROR_SUCCESS);
+		lastError = status::MakeSystem(ERROR_SUCCESS);
 	} catch (std::system_error& err) {
 		SetLastError(err);
 	}
 	return lastError;
 }
 
-auto File_win32::Status() const -> std::error_code {
+auto File_win32::GetStatus() const -> Status {
 	return lastError;
 }
 
 File_win32::~File_win32() {
-	event.WaitFor(INFINITE);
+//	event.WaitFor(INFINITE);
 }
 
 void File_win32::Release() {
@@ -267,14 +267,14 @@ auto File_win32::Tell() const -> FilePos {
 	return pos;
 }
 
-auto File_win32::Seek(FilePos pos) -> std::error_code {
+auto File_win32::Seek(FilePos pos) -> Status {
 	std::lock_guard lck(dataMtx);
 	this->pos = pos;
 	eof = false;
 	return {};
 }
 
-auto File_win32::Seek(FileOff off, StPoint point) -> std::error_code {
+auto File_win32::Seek(FileOff off, StPoint point) -> Status {
 	std::lock_guard lck(dataMtx);
 	switch (point) {
 	case StPoint::START:
@@ -311,7 +311,7 @@ void File_win32::IncRefs() {
 void File_win32::SetLastError(std::system_error &err) {
 	auto ecode = err.code();
 	if (ecode.category() == swal::win32_category::instance()) {
-		lastError = win32_errc(ecode.value());
+		lastError = status::MakeSystem(ecode.value());
 	} else {
 		throw;
 	}

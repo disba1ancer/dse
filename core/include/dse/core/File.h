@@ -15,6 +15,7 @@
 #include <dse/util/functional.h>
 #include <dse/util/execution.h>
 #include "errors.h"
+#include "status.h"
 #include "ThreadPool.h"
 #include "detail/impexp.h"
 
@@ -53,7 +54,7 @@ namespace impl {
 
 struct FileOpResult {
 	std::size_t transfered;
-	std::error_code ecode;
+	Status ecode;
 };
 
 enum class FileOp {
@@ -89,7 +90,7 @@ class FileOpstate {
 	FileOpBufT<op> *buf;
 	std::size_t size;
 	std::remove_cvref_t<R> recv;
-	void callback(std::size_t size, std::error_code error)
+	void callback(std::size_t size, Status error)
 	{
 		util::SetValue(std::move(recv), size, error);
 	}
@@ -111,13 +112,13 @@ class FileSender {
 	std::size_t size;
 public:
 	template <template<typename ...> typename T>
-	using ValueTypes = T<std::size_t, std::error_code>;
+	using ValueTypes = T<std::size_t, Status>;
 	using ErrorType = std::exception_ptr;
 	static constexpr bool SendsDone = false;
 	FileSender(File *file, FileOpBufT<op> buf[], std::size_t size) :
 		file(file), buf(buf), size(size)
 	{}
-	template <util::ReceiverOf<std::size_t, std::error_code> R>
+	template <util::ReceiverOf<std::size_t, Status> R>
 	friend auto dse_TagInvoke(util::TagT<util::Connect>, FileSender&& sndr, R&& recv)
 	-> FileOpstate<op, R>
 	{
@@ -131,7 +132,7 @@ class API_DSE_CORE File {
 public:
 	using FilePos = std::uint_least64_t;
 	using FileOff = std::int_least64_t;
-	using Callback = util::FunctionPtr<void(std::size_t, std::error_code)>;
+	using Callback = util::FunctionPtr<void(std::size_t, Status)>;
 private:
 	std::unique_ptr<IOTarget_impl, IOTargetDelete> impl;
 public:
@@ -140,9 +141,9 @@ public:
 	//~File(); // may cause undefined behavior if called while async operation
 	auto Read(std::byte buf[], std::size_t size) -> impl::FileOpResult;
 	auto Write(const std::byte buf[], std::size_t size) -> impl::FileOpResult;
-	auto Resize() -> std::error_code;
-	void ReadAsync(std::byte buf[], std::size_t size, const Callback& cb);
-	void WriteAsync(const std::byte buf[], std::size_t size, const Callback& cb);
+	auto Resize() -> Status;
+	auto ReadAsync(std::byte buf[], std::size_t size, const Callback& cb) -> Status;
+	auto WriteAsync(const std::byte buf[], std::size_t size, const Callback& cb) -> Status;
 	auto ReadAsync(std::byte buf[], std::size_t size) -> impl::FileSender<impl::FileOp::Read>
 	{
 		return { this, buf, size };
@@ -151,12 +152,12 @@ public:
 	{
 		return { this, buf, size };
 	}
-	auto Cancel() -> std::error_code;
+	auto Cancel() -> Status;
 	bool IsEOF() const;
 	bool IsValid() const;
-	auto Seek(FilePos pos) -> std::error_code;
-	auto Seek(FileOff offset, StPoint rel) -> std::error_code;
-	auto Status() const -> std::error_code;
+	auto Seek(FilePos pos) -> Status;
+	auto Seek(FileOff offset, StPoint rel) -> Status;
+    auto GetStatus() const -> Status;
 	auto Tell() const -> FilePos;
 };
 

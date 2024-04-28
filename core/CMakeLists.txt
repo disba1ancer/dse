@@ -35,6 +35,7 @@ target_sources(core PUBLIC
     include/dse/core/mcursor.h
     include/dse/core/modloader.h
     include/dse/core/status.h
+    include/dse/core/statusdef.h
     include/dse/renders/RenderOpenGL31.h
 )
 
@@ -79,6 +80,8 @@ target_sources(core PRIVATE
     Window_win32.h
     errors_win32.cpp
     errors_win32.h
+    status_win32.cpp
+    status_win32.h
 )
 endif()
 

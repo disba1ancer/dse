@@ -35,19 +35,19 @@ auto File::Tell() const -> FilePos {
 	return impl->Tell();
 }
 
-auto File::Seek(FilePos pos) -> std::error_code {
+auto File::Seek(FilePos pos) -> Status {
 	return impl->Seek(pos);
 }
 
-auto File::Seek(FileOff offset, StPoint rel) -> std::error_code {
+auto File::Seek(FileOff offset, StPoint rel) -> Status {
 	return impl->Seek(offset, rel);
 }
 
-std::error_code File::Status() const {
-	return impl->Status();
+auto File::GetStatus() const -> Status {
+    return impl->GetStatus();
 }
 
-auto File::Resize() -> std::error_code {
+auto File::Resize() -> Status {
 	return impl->Resize();
 }
 
@@ -55,15 +55,15 @@ bool File::IsEOF() const {
 	return impl->IsEOF();
 }
 
-void File::ReadAsync(std::byte buf[], std::size_t size, const Callback& cb) {
+auto File::ReadAsync(std::byte buf[], std::size_t size, const Callback& cb) -> Status {
 	return impl->ReadAsync(buf, size, cb);
 }
 
-void File::WriteAsync(const std::byte buf[], std::size_t size, const Callback& cb) {
+auto File::WriteAsync(const std::byte buf[], std::size_t size, const Callback& cb) -> Status {
 	return impl->WriteAsync(buf, size, cb);
 }
 
-auto File::Cancel() -> std::error_code {
+auto File::Cancel() -> Status {
 	return impl->Cancel();
 }
 

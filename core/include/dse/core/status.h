@@ -6,68 +6,97 @@
 
 typedef long dse_core_Status;
 
-inline dse_core_Status dse_core_MakeStatus(unsigned source, int status, bool error)
+enum dse_core_status {
+    dse_core_status_SourceId = 0,
+    dse_core_status_SystemSourceId = 1,
+    dse_core_status_ReservedSourceIds = 128
+};
+
+inline dse_core_Status dse_core_status_Make(int source, int status)
 {
-    return -0x80000000LL * error + (dse_core_Status)(source & 0x7FFF) * 0x10000 + (dse_core_Status)((unsigned)status & 0xFFFF);
+    constexpr auto m = -0x7FFFFFFFL;
+    auto s1 = status < 0;
+    auto s2 = s1 * 2 - 1;
+    status = (status * s2 - s1) & 0x7FFF;
+    auto resultBase = m * s1;
+    auto resultSource = (source & 0xFFFF) * 0x8000L;
+    return resultBase + resultSource + status;
 }
 
-inline bool dse_core_IsError(dse_core_Status status)
+inline dse_core_Status dse_core_status_MakeSystem(int status)
+{
+    return dse_core_status_Make(dse_core_status_SystemSourceId, status);
+}
+
+inline bool dse_core_status_IsError(dse_core_Status status)
 {
     return status < 0;
 }
 
-inline unsigned dse_core_StatusSource(dse_core_Status status)
+inline unsigned dse_core_status_Source(dse_core_Status status)
 {
-    return ((unsigned long)status / 0x10000) & 0x7FFF;
+    return ((unsigned long)status / 0x8000) & 0xFFFF;
 }
 
-inline int dse_core_StatusCode(dse_core_Status status)
+inline int dse_core_status_GetCode(dse_core_Status status)
 {
-    unsigned long s2 = (unsigned long)status;
-    return (short int)((long)(s2 & 0xFFFF) - (long)(s2 & 0x8000) * 2L);
+    auto s1 = status < 0;
+    auto s2 = s1 * 2 - 1;
+    int result = (unsigned long)status & 0x7FFF;
+    return result * s2;
 }
 
-struct dse_core_IStatusProvider;
+struct dse_core_status_IProvider;
 
-typedef const char8_t* dse_core_NameFunc(const dse_core_IStatusProvider* obj);
-typedef const char8_t* dse_core_MessageFunc(const dse_core_IStatusProvider* obj, int code);
+typedef const char8_t* dse_core_status_NameFunc(const dse_core_status_IProvider* obj);
+typedef const char8_t* dse_core_status_MessageFunc(const dse_core_status_IProvider* obj, int code);
 
-struct dse_core_IStatusProviderVTBL {
-    dse_core_NameFunc *Name;
-    dse_core_MessageFunc *Message;
+struct dse_core_status_IProviderVTBL {
+    dse_core_status_NameFunc *Name;
+    dse_core_status_MessageFunc *Message;
 };
 
-struct dse_core_IStatusProvider {
-    const dse_core_IStatusProviderVTBL* vtbl;
+struct dse_core_status_IProvider {
+    const dse_core_status_IProviderVTBL* vtbl;
 };
 
-API_DSE_CORE unsigned dse_core_RegisterStatusProvider(dse_core_IStatusProvider* provider);
-API_DSE_CORE dse_core_IStatusProvider* dse_core_ProviderByID(unsigned providerID);
-API_DSE_CORE void dse_core_UnregisterStatusProvider(unsigned providerID);
+API_DSE_CORE unsigned dse_core_status_RegisterProvider(dse_core_status_IProvider* provider);
+API_DSE_CORE dse_core_status_IProvider* dse_core_status_ProviderByID(unsigned providerID);
+API_DSE_CORE void dse_core_status_UnregisterProvider(unsigned providerID);
 
-#define GENERATE_ENUM_ELEM(enum_n, name) enum_n##_##name
-
-#define GENERATE_ENUM(name) name {\
-GENERATE_ENUM_ELEM(name, Success),\
-GENERATE_ENUM_ELEM(name, EndOfStream),\
-GENERATE_ENUM_ELEM(name, PendingOperation),\
+inline const char8_t* dse_core_status_Message(dse_core_Status status)
+{
+    dse_core_status_IProvider* prov = dse_core_status_ProviderByID(dse_core_status_Source(status));
+    return prov->vtbl->Message(prov, dse_core_status_GetCode(status));
 }
 
-enum GENERATE_ENUM(dse_core_StatusEnum);
+inline const char8_t* dse_core_status_SourceName(dse_core_Status status)
+{
+    dse_core_status_IProvider* prov = dse_core_status_ProviderByID(dse_core_status_Source(status));
+    return prov->vtbl->Name(prov);
+}
+
+enum dse_core_status_Code {
+#define DEFINE_STATUS(name, value, message) dse_core_status_Code_##name = value,
+#include "statusdef.h"
+#undef DEFINE_STATUS
+};
+
+API_DSE_CORE void dse_core_status_UnregisterProvider(unsigned providerID);
 
 namespace dse::core {
+namespace status {
 
-#undef GENERATE_ENUM_ELEM
-#define GENERATE_ENUM_ELEM(enum_n, name) name
-
-enum class GENERATE_ENUM(StatusEnum : int);
+constexpr int SourceId = dse_core_status_SourceId;
+constexpr int SystemSourceId = dse_core_status_SystemSourceId;
+constexpr int ReservedSourceIds = dse_core_status_ReservedSourceIds;
 
 enum class Status : dse_core_Status {};
 
-using IStatusProviderVTBL = dse_core_IStatusProviderVTBL;
-using IStatusProvider = dse_core_IStatusProvider;
-using NameFunc = dse_core_NameFunc;
-using MessageFunc = dse_core_MessageFunc;
+using IProviderVTBL = dse_core_status_IProviderVTBL;
+using IProvider = dse_core_status_IProvider;
+using NameFunc = dse_core_status_NameFunc;
+using MessageFunc = dse_core_status_MessageFunc;
 template <typename T>
 using NameFuncRef = const char8_t*(const T&);
 template <typename T>
@@ -79,26 +108,25 @@ using MessageMemFunc = const char8_t*(T::*)(int) const;
 
 template <typename T>
 struct StatusProviderVTBL {
-    static const IStatusProviderVTBL vtbl;
+    static const IProviderVTBL vtbl;
 };
 
 template <typename T>
-const IStatusProviderVTBL StatusProviderVTBL<T>::vtbl = {
-    util::function_ptr_impl::ReplaceThisTypeByPtr<static_cast<NameFuncRef<T>*>(util::function_ptr_impl::ToExplicitThis<static_cast<NameMemFunc<T>>(&T::Name)>::Function), const IStatusProvider>::Function,
-    util::function_ptr_impl::ReplaceThisTypeByPtr<static_cast<MessageFuncRef<T>*>(util::function_ptr_impl::ToExplicitThis<static_cast<MessageMemFunc<T>>(&T::Message)>::Function), const IStatusProvider>::Function
+const IProviderVTBL StatusProviderVTBL<T>::vtbl = {
+    util::function_ptr_impl::ReplaceThisTypeByPtr<static_cast<NameFuncRef<T>*>(util::function_ptr_impl::ToExplicitThis<static_cast<NameMemFunc<T>>(&T::Name)>::Function), const IProvider>::Function,
+    util::function_ptr_impl::ReplaceThisTypeByPtr<static_cast<MessageFuncRef<T>*>(util::function_ptr_impl::ToExplicitThis<static_cast<MessageMemFunc<T>>(&T::Message)>::Function), const IProvider>::Function
 };
 
 template <typename T>
-struct StatusProviderInit {
-    StatusProviderInit() {
-        auto interface = static_cast<IStatusProvider*>(static_cast<T*>(this));
-        interface->vtbl = &StatusProviderVTBL<T>::vtbl;
+struct StatusProviderBase : IProvider {
+    StatusProviderBase() {
+        vtbl = &StatusProviderVTBL<T>::vtbl;
     }
 };
 
 class StatusProviderAdapter {
 public:
-    StatusProviderAdapter(IStatusProvider* provider) : provider(provider) {}
+    StatusProviderAdapter(IProvider* provider) : provider(provider) {}
     const char8_t* Name() const {
         return (provider->vtbl->Name)(provider);
     }
@@ -106,37 +134,119 @@ public:
         return provider->vtbl->Message(provider, status);
     }
 private:
-    IStatusProvider* provider;
+    IProvider* provider;
 };
 
-StatusProviderAdapter adapter(IStatusProvider* provider)
+StatusProviderAdapter adapter(IProvider* provider)
 {
     return { provider };
 }
 
-inline Status MakeStatus(unsigned source, int status, bool error)
+inline auto Make(unsigned source, int status) -> Status
 {
-    return static_cast<Status>(dse_core_MakeStatus(source, status, error));
+    return static_cast<Status>(dse_core_status_Make(source, status));
+}
+
+inline auto MakeSystem(int status) -> Status
+{
+    return Make(SystemSourceId, status);
 }
 
 inline bool IsError(Status status)
 {
-    return dse_core_IsError(static_cast<dse_core_Status>(status));
+    return dse_core_status_IsError(static_cast<dse_core_Status>(status));
 }
 
-inline unsigned StatusSource(Status status)
+inline auto Source(Status status) -> unsigned
 {
-    return dse_core_StatusSource(static_cast<dse_core_Status>(status));
+    return dse_core_status_Source(static_cast<dse_core_Status>(status));
 }
 
-inline int StatusCode(dse_core_Status status)
+inline int GetCode(Status status)
 {
-    return dse_core_StatusCode(static_cast<dse_core_Status>(status));
+    return dse_core_status_GetCode(static_cast<dse_core_Status>(status));
+}
+
+inline auto Message(Status status) -> const char8_t*
+{
+    return dse_core_status_Message(static_cast<dse_core_Status>(status));
+}
+
+inline auto SourceName(Status status) -> const char8_t*
+{
+    return dse_core_status_SourceName(static_cast<dse_core_Status>(status));
+}
+
+enum class Code : int {
+#define DEFINE_STATUS(name, value, message) name = value,
+#include "statusdef.h"
+#undef DEFINE_STATUS
+};
+
+enum class SystemCode : int {};
+
+}
+
+template <typename T>
+struct StatusTraits /*{
+    static auto ToStatus(T code) -> Status;
+    static auto Message(T code) -> const char8_t*;
+}*/;
+
+using Status = dse::core::status::Status;
+
+template <>
+struct StatusTraits<status::Code> {
+    static auto ToStatus(status::Code code) -> Status
+    {
+        return status::Make(status::SourceId, int(code));
+    }
+    static auto Message(status::Code code) -> const char8_t*
+    {
+        return status::Message(ToStatus(code));
+    }
+};
+
+template <>
+struct StatusTraits<status::SystemCode> {
+    static auto ToStatus(status::SystemCode code) -> Status
+    {
+        return status::Make(status::SystemSourceId, int(code));
+    }
+    static auto Message(status::SystemCode code) -> const char8_t*
+    {
+        return status::Message(ToStatus(code));
+    }
+};
+
+namespace status {
+
+template <typename T>
+requires requires (T t) {
+    { StatusTraits<T>::ToStatus(t) } -> std::same_as<Status>;
+}
+bool operator==(Status status, T code)
+{
+    return status == StatusTraits<T>::ToStatus(code);
+}
+
+/*template <typename T>
+bool operator==(T code, Status status)
+{
+    return status == code;
+}*/
+
+template <typename T>
+requires requires (T t) {
+    { StatusTraits<T>::ToStatus(t) } -> std::same_as<Status>;
+}
+auto Make(T code) -> Status
+{
+    return StatusTraits<T>::ToStatus(code);
 }
 
 }
 
-#undef GENERATE_ENUM
-#undef GENERATE_ENUM_ELEM
+}
 
 #endif // STATUS_H
