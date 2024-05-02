@@ -74,7 +74,7 @@ private:
 	virtual void Complete(DWORD transfered, DWORD error) override;
 	void IncPtr(DWORD transfered);
 	void IncRefs();
-	void SetLastError(std::system_error& err);
+	bool SetLastError(std::system_error& err);
 };
 
 } // namespace dse::core

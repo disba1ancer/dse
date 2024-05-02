@@ -7,7 +7,7 @@ namespace {
 
 using namespace dse::core::status;
 
-class CoreStatusProvider : public StatusProviderBase<CoreStatusProvider> {
+class CoreStatusProvider : public status_provider_base<CoreStatusProvider> {
 public:
     CoreStatusProvider();
     const char8_t* Name() const

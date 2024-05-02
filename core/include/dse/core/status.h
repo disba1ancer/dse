@@ -82,7 +82,7 @@ enum dse_core_status_Code {
 #undef DEFINE_STATUS
 };
 
-API_DSE_CORE void dse_core_status_UnregisterProvider(unsigned providerID);
+API_DSE_CORE dse_core_Status dse_core_status_FromSystem(int code);
 
 namespace dse::core {
 namespace status {
@@ -107,20 +107,20 @@ template <typename T>
 using MessageMemFunc = const char8_t*(T::*)(int) const;
 
 template <typename T>
-struct StatusProviderVTBL {
+struct status_provider_vtbl {
     static const IProviderVTBL vtbl;
 };
 
 template <typename T>
-const IProviderVTBL StatusProviderVTBL<T>::vtbl = {
+const IProviderVTBL status_provider_vtbl<T>::vtbl = {
     util::function_ptr_impl::ReplaceThisTypeByPtr<static_cast<NameFuncRef<T>*>(util::function_ptr_impl::ToExplicitThis<static_cast<NameMemFunc<T>>(&T::Name)>::Function), const IProvider>::Function,
     util::function_ptr_impl::ReplaceThisTypeByPtr<static_cast<MessageFuncRef<T>*>(util::function_ptr_impl::ToExplicitThis<static_cast<MessageMemFunc<T>>(&T::Message)>::Function), const IProvider>::Function
 };
 
 template <typename T>
-struct StatusProviderBase : IProvider {
-    StatusProviderBase() {
-        vtbl = &StatusProviderVTBL<T>::vtbl;
+struct status_provider_base : IProvider {
+    status_provider_base() {
+        vtbl = &status_provider_vtbl<T>::vtbl;
     }
 };
 
@@ -137,14 +137,14 @@ private:
     IProvider* provider;
 };
 
-StatusProviderAdapter adapter(IProvider* provider)
+inline StatusProviderAdapter adapter(IProvider* provider)
 {
     return { provider };
 }
 
 inline auto Make(unsigned source, int status) -> Status
 {
-    return static_cast<Status>(dse_core_status_Make(source, status));
+    return static_cast<Status>(::dse_core_status_Make(source, status));
 }
 
 inline auto MakeSystem(int status) -> Status
@@ -154,27 +154,47 @@ inline auto MakeSystem(int status) -> Status
 
 inline bool IsError(Status status)
 {
-    return dse_core_status_IsError(static_cast<dse_core_Status>(status));
+    return ::dse_core_status_IsError(static_cast<dse_core_Status>(status));
 }
 
 inline auto Source(Status status) -> unsigned
 {
-    return dse_core_status_Source(static_cast<dse_core_Status>(status));
+    return ::dse_core_status_Source(static_cast<dse_core_Status>(status));
 }
 
 inline int GetCode(Status status)
 {
-    return dse_core_status_GetCode(static_cast<dse_core_Status>(status));
+    return ::dse_core_status_GetCode(static_cast<dse_core_Status>(status));
+}
+
+inline auto RegisterProvider(dse_core_status_IProvider* provider) -> unsigned
+{
+    return ::dse_core_status_RegisterProvider(provider);
+}
+
+inline auto ProviderByID(unsigned providerID) -> dse_core_status_IProvider*
+{
+    return ::dse_core_status_ProviderByID(providerID);
+}
+
+inline void UnregisterProvider(unsigned providerID)
+{
+    return ::dse_core_status_UnregisterProvider(providerID);
 }
 
 inline auto Message(Status status) -> const char8_t*
 {
-    return dse_core_status_Message(static_cast<dse_core_Status>(status));
+    return ::dse_core_status_Message(static_cast<dse_core_Status>(status));
 }
 
 inline auto SourceName(Status status) -> const char8_t*
 {
-    return dse_core_status_SourceName(static_cast<dse_core_Status>(status));
+    return ::dse_core_status_SourceName(static_cast<dse_core_Status>(status));
+}
+
+inline auto FromSystem(int code) -> Status
+{
+    return static_cast<Status>(::dse_core_status_FromSystem(code));
 }
 
 enum class Code : int {
@@ -188,34 +208,34 @@ enum class SystemCode : int {};
 }
 
 template <typename T>
-struct StatusTraits /*{
-    static auto ToStatus(T code) -> Status;
-    static auto Message(T code) -> const char8_t*;
+struct status_traits /*{
+    static auto to_status(T code) -> Status;
+    static auto message(T code) -> const char8_t*;
 }*/;
 
 using Status = dse::core::status::Status;
 
 template <>
-struct StatusTraits<status::Code> {
-    static auto ToStatus(status::Code code) -> Status
+struct status_traits<status::Code> {
+    static auto to_status(status::Code code) -> Status
     {
         return status::Make(status::SourceId, int(code));
     }
-    static auto Message(status::Code code) -> const char8_t*
+    static auto message(status::Code code) -> const char8_t*
     {
-        return status::Message(ToStatus(code));
+        return status::Message(to_status(code));
     }
 };
 
 template <>
-struct StatusTraits<status::SystemCode> {
-    static auto ToStatus(status::SystemCode code) -> Status
+struct status_traits<status::SystemCode> {
+    static auto to_status(status::SystemCode code) -> Status
     {
         return status::Make(status::SystemSourceId, int(code));
     }
-    static auto Message(status::SystemCode code) -> const char8_t*
+    static auto message(status::SystemCode code) -> const char8_t*
     {
-        return status::Message(ToStatus(code));
+        return status::Message(to_status(code));
     }
 };
 
@@ -223,11 +243,11 @@ namespace status {
 
 template <typename T>
 requires requires (T t) {
-    { StatusTraits<T>::ToStatus(t) } -> std::same_as<Status>;
+    { status_traits<T>::to_status(t) } -> std::same_as<Status>;
 }
 bool operator==(Status status, T code)
 {
-    return status == StatusTraits<T>::ToStatus(code);
+    return status == status_traits<T>::to_status(code);
 }
 
 /*template <typename T>
@@ -238,11 +258,11 @@ bool operator==(T code, Status status)
 
 template <typename T>
 requires requires (T t) {
-    { StatusTraits<T>::ToStatus(t) } -> std::same_as<Status>;
+    { status_traits<T>::to_status(t) } -> std::same_as<Status>;
 }
 auto Make(T code) -> Status
 {
-    return StatusTraits<T>::ToStatus(code);
+    return status_traits<T>::to_status(code);
 }
 
 }

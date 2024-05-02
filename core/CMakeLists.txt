@@ -18,6 +18,7 @@ target_sources(core PUBLIC
     include/dse/core/File.h
     include/dse/core/FrameBuffer.h
     include/dse/core/IMesh.h
+    include/dse/core/IOContext.h
     include/dse/core/ITextureDataProvider.h
     include/dse/core/Image.h
     include/dse/core/ImageManipulator.h
@@ -45,6 +46,7 @@ target_sources(core PRIVATE
     Cube.cpp
     File.cpp
     FrameBuffer.cpp
+    IOContext.cpp
     Image.cpp
     ImageManipulator.cpp
     Material.cpp
@@ -74,6 +76,8 @@ target_sources(core PRIVATE
     File_win32.h
     FrameBuffer_win32.cpp
     FrameBuffer_win32.h
+    IOContext_win32.cpp
+    IOContext_win32.h
     ThreadPool_win32.cpp
     ThreadPool_win32.h
     Window_win32.cpp

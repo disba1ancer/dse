@@ -207,7 +207,7 @@ void ImageManipulator::DrawText(ivec2 pos, ivec2 size, const char8_t *text, Imag
     auto cPos = pos;
     auto end = pos + size;
     int gVCount = font.Size().x() / gSize.x();
-    char8_t *cur = text;
+    const char8_t *cur = text;
     while (*cur != 0 && cPos.y() < end.y()) {
         if (*cur == u8'\n') {
             cPos = {pos.x(), cPos.y() + gSize.y()};
@@ -221,7 +221,7 @@ void ImageManipulator::DrawText(ivec2 pos, ivec2 size, const char8_t *text, Imag
         if (cPos.x() < end.x()) {
             continue;
         }
-        cur = reinterpret_cast<char8_t*>(std::strchr(reinterpret_cast<char*>(cur), u8'\n'));
+        cur = reinterpret_cast<const char8_t*>(std::strchr(reinterpret_cast<const char*>(cur), u8'\n'));
         if (cur == nullptr) {
             break;
         }

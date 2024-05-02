@@ -12,7 +12,21 @@ const char8_t *StatusProvider::Name() const
 }
 
 const char8_t *StatusProvider::Message(int status) const {
-    return "";
+    return u8"";
 }
 
+}
+
+API_DSE_CORE dse_core_Status dse_core_status_FromSystem(int code)
+{
+    using namespace dse::core::status;
+#define GENERATE(in, out) case in: return static_cast<dse_core_Status>(Make(Code::out))
+    switch (code) {
+    GENERATE(ERROR_SUCCESS, Success);
+    GENERATE(ERROR_HANDLE_EOF, EndOfStream);
+    GENERATE(ERROR_IO_PENDING, PendingOperation);
+    GENERATE(ERROR_BAD_ARGUMENTS, InvalidArgument);
+    }
+#undef GENERATE
+    return dse_core_status_MakeSystem(code);
 }

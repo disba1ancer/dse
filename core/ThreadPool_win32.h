@@ -18,7 +18,7 @@ namespace dse::core {
 
 namespace threadpool_detail {
 
-thread_local swal::Event thrEvent{true, true};
+extern thread_local swal::Event thrEvent;
 
 }
 

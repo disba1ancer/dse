@@ -5,7 +5,7 @@
 
 namespace dse::core::status::win32 {
 
-class StatusProvider : public StatusProviderBase<StatusProvider> {
+class StatusProvider : public status_provider_base<StatusProvider> {
 public:
     StatusProvider();
     auto Name() const -> const char8_t*;
