@@ -7,38 +7,22 @@ IOContext_win32::IOContext_win32()
 
 void IOContext_win32::Run()
 {
-    while (true) {
-        RunOne();
-    }
+    while (PollOne(INFINITE) != StopSig) {}
 }
 
 void IOContext_win32::RunOne()
 {
-    auto ioCompletion = iocp.GetQueuedCompletionStatus2(INFINITE);
-    if (ioCompletion.ovl == nullptr) {
-        return;
-    }
-    auto asyncHandle = static_cast<IAsyncIO2*>(ioCompletion.ovl);
-    asyncHandle->Complete(ioCompletion.bytesTransfered, ioCompletion.error);
+    PollOne(INFINITE);
 }
 
 void IOContext_win32::Poll()
 {
-    while (PollOne()) {}
+    while (PollOne(0) == Enqueue) {}
 }
 
-bool IOContext_win32::PollOne()
+void IOContext_win32::PollOne()
 {
-    auto ioCompletion = iocp.GetQueuedCompletionStatus2(0);
-    if (ioCompletion.error == WAIT_TIMEOUT) {
-        return false;
-    }
-    if (ioCompletion.ovl == nullptr) {
-        return true;
-    }
-    auto asyncHandle = static_cast<IAsyncIO2*>(ioCompletion.ovl);
-    asyncHandle->Complete(ioCompletion.bytesTransfered, ioCompletion.error);
-    return true;
+    PollOne(0);
 }
 
 void IOContext_win32::Stop(StopMode mode)
@@ -46,14 +30,63 @@ void IOContext_win32::Stop(StopMode mode)
 
 }
 
-void IOContext_win32::IOCPAttach(swal::Handle &handle)
-{
-    iocp.AssocFile(handle, 0x0DB5);
+namespace {
+
+void StopFunc(OVERLAPPED*, DWORD, DWORD)
+{}
+
 }
 
-auto IAsyncIO2::GetImplFromContext(IOContext &context) -> std::shared_ptr<IOContext_win32>
+void IOContext_win32::StopOne()
 {
-    return context.GetImpl();
+    Post(StopFunc, nullptr, 0);
+}
+
+void IOContext_win32::IOCPAttach(swal::Handle &handle, CompleteCallback cb)
+{
+    auto vcb = reinterpret_cast<void*>(cb);
+    iocp.AssocFile(handle, reinterpret_cast<ULONG_PTR>(vcb));
+}
+
+void IOContext_win32::StartOp()
+{
+    activeOps.fetch_add(1, std::memory_order_release);
+}
+
+bool IOContext_win32::EndOp()
+{
+    return activeOps.fetch_sub(1, std::memory_order_acquire) == 1;
+}
+
+void IOContext_win32::Post(CompleteCallback cb, OVERLAPPED *ovl, DWORD transfered)
+{
+    auto ucb = reinterpret_cast<ULONG_PTR>(reinterpret_cast<void*>(cb));
+    StartOp();
+    iocp.PostQueuedCompletionStatus(transfered, ucb, ovl);
+}
+
+auto IOContext_win32::PollOne(DWORD timeout) -> PollResult
+{
+    auto enqIO = iocp.GetQueuedCompletionStatus2(0);
+    if (enqIO.error != ERROR_SUCCESS) {
+        if (enqIO.error == WAIT_TIMEOUT) {
+            return Timeout;
+        }
+        if (enqIO.ovl == nullptr) {
+            throw std::runtime_error("Unexpected IOCP error");
+        }
+    }
+    auto vcb = reinterpret_cast<void*>(enqIO.key);
+    auto cb = reinterpret_cast<CompleteCallback>(vcb);
+    if (vcb == StopFunc) {
+        EndOp();
+        return StopSig;
+    }
+    cb(enqIO.ovl, enqIO.bytesTransfered, enqIO.error);
+    if (EndOp()) {
+        return StopSig;
+    }
+    return Enqueue;
 }
 
 } // namespace dse::core

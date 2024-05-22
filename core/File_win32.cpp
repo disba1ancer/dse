@@ -16,6 +16,7 @@
 namespace {
 
 using namespace dse::core;
+using dse::core::status::Code;
 
 std::wstring convertFilePath(std::u8string_view filepath) {
 	auto path = std::filesystem::path(filepath);
@@ -206,7 +207,7 @@ auto File_win32::ReadAsync(std::byte buf[], std::size_t size, const File::Callba
         lastError = ERROR_SUCCESS;
 	} catch (std::system_error& err) {
         if (SetLastError(err)) {
-            return status::FromSystem(ERROR_IO_PENDING);
+            return status::Make(Code::PendingOperation);
         }
 	}
     --references;
@@ -227,7 +228,7 @@ auto File_win32::WriteAsync(const std::byte buf[], std::size_t size, const File:
         lastError = ERROR_SUCCESS;
 	} catch (std::system_error& err) {
         if (SetLastError(err)) {
-            return status::FromSystem(ERROR_IO_PENDING);
+            return status::Make(Code::PendingOperation);
         }
 	}
     --references;

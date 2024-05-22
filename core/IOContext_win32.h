@@ -6,12 +6,7 @@
 
 namespace dse::core {
 
-class IAsyncIO2 : public OVERLAPPED {
-public:
-	virtual void Complete(DWORD transfered, DWORD error) = 0;
-protected:
-	static std::shared_ptr<IOContext_win32> GetImplFromContext(IOContext& context);
-};
+using CompleteCallback = void(*)(OVERLAPPED* ovl, DWORD transfered, DWORD error);
 
 class IOContext_win32 : public std::enable_shared_from_this<IOContext_win32>
 {
@@ -22,11 +17,23 @@ public:
     void Run();
     void RunOne();
     void Poll();
-    bool PollOne();
+    void PollOne();
     void Stop(StopMode mode = Soft);
-    void IOCPAttach(swal::Handle& handle);
+    void StopOne();
+    void IOCPAttach(swal::Handle& handle, CompleteCallback cb);
+    void StartOp();
+    bool EndOp();
 private:
+    enum PollResult {
+        Enqueue,
+        Timeout,
+        StopSig
+    };
+    void Post(CompleteCallback cb, OVERLAPPED* ovl, DWORD transfered);
+    auto PollOne(DWORD timeout) -> PollResult;
+
     swal::IOCompletionPort iocp;
+    std::atomic_int activeOps = 0;
 };
 
 } // namespace dse::core
