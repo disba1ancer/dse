@@ -12,9 +12,24 @@ void IOContext::Run()
     GetImpl()->Run();
 }
 
-void IOContext::Stop(StopMode mode)
+void IOContext::RunOne()
 {
-    GetImpl()->Stop(mode);
+    GetImpl()->RunOne();
+}
+
+void IOContext::Poll()
+{
+    GetImpl()->Poll();
+}
+
+void IOContext::PollOne()
+{
+    GetImpl()->PollOne();
+}
+
+void IOContext::StopOne()
+{
+    GetImpl()->StopOne();
 }
 
 } // namespace dse::core

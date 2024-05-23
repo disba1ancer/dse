@@ -11,18 +11,16 @@ using CompleteCallback = void(*)(OVERLAPPED* ovl, DWORD transfered, DWORD error)
 class IOContext_win32 : public std::enable_shared_from_this<IOContext_win32>
 {
 public:
-    using StopMode = IOContext::StopMode;
-    using enum StopMode;
     IOContext_win32();
     void Run();
     void RunOne();
     void Poll();
     void PollOne();
-    void Stop(StopMode mode = Soft);
     void StopOne();
     void IOCPAttach(swal::Handle& handle, CompleteCallback cb);
-    void StartOp();
-    bool EndOp();
+    void Lock();
+    bool Unlock();
+    static auto GetImplFromObj(IOContext& context) -> std::shared_ptr<IOContext_win32>;
 private:
     enum PollResult {
         Enqueue,

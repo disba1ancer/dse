@@ -25,11 +25,6 @@ void IOContext_win32::PollOne()
     PollOne(0);
 }
 
-void IOContext_win32::Stop(StopMode mode)
-{
-
-}
-
 namespace {
 
 void StopFunc(OVERLAPPED*, DWORD, DWORD)
@@ -39,7 +34,7 @@ void StopFunc(OVERLAPPED*, DWORD, DWORD)
 
 void IOContext_win32::StopOne()
 {
-    Post(StopFunc, nullptr, 0);
+    Post(nullptr, nullptr, 0);
 }
 
 void IOContext_win32::IOCPAttach(swal::Handle &handle, CompleteCallback cb)
@@ -48,20 +43,25 @@ void IOContext_win32::IOCPAttach(swal::Handle &handle, CompleteCallback cb)
     iocp.AssocFile(handle, reinterpret_cast<ULONG_PTR>(vcb));
 }
 
-void IOContext_win32::StartOp()
+void IOContext_win32::Lock()
 {
     activeOps.fetch_add(1, std::memory_order_release);
 }
 
-bool IOContext_win32::EndOp()
+bool IOContext_win32::Unlock()
 {
     return activeOps.fetch_sub(1, std::memory_order_acquire) == 1;
+}
+
+auto IOContext_win32::GetImplFromObj(IOContext& context) -> std::shared_ptr<IOContext_win32>
+{
+    return context.GetImpl();
 }
 
 void IOContext_win32::Post(CompleteCallback cb, OVERLAPPED *ovl, DWORD transfered)
 {
     auto ucb = reinterpret_cast<ULONG_PTR>(reinterpret_cast<void*>(cb));
-    StartOp();
+    Lock();
     iocp.PostQueuedCompletionStatus(transfered, ucb, ovl);
 }
 
@@ -78,12 +78,13 @@ auto IOContext_win32::PollOne(DWORD timeout) -> PollResult
     }
     auto vcb = reinterpret_cast<void*>(enqIO.key);
     auto cb = reinterpret_cast<CompleteCallback>(vcb);
-    if (vcb == StopFunc) {
-        EndOp();
+    if (vcb == nullptr) {
+        Unlock();
         return StopSig;
     }
     cb(enqIO.ovl, enqIO.bytesTransfered, enqIO.error);
-    if (EndOp()) {
+    if (Unlock()) {
+        Post(StopFunc, nullptr, 0);
         return StopSig;
     }
     return Enqueue;

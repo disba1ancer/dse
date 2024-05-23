@@ -7,22 +7,19 @@
 namespace dse::core {
 
 #ifdef _WIN32
-typedef class IOContext_win32 IOContext_impl;
+using IOContext_impl = class IOContext_win32;
 #endif
-
-class IAsyncIO2;
 
 class API_DSE_CORE IOContext : dse::util::pimpl<IOContext, IOContext_impl>
 {
 public:
-    friend IAsyncIO2;
-    enum StopMode {
-        Soft,
-        Hard
-    };
+    friend IOContext_impl;
     IOContext();
     void Run();
-    void Stop(StopMode mode = Soft);
+    void RunOne();
+    void Poll();
+    void PollOne();
+    void StopOne();
 };
 
 } // namespace dse::core
