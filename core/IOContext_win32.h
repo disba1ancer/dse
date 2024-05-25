@@ -6,6 +6,18 @@
 
 namespace dse::core {
 
+namespace iocontext_detail {
+
+extern thread_local swal::Event thrEvent;
+
+inline auto IocpDisabledEvent() -> HANDLE
+{
+    auto eventLong = reinterpret_cast<ULONG_PTR>(HANDLE(thrEvent));
+	return reinterpret_cast<HANDLE>(eventLong | 1);
+}
+
+}
+
 using CompleteCallback = void(*)(OVERLAPPED* ovl, DWORD transfered, DWORD error);
 
 class IOContext_win32 : public std::enable_shared_from_this<IOContext_win32>

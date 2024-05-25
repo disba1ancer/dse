@@ -42,6 +42,7 @@ private:
     auto CoRun() -> Task<void>;
 
     dse::core::ThreadPool tpool;
+    dse::core::IOContext ctx;
     Window window;
     FrameBuffer framebuffer;
     Image font;
@@ -128,30 +129,28 @@ void App::OnMouseMove(dse::core::WndEvtDt, int x, int y)
 
 Task<void> App::CoRun()
 {
-    struct LoadImage {
-        bool await_ready() { return false; }
-        bool await_suspend(std::coroutine_handle<> h)
-        {
-            handle = h;
-            Image::LoadByProvider(provider, {*this, fnTag<&LoadImage::Callback>});
-            return true;
-        }
-        void await_resume() {}
-        void Callback(Image&& img)
+    struct ImageCallback {
+        void operator()(Image&& img)
         {
             image = std::move(img);
-            handle.resume();
         }
-        dse::core::ITextureDataProvider* provider;
         Image& image;
-        std::coroutine_handle<> handle;
     };
-    BasicBitmapLoader loader(tpool, u8"assets/textures/font.bmp", false);
-    BasicBitmapLoader loader2(tpool, u8"assets/textures/wall_alpha.bmp", false);
-    co_await LoadImage{ &loader, font };
-    co_await LoadImage{ &loader2, wall };
+    BasicBitmapLoader loader(ctx, u8"assets/textures/font.bmp", false);
+    BasicBitmapLoader loader2(ctx, u8"assets/textures/wall_alpha.bmp", false);
+    {
+        ImageCallback cb{font};
+        Image::LoadByProvider(&loader, cb);
+        ctx.Run();
+    }
+    {
+        ImageCallback cb{wall};
+        Image::LoadByProvider(&loader2, cb);
+        ctx.Run();
+    }
     window.Show();
     framebuffer.Render(nullptr);
+    co_return;
 }
 
 int main(int argc, char* argv[])

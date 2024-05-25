@@ -16,12 +16,6 @@
 
 namespace dse::core {
 
-namespace threadpool_detail {
-
-extern thread_local swal::Event thrEvent;
-
-}
-
 class IAsyncIO : public OVERLAPPED {
 public:
 	virtual void Complete(DWORD transfered, DWORD error) = 0;

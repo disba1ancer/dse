@@ -2,6 +2,12 @@
 
 namespace dse::core {
 
+namespace iocontext_detail {
+
+thread_local swal::Event thrEvent{true, true};
+
+}
+
 IOContext_win32::IOContext_win32()
 {}
 

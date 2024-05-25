@@ -84,7 +84,7 @@ void TextureInstance::BeginLoad()
     );
 }
 
-void TextureInstance::LoadTexture()
+void TextureInstance::LoadTexture(core::Status status)
 {
     GLFormatMapEntry* format;
     if (textureParameters.format < std::size(glFormatMap)) {
@@ -98,7 +98,7 @@ void TextureInstance::LoadTexture()
     textureProvider->LoadData(textureData.data(), 0, {*this, util::fnTag<&TextureInstance::TextureReady>});
 }
 
-void TextureInstance::TextureReady()
+void TextureInstance::TextureReady(core::Status status)
 {
     readyStatus.store(UploadReady, std::memory_order_release);
 }

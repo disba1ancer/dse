@@ -16,7 +16,7 @@ namespace dse::core {
 File::File() : impl(new IOTarget_impl()) {
 }
 
-File::File(ThreadPool& pool, std::u8string_view filepath, OpenMode mode) : impl(new IOTarget_impl(pool, filepath, mode)) {
+File::File(IOContext& ctx, std::u8string_view filepath, OpenMode mode) : impl(new IOTarget_impl(ctx, filepath, mode)) {
 }
 
 bool File::IsValid() const {

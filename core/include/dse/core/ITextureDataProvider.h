@@ -1,6 +1,7 @@
 #ifndef DSE_CORE_ITEXTUREDATAPROVIDER_H
 #define DSE_CORE_ITEXTUREDATAPROVIDER_H
 
+#include "dse/core/status.h"
 #include <dse/util/functional.h>
 
 namespace dse::core {
@@ -50,10 +51,12 @@ struct ITextureDataProvider {
      * Pointer to a structure to be filled with texture parameters
      * @param onReady
      * Callback to be called after filling in parameters.
+     * @return
+     * Status of operation
      * @note
      * The thread on which the callback will be called is implementation-defined
      */
-    virtual void LoadParameters(TextureParameters* parameters, util::FunctionPtr<void()> onReady) = 0;
+    virtual auto LoadParameters(TextureParameters* parameters, util::FunctionPtr<void(Status)> onReady) -> Status = 0;
     /**
      * @brief LoadData
      * Loads texture data for single level of detail asynchronously
@@ -63,11 +66,17 @@ struct ITextureDataProvider {
      * The level of detail to be loaded
      * @param onReady
      * Callback to be called after filling in parameters.
+     * @return
+     * Status of operation
      * @note
      * The thread on which the callback will be called is implementation-defined.
      * Size of buffer to be filled defined by texture parameters.
      */
-    virtual void LoadData(void* recvBuffer, unsigned lod, util::FunctionPtr<void()> onReady) = 0;
+    virtual auto LoadData(void* recvBuffer, unsigned lod, util::FunctionPtr<void(Status)> onReady) -> Status = 0;
+    /**
+     * @brief GetVersion
+     * @return
+     */
     virtual auto GetVersion() -> unsigned = 0;
     ~ITextureDataProvider() = default;
 };

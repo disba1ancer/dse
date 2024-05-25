@@ -14,12 +14,6 @@
 
 namespace dse::core {
 
-namespace threadpool_detail {
-
-extern thread_local swal::Event thrEvent{true, true};
-
-}
-
 //thread_local std::weak_ptr<ThreadPool_win32> ThreadPool_win32::currentPool;
 //thread_local ThreadPool::Task* ThreadPool_win32::currentTask;
 thread_local ThreadPool_win32::ThreadData* ThreadPool_win32::thrDataPtr;

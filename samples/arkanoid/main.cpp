@@ -35,6 +35,7 @@ private:
     void OnMouseMove(dse::core::WndEvtDt, int x, int y);
     auto CoRun() -> Task<void>;
 
+    dse::core::IOContext ctx;
     dse::core::ThreadPool tpool;
     Window window;
     FrameBuffer framebuffer;
@@ -55,7 +56,9 @@ int App::Run()
     auto resizeCon = window.SubscribeResizeEvent(FunctionPtr{*this, fnTag<&App::OnResize>});
     auto mMoveCon = window.SubscribeMouseMoveEvent(FunctionPtr{*this, fnTag<&App::OnMouseMove>});
     auto task = CoRun();
-    tpool.Schedule(task);
+    task();
+    ctx.Run();
+//    tpool.Schedule(task);
     return tpool.Run(dse::core::PoolCaps::UI);
 }
 
@@ -87,7 +90,10 @@ void App::OnMouseMove(dse::core::WndEvtDt, int x, int y)
 Task<void> App::CoRun()
 {
     struct LoadImage {
-        bool await_ready() { return false; }
+        bool await_ready()
+        {
+            return false;
+        }
         bool await_suspend(std::coroutine_handle<> h)
         {
             handle = h;
@@ -104,10 +110,22 @@ Task<void> App::CoRun()
         Image& image;
         std::coroutine_handle<> handle;
     };
-    BasicBitmapLoader loader(tpool, u8"assets/textures/font.bmp", false);
-    co_await LoadImage{ &loader, font };
+    struct ImageCallback {
+        void operator()(Image&& img)
+        {
+            image = std::move(img);
+        }
+        Image& image;
+    };
+    BasicBitmapLoader loader(ctx, u8"assets/textures/font.bmp", false);
+    {
+        ImageCallback cb{font};
+        Image::LoadByProvider(&loader, cb);
+        ctx.Run();
+    }
     window.Show();
     framebuffer.Render(nullptr);
+    co_return;
 }
 
 int main(int argc, char* argv[])

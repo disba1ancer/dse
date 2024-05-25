@@ -16,7 +16,7 @@
 #include <dse/util/execution.h>
 #include "errors.h"
 #include "status.h"
-#include "ThreadPool.h"
+#include "IOContext.h"
 #include "detail/impexp.h"
 
 namespace dse::core {
@@ -137,7 +137,7 @@ private:
 	std::unique_ptr<IOTarget_impl, IOTargetDelete> impl;
 public:
 	File();
-	File(ThreadPool& pool, std::u8string_view filepath, OpenMode mode);
+	File(IOContext& ctx, std::u8string_view filepath, OpenMode mode);
 	//~File(); // may cause undefined behavior if called while async operation
 	auto Read(std::byte buf[], std::size_t size) -> impl::FileOpResult;
 	auto Write(const std::byte buf[], std::size_t size) -> impl::FileOpResult;

@@ -20,8 +20,8 @@ public:
     };
 private:
     void BeginLoad();
-    void LoadTexture();
-    void TextureReady();
+    void LoadTexture(core::Status status);
+    void TextureReady(core::Status status);
     void UploadTexture();
     core::ITextureDataProvider* textureProvider;
     glwrp::Texture2D texture;

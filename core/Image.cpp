@@ -43,28 +43,45 @@ void Image::LoadByProvider(ITextureDataProvider *provider, util::FunctionPtr<voi
         bool await_ready() { return false; }
         bool await_suspend(std::coroutine_handle<> handle)
         {
-            provider->LoadParameters(&params, {handle.address(), +[](void* addr){
-                std::coroutine_handle<>::from_address(addr)();
-            }});
+            this->handle = handle;
+            provider->LoadParameters(&result.result, {*this, util::fnTag<&LoadParameters::Callback>});
             return true;
         }
-        auto await_resume() -> ITextureDataProvider::TextureParameters
-        { return params; }
+        struct Result {
+            Status status;
+            ITextureDataProvider::TextureParameters result;
+        };
+
+        auto await_resume() -> Result
+        { return result; }
+        void Callback(Status status)
+        {
+            result.status = status;
+            handle();
+        }
         ITextureDataProvider* provider;
-        ITextureDataProvider::TextureParameters params;
+        std::coroutine_handle<> handle;
+        Result result;
     };
     struct LoadData {
         bool await_ready() { return false; }
         bool await_suspend(std::coroutine_handle<> handle)
         {
-            provider->LoadData(data, 0, {handle.address(), +[](void* addr){
-                std::coroutine_handle<>::from_address(addr)();
-            }});
+            this->handle = handle;
+            provider->LoadData(data, 0, {*this, util::fnTag<&LoadData::Callback>});
             return true;
         }
-        void await_resume() {}
+        auto await_resume() -> Status
+        { return status; }
+        void Callback(Status status)
+        {
+            this->status = status;
+            handle();
+        }
         ITextureDataProvider* provider;
         void* data;
+        std::coroutine_handle<> handle;
+        Status status;
     };
     struct Callback {
         bool await_ready() { return false; }
@@ -78,8 +95,12 @@ void Image::LoadByProvider(ITextureDataProvider *provider, util::FunctionPtr<voi
         Image& image;
     };
     auto coro = +[](ITextureDataProvider *provider, util::FunctionPtr<void (Image &&)> callback) -> util::Task<void> {
-        auto params = co_await LoadParameters{ provider };
         Image image;
+        auto [status, params] = co_await LoadParameters{ provider };
+        if (IsError(status)) {
+            callback(std::move(image));
+            co_return;
+        }
         image.linear = false;
         switch (params.format) {
         case ITextureDataProvider::BGRA8:
@@ -90,13 +111,13 @@ void Image::LoadByProvider(ITextureDataProvider *provider, util::FunctionPtr<voi
         case ITextureDataProvider::BGRX8sRGB:
             break;
         default:
-            co_await Callback{ callback, image };
+            callback(std::move(image));
             co_return;
         }
         image.size = { params.width, params.height };
         image.data.reset(::operator new(params.height * params.width * ImageManipulator::PixelSize));
-        co_await LoadData{ provider, image.data.get() };
-        co_await Callback{ callback, image };
+        status = co_await LoadData{ provider, image.data.get() };
+        callback(std::move(image));
     };
     util::StartDetached(coro(provider, callback));
 }

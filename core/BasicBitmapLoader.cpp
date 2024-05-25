@@ -69,7 +69,7 @@ namespace {
 
 namespace dse::core {
 
-BasicBitmapLoader::BasicBitmapLoader(ThreadPool& pool, const char8_t* file, bool linear) :
+BasicBitmapLoader::BasicBitmapLoader(IOContext& ctx, const char8_t* file, bool linear) :
     width(0),
     height(0),
     format(PixelFormat::Unsupported),
@@ -78,31 +78,34 @@ BasicBitmapLoader::BasicBitmapLoader(ThreadPool& pool, const char8_t* file, bool
     if (file == nullptr || file[0] == '\0') {
         return;
     }
-    bitmapFile = { pool, file, OpenMode::Read };
+    bitmapFile = { ctx, file, OpenMode::Read };
 }
 
-void BasicBitmapLoader::LoadParameters(TextureParameters* parameters, util::FunctionPtr<void ()> onReady)
+auto BasicBitmapLoader::LoadParameters(TextureParameters* parameters, util::FunctionPtr<void (Status)> onReady) -> Status
 {
     util::StartDetached(LoadParametersInternal(parameters, onReady));
+    return Make(status::Code::PendingOperation);
 }
 
-void BasicBitmapLoader::LoadData(void* recvBuffer, unsigned lod, util::FunctionPtr<void ()> onReady)
+auto BasicBitmapLoader::LoadData(void* recvBuffer, unsigned lod, util::FunctionPtr<void (Status)> onReady) -> Status
 {
     util::StartDetached(LoadDataInternal(recvBuffer, lod, onReady));
+    return Make(status::Code::PendingOperation);
 }
 
-unsigned BasicBitmapLoader::GetVersion()
+auto BasicBitmapLoader::GetVersion() -> unsigned
 {
     return 1;
 }
 
-util::Task<void> BasicBitmapLoader::LoadParametersInternal(TextureParameters* parameters, util::FunctionPtr<void ()> onReady)
+util::Task<void> BasicBitmapLoader::LoadParametersInternal(TextureParameters* parameters, util::FunctionPtr<void (Status)> onReady)
 {
     if (format == Unsupported) {
         std::uint_least16_t sign;
         co_await bitmapFile.ReadAsync(reinterpret_cast<std::byte*>(&sign), sizeof(sign));
         if ((sign & 0xFFFF) != 0x4D42) {
-            throw std::runtime_error("Bitmap signature error");
+            onReady(Make(status::Code::Unexpected));
+            co_return; // Bitmap signature error
         }
         BitmapMeta bitmapMeta;
         co_await bitmapFile.ReadAsync(reinterpret_cast<std::byte*>(&bitmapMeta), sizeof(bitmapMeta));
@@ -110,7 +113,8 @@ util::Task<void> BasicBitmapLoader::LoadParametersInternal(TextureParameters* pa
             throw std::runtime_error("Negative height not supported");
         }*/
         if (bitmapMeta.info.compression != BMCOMPR_RGB && bitmapMeta.info.compression != BMCOMPR_BITFIELDS) {
-            throw std::runtime_error("Compression in not supported");
+            onReady(Make(status::Code::Unexpected));
+            co_return; // Compression in not supported
         }
         if (bitmapMeta.info.bpp == 24) {
             format = BGR8;
@@ -149,11 +153,13 @@ util::Task<void> BasicBitmapLoader::LoadParametersInternal(TextureParameters* pa
                 ) {
                     format = RGBX8;
                 } else {
-                    throw std::runtime_error("Unsupported 32 bit format");
+                    onReady(Make(status::Code::Unexpected));
+                    co_return; // Unsupported 32 bit format
                 }
             }
         } else {
-            throw std::runtime_error("Only 24 and 32 BPP supported");
+            onReady(Make(status::Code::Unexpected));
+            co_return; // Only 24 and 32 BPP supported
         }
         format = PixelFormat(format + ToSRGB * !linear);
         width = bitmapMeta.info.width;
@@ -165,13 +171,13 @@ util::Task<void> BasicBitmapLoader::LoadParametersInternal(TextureParameters* pa
     parameters->depth = 1;
     parameters->lodCount = 1;
     parameters->format = format;
-    onReady();
+    onReady(Make(status::Code::Success));
 }
 
-util::Task<void> BasicBitmapLoader::LoadDataInternal(void* recvBuffer, unsigned lod, util::FunctionPtr<void ()> onReady)
+util::Task<void> BasicBitmapLoader::LoadDataInternal(void* recvBuffer, unsigned lod, util::FunctionPtr<void (Status)> onReady)
 {
     bitmapFile.Seek(pixelsPos);
-    auto bytePerPix = format == BGR8 ? 3 : 4;
+    int bytePerPix;
     switch (format) {
     case BGR8:
     case BGR8sRGB: bytePerPix = 3; break;
@@ -184,7 +190,8 @@ util::Task<void> BasicBitmapLoader::LoadDataInternal(void* recvBuffer, unsigned 
     case RGBA8sRGB:
     case RGBX8sRGB: bytePerPix = 4; break;
     default:
-        throw std::runtime_error("Internal error: invalid format");
+        onReady(Make(status::Code::Unexpected));
+        co_return; // Internal error: invalid format
     }
     size_t dataSize = bytePerPix * size_t(width) + 3;
     dataSize &= (dataSize ^ 3);
@@ -199,7 +206,7 @@ util::Task<void> BasicBitmapLoader::LoadDataInternal(void* recvBuffer, unsigned 
             co_await bitmapFile.ReadAsync(buffer, dataSize);
         }
     }
-    onReady();
+    onReady(Make(status::Code::Success));
 }
 
 } // namespace dse::scn
