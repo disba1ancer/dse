@@ -67,7 +67,7 @@ ATOM Window_win32::makeWindowClsID() {
 		WNDCLASSEX wcex;
 		wcex.cbSize = sizeof(WNDCLASSEX);
 		wcex.style = CS_OWNDC | CS_HREDRAW | CS_VREDRAW;
-		wcex.lpfnWndProc = swal::ClsWndProc<Window_win32, &Window_win32::wndProc, GWLP_THIS>;
+        wcex.lpfnWndProc = swal::ClsWndProc<Window_win32, &Window_win32::wndProc, GwlpThis>;
 		wcex.cbClsExtra = 0;
 		wcex.cbWndExtra = sizeof(LONG_PTR);
 		wcex.hInstance = hInst;

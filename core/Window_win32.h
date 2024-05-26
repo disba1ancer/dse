@@ -8,6 +8,7 @@
 #ifndef WINDOW_WIN32_H_
 #define WINDOW_WIN32_H_
 
+#include "dse/core/UILoop.h"
 #include <dse/core/win32.h>
 #include <swal/window.h>
 #include <map>
@@ -24,7 +25,9 @@ class Window_win32 {
 	notifier::notifier<Window::MouseMoveHandler> mouseMoveSubscribers;
 	swal::Window wnd;
 
-	static constexpr int GWLP_THIS = 0;
+    enum Constants {
+        GwlpThis = 0
+    };
 
 	//static LRESULT CALLBACK staticWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 	LRESULT wndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) noexcept;

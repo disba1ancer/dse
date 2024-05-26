@@ -44,8 +44,7 @@ void FrameBuffer_win32::OnPaint(WndEvtDt data)
             auto callback = std::exchange(exitCallback, nullptr);
             sync.clear(std::memory_order_release);
             if (callback) {
-                auto pool = core::ThreadPool::GetCurrentPool();
-                pool.Schedule(callback);
+                callback();
             }
         }
     });

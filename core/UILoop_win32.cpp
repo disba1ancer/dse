@@ -4,20 +4,24 @@ namespace dse::core {
 
 UILoop_win32::UILoop_win32() :
     msgWnd(WindowClass(), NULL, this)
-{
-
-}
+{}
 
 int UILoop_win32::Run()
 {
-    while (RunOne()) {}
+    while(Poll()) {
+        swal::winapi_call(::WaitMessage());
+    }
     return Result();
 }
 
 bool UILoop_win32::RunOne()
 {
-    ::WaitMessage();
-    return PollOneInt() != PollQuit;
+    auto r = PollOneInt();
+    if (r == PollEmpty) {
+        swal::winapi_call(::WaitMessage());
+        r = PollOneInt();
+    }
+    return r != PollQuit;
 }
 
 bool UILoop_win32::Poll()
@@ -46,7 +50,7 @@ void UILoop_win32::Post(util::FunctionPtr<void ()> cb)
 {
     auto wParam = reinterpret_cast<WPARAM>(reinterpret_cast<void*>(cb.GetFunction()));
     auto lParam = reinterpret_cast<LPARAM>(cb.GetObjectPtr());
-    PostMessage(msgWnd, PostMsg, wParam, lParam);
+    swal::winapi_call(PostMessage(msgWnd, PostMsg, wParam, lParam));
 }
 
 ATOM UILoop_win32::WindowClass()

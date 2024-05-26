@@ -1,3 +1,4 @@
+#include "dse/core/UILoop.h"
 #include <dse/core/BasicBitmapLoader.h>
 #include <dse/core/Image.h>
 #include <dse/util/coroutine.h>
@@ -36,14 +37,15 @@ private:
     auto CoRun() -> Task<void>;
 
     dse::core::IOContext ctx;
-    dse::core::ThreadPool tpool;
+    dse::core::UILoop uiLoop;
+//    dse::core::ThreadPool tpool;
     Window window;
     FrameBuffer framebuffer;
     Image font;
 };
 
 App::App(int argc, char *argv[]) :
-    tpool(2),
+//    tpool(2),
     framebuffer(window)
 {
     framebuffer.SetDrawCallback({*this, fnTag<&App::Draw>});
@@ -59,7 +61,7 @@ int App::Run()
     task();
     ctx.Run();
 //    tpool.Schedule(task);
-    return tpool.Run(dse::core::PoolCaps::UI);
+    return uiLoop.Run();
 }
 
 void App::Draw(void* buffer, dse::math::ivec2 size)
@@ -76,7 +78,7 @@ void App::AfterRender()
 
 void App::OnClose(dse::core::WndEvtDt)
 {
-    tpool.Stop();
+    uiLoop.Stop(0);
 }
 
 void App::OnResize(dse::core::WndEvtDt, int w, int h, WindowShowCommand)
@@ -100,32 +102,43 @@ Task<void> App::CoRun()
             Image::LoadByProvider(provider, {*this, fnTag<&LoadImage::Callback>});
             return true;
         }
-        void await_resume() {}
+        Image await_resume() {
+            return std::move(image);
+        }
         void Callback(Image&& img)
         {
             image = std::move(img);
             handle.resume();
         }
         dse::core::ITextureDataProvider* provider;
-        Image& image;
+        Image image;
         std::coroutine_handle<> handle;
     };
-    struct ImageCallback {
-        void operator()(Image&& img)
-        {
-            image = std::move(img);
-        }
-        Image& image;
-    };
     BasicBitmapLoader loader(ctx, u8"assets/textures/font.bmp", false);
-    {
-        ImageCallback cb{font};
-        Image::LoadByProvider(&loader, cb);
-        ctx.Run();
-    }
+    font = co_await LoadImage{&loader};
+    struct UITransfer {
+        bool await_ready()
+        {
+            return false;
+        }
+        bool await_suspend(std::coroutine_handle<> h)
+        {
+            handle = h;
+            uiLoop.Post({*this, fnTag<&UITransfer::Callback>});
+            return true;
+        }
+        void await_resume() {
+        }
+        void Callback()
+        {
+            handle.resume();
+        }
+        dse::core::UILoop& uiLoop;
+        std::coroutine_handle<> handle;
+    };
+    co_await UITransfer { uiLoop };
     window.Show();
     framebuffer.Render(nullptr);
-    co_return;
 }
 
 int main(int argc, char* argv[])
