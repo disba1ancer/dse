@@ -20,12 +20,6 @@ namespace dse::core {
 typedef class ThreadPool_win32 ThreadPool_impl;
 #endif
 
-//enum class ThreadType {
-//	Normal,
-//	Main,
-//	UI = Main
-//};
-
 enum class PoolCaps {
 	OnlyWorkers = 0,
 	IO = 1,
@@ -34,37 +28,28 @@ enum class PoolCaps {
 
 class IAsyncIO;
 
-class API_DSE_CORE ThreadPool : public util::pimpl<ThreadPool, ThreadPool_impl> {
+class API_DSE_CORE ThreadPool {
 public:
 	typedef std::size_t TaskId;
 	typedef std::function<void()> TaskHandler;
 	typedef std::function<void()> FinishHandler;
+    friend ThreadPool_impl;
 	friend IAsyncIO;
 
 	using Task = util::FunctionPtr<void()>;
-//	class Task {
-//	public:
-//		friend ThreadPool_impl;
-//		Task(TaskHandler&& taskHandler);
-//		void then(FinishHandler&& fHandler);
-//		void reset(TaskHandler&& taskHandler);
-//	private:
-//		TaskHandler taskHandler;
-//		FinishHandler fHandler;
-//	};
 public:
 	ThreadPool(unsigned int concurrency = std::thread::hardware_concurrency());
-private:
-	ThreadPool(const std::shared_ptr<ThreadPool_impl>& ptr);
+    ~ThreadPool();
 public:
-	ThreadPool(std::nullptr_t) noexcept;
 	void Schedule(const Task& task);
 	int Run(PoolCaps caps);
 	[[deprecated]]
 	void Join();
 	void Stop();
 	static const Task &GetCurrentTask();
-	static ThreadPool GetCurrentPool();
+	static ThreadPool* GetCurrentPool();
+private:
+    util::impl_ptr<ThreadPool_impl> impl;
 };
 
 } /* namespace dse::core */

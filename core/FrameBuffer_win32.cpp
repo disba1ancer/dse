@@ -78,7 +78,7 @@ void FrameBuffer_win32::OnPaint(WndEvtDt data)
     auto yBeg = std::clamp(int(dc->rcPaint.top), 0, size.y());
     auto xSiz = std::clamp(int(dc->rcPaint.right), 0, size.x()) - xBeg;
     auto ySiz = std::clamp(int(dc->rcPaint.bottom), 0, size.y()) - yBeg;
-    swal::winapi_call(::SetDIBitsToDevice(dc, xBeg, yBeg, xSiz, ySiz, xBeg, 0, yBeg, ySiz, frameBuffer.Data(), &bmi, 0));
+    swal::winapi_call(::StretchDIBits(dc, xBeg, yBeg, xSiz, ySiz, xBeg, yBeg, xSiz, ySiz, frameBuffer.Data(), &bmi, 0, SRCCOPY));
 }
 
 void FrameBuffer_win32::OnResize(WndEvtDt, int w, int h, WindowShowCommand)

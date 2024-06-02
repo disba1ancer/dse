@@ -43,11 +43,6 @@ enum class StPoint {
 	END,
 };
 
-class API_DSE_CORE IOTargetDelete {
-public:
-	void operator()(IOTarget_impl* obj);
-};
-
 class API_DSE_CORE File;
 
 namespace impl {
@@ -133,12 +128,12 @@ public:
 	using FilePos = std::uint_least64_t;
 	using FileOff = std::int_least64_t;
 	using Callback = util::FunctionPtr<void(std::size_t, Status)>;
-private:
-	std::unique_ptr<IOTarget_impl, IOTargetDelete> impl;
 public:
 	File();
 	File(IOContext& ctx, std::u8string_view filepath, OpenMode mode);
-	//~File(); // may cause undefined behavior if called while async operation
+    File(File&& oth);
+    File& operator=(File&& oth);
+	~File(); // may cause undefined behavior if called while async operation
 	auto Read(std::byte buf[], std::size_t size) -> impl::FileOpResult;
 	auto Write(const std::byte buf[], std::size_t size) -> impl::FileOpResult;
 	auto Resize() -> Status;
@@ -159,6 +154,8 @@ public:
 	auto Seek(FileOff offset, StPoint rel) -> Status;
     auto GetStatus() const -> Status;
 	auto Tell() const -> FilePos;
+private:
+    util::impl_ptr<IOTarget_impl> impl;
 };
 
 template <impl::FileOp op, typename R>

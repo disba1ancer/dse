@@ -18,7 +18,7 @@ namespace dse::core {
 //thread_local ThreadPool::Task* ThreadPool_win32::currentTask;
 thread_local ThreadPool_win32::ThreadData* ThreadPool_win32::thrDataPtr;
 
-ThreadPool_win32::ThreadPool_win32(unsigned int concurrency) /*: threadsData(concurrency)*/ {
+ThreadPool_win32::ThreadPool_win32(ThreadPool* pub, unsigned int concurrency) /*: threadsData(concurrency)*/ {
 	for (std::size_t i = 0; i < concurrency; ++i) {
 		threadsData.emplace_back(ThreadData{});
 	}
@@ -26,7 +26,7 @@ ThreadPool_win32::ThreadPool_win32(unsigned int concurrency) /*: threadsData(con
 		throw std::runtime_error("Unexpected concurrency value");
 	}
 	for (auto& thrData : threadsData) {
-		thrData.currentPool = this;
+		thrData.currentPool = pub;
 	}
 }
 
@@ -51,7 +51,7 @@ void ThreadPool_win32::Schedule(const Task& task) {
 	}
 }
 
-int ThreadPool_win32::Run(PoolCaps caps) {
+int ThreadPool_win32::Run(ThreadPool* pub, PoolCaps caps) {
 	this->caps = caps;
 	util::scope_exit f([this]{
 		thrDataPtr = nullptr;
@@ -64,10 +64,10 @@ int ThreadPool_win32::Run(PoolCaps caps) {
 	running.store(true, std::memory_order_relaxed);
 	mainThread = GetCurrentThreadId();
 	for (std::size_t i = 1; i < threadsData.size(); ++i) {
-		threadsData[i].thr = std::thread(&ThreadPool_win32::ThrEntry, this, i);
+		threadsData[i].thr = std::thread(&ThreadPool_win32::ThrEntry, pub, i);
 	}
 
-	threadsData[0].currentPool = this;
+	threadsData[0].currentPool = pub;
 	thrDataPtr = &(threadsData[0]);
 	Join(true);
 
@@ -84,8 +84,8 @@ void ThreadPool_win32::Stop() {
 	}
 }
 
-std::shared_ptr<ThreadPool_win32> ThreadPool_win32::GetCurrentPool() {
-	auto t = thrDataPtr->currentPool->shared_from_this();
+ThreadPool* ThreadPool_win32::GetCurrentPool() {
+	auto t = thrDataPtr->currentPool;
 	return t;
 }
 
@@ -118,11 +118,12 @@ auto ThreadPool_win32::GetCurrentTask() -> const Task& {
 	return thrDataPtr->currentTask;
 }
 
-void ThreadPool_win32::ThrEntry(size_t dataIdx) {
+void ThreadPool_win32::ThrEntry(ThreadPool* pub, size_t dataIdx) {
+    auto& impl = pub->impl;
 	try {
-		threadsData[dataIdx].currentPool = this;
-		thrDataPtr = &(threadsData[dataIdx]);
-		Join();
+		impl->threadsData[dataIdx].currentPool = pub;
+		thrDataPtr = &(impl->threadsData[dataIdx]);
+		impl->Join();
 	} catch (std::exception& e) {
 		std::cerr << "Error in thread " << dataIdx << ": " << e.what();
 		std::terminate();
@@ -231,8 +232,8 @@ void ThreadPool_win32::HandleSystem(ThreadData& thrData) {
 	HandleIO(thrData);
 }
 
-std::shared_ptr<ThreadPool_win32> IAsyncIO::GetImplFromPool(ThreadPool& pool) {
-	return pool.GetImpl();
+ThreadPool_win32* IAsyncIO::GetImplFromPool(ThreadPool& pool) {
+	return pool.impl;
 }
 
 } // namespace dse::core

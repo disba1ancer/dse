@@ -10,16 +10,19 @@ namespace dse::core {
 using IOContext_impl = class IOContext_win32;
 #endif
 
-class API_DSE_CORE IOContext : dse::util::pimpl<IOContext, IOContext_impl>
+class API_DSE_CORE IOContext
 {
 public:
     friend IOContext_impl;
     IOContext();
+    ~IOContext();
     void Run();
     void RunOne();
     void Poll();
     void PollOne();
     void StopOne();
+private:
+    util::impl_ptr<IOContext_impl> impl;
 };
 
 } // namespace dse::core

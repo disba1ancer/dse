@@ -4,32 +4,35 @@
 namespace dse::core {
 
 IOContext::IOContext() :
-    pimpl(std::make_shared<IOContext_impl>())
+    impl()
+{}
+
+IOContext::~IOContext()
 {}
 
 void IOContext::Run()
 {
-    GetImpl()->Run();
+    impl->Run();
 }
 
 void IOContext::RunOne()
 {
-    GetImpl()->RunOne();
+    impl->RunOne();
 }
 
 void IOContext::Poll()
 {
-    GetImpl()->Poll();
+    impl->Poll();
 }
 
 void IOContext::PollOne()
 {
-    GetImpl()->PollOne();
+    impl->PollOne();
 }
 
 void IOContext::StopOne()
 {
-    GetImpl()->StopOne();
+    impl->StopOne();
 }
 
 } // namespace dse::core

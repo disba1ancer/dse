@@ -307,7 +307,7 @@ void RenderOpenGL31_impl::OnPaint(core::WndEvtDt) {
     swal::Wnd(wnd->GetSysData().hWnd).ValidateRect();
     if (requested.load(std::memory_order_acquire)) {
         auto pool = core::ThreadPool::GetCurrentPool();
-        pool.Schedule(renderCallback);
+        pool->Schedule(renderCallback);
         requested.store(false, std::memory_order_release);
     }
 }

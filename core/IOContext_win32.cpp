@@ -59,9 +59,9 @@ bool IOContext_win32::Unlock()
     return activeOps.fetch_sub(1, std::memory_order_acquire) == 1;
 }
 
-auto IOContext_win32::GetImplFromObj(IOContext& context) -> std::shared_ptr<IOContext_win32>
+auto IOContext_win32::GetImplFromObj(IOContext& context) -> IOContext_win32*
 {
-    return context.GetImpl();
+    return context.impl;
 }
 
 void IOContext_win32::Post(CompleteCallback cb, OVERLAPPED *ovl, DWORD transfered)

@@ -20,10 +20,10 @@ class IAsyncIO : public OVERLAPPED {
 public:
 	virtual void Complete(DWORD transfered, DWORD error) = 0;
 protected:
-	static std::shared_ptr<ThreadPool_win32> GetImplFromPool(ThreadPool& pool);
+	static ThreadPool_win32* GetImplFromPool(ThreadPool& pool);
 };
 
-class ThreadPool_win32 : public std::enable_shared_from_this<ThreadPool_win32> {
+class ThreadPool_win32 {
 public:
 	typedef ThreadPool::Task Task;
 	typedef ThreadPool::TaskId TaskId;
@@ -35,7 +35,7 @@ private:
 //static thread_local Task* currentTask;
 	static thread_local struct ThreadData {
 		std::thread thr;
-		ThreadPool_win32* currentPool = nullptr;
+		ThreadPool* currentPool = nullptr;
 		Task currentTask = nullptr;
 		struct slmover : util::spinlock {
 			slmover() noexcept = default;
@@ -59,18 +59,18 @@ private:
 	std::vector<ThreadData> threadsData;
 	swal::IOCompletionPort iocp;
 public:
-	ThreadPool_win32(unsigned int concurrency);
+	ThreadPool_win32(ThreadPool* pub, unsigned int concurrency);
 	~ThreadPool_win32();
 	void Schedule(const Task& task);
-	int Run(PoolCaps caps);
+	int Run(ThreadPool* pub, PoolCaps caps);
 	void Join();
 	void Stop();
 	static const Task& GetCurrentTask();
-	static std::shared_ptr<ThreadPool_win32> GetCurrentPool();
+	static ThreadPool* GetCurrentPool();
 	void IOCPAttach(swal::Handle& handle);
 private:
 	void Join(bool isMain);
-	void ThrEntry(std::size_t dataIdx);
+	static void ThrEntry(ThreadPool* pub, std::size_t dataIdx);
 	void HandleMessages();
 	void TrySteal(ThreadData& thrData);
 	Task Pop(ThreadData& thrData);

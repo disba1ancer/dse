@@ -13,60 +13,40 @@
 
 namespace dse::core {
 
-ThreadPool::ThreadPool(unsigned int concurrency) : pimpl(std::make_shared<ThreadPool_impl>(concurrency)) {
+ThreadPool::ThreadPool(unsigned int concurrency) : impl(this, concurrency)
+{}
+
+ThreadPool::~ThreadPool()
+{}
+
+void ThreadPool::Schedule(const Task& task)
+{
+	impl->Schedule(task);
 }
 
-ThreadPool::ThreadPool(const std::shared_ptr<ThreadPool_impl> &ptr) : pimpl(ptr) {
+int ThreadPool::Run(PoolCaps caps)
+{
+	return impl->Run(this, caps);
 }
 
-ThreadPool::ThreadPool(std::nullptr_t) noexcept : pimpl() {
+void  ThreadPool::Join()
+{
+	impl->Join();
 }
 
-/*ThreadPool::~ThreadPool() {
-}*/
-
-void ThreadPool::Schedule(const Task& task) {
-	GetImpl()->Schedule(task);
+void ThreadPool::Stop()
+{
+	impl->Stop();
 }
 
-int ThreadPool::Run(PoolCaps caps) {
-	return GetImpl()->Run(caps);
-}
-
-void  ThreadPool::Join() {
-	GetImpl()->Join();
-}
-
-void ThreadPool::Stop() {
-	GetImpl()->Stop();
-}
-
-auto ThreadPool::GetCurrentTask() -> const Task& {
+auto ThreadPool::GetCurrentTask() -> const Task&
+{
 	return ThreadPool_impl::GetCurrentTask();
 }
 
-ThreadPool ThreadPool::GetCurrentPool()
+ThreadPool* ThreadPool::GetCurrentPool()
 {
 	return ThreadPool_impl::GetCurrentPool();
 }
-
-//ThreadPool::Task::Task(TaskHandler&& taskHandler) :
-//	taskHandler(std::move(taskHandler))
-//{}
-
-///*void ThreadPool::Task::cancel() {
-//	std::scoped_lock lck(mtx);
-//	state = TaskState::Canceled;
-//}*/
-
-//void ThreadPool::Task::then(FinishHandler &&fHandler) {
-//	this->fHandler = std::move(fHandler);
-//}
-
-//void ThreadPool::Task::reset(ThreadPool::TaskHandler &&taskHandler)
-//{
-//	fHandler = nullptr;
-//	this->taskHandler = std::move(taskHandler);
-//}
 
 } /* namespace dse::core */

@@ -20,7 +20,7 @@ inline auto IocpDisabledEvent() -> HANDLE
 
 using CompleteCallback = void(*)(OVERLAPPED* ovl, DWORD transfered, DWORD error);
 
-class IOContext_win32 : public std::enable_shared_from_this<IOContext_win32>
+class IOContext_win32
 {
 public:
     IOContext_win32();
@@ -32,7 +32,7 @@ public:
     void IOCPAttach(swal::Handle& handle, CompleteCallback cb);
     void Lock();
     bool Unlock();
-    static auto GetImplFromObj(IOContext& context) -> std::shared_ptr<IOContext_win32>;
+    static auto GetImplFromObj(IOContext& context) -> IOContext_win32*;
 private:
     enum PollResult {
         Enqueue,

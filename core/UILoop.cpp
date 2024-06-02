@@ -4,42 +4,46 @@
 namespace dse::core {
 
 UILoop::UILoop() :
-    pimpl(std::make_shared<UILoop_impl>())
+    impl()
 {}
+
+UILoop::UILoop(UILoop &&oth) = default;
+UILoop::~UILoop() = default;
+auto UILoop::operator=(UILoop &&oth) -> UILoop& = default;
 
 int UILoop::Run()
 {
-    return GetImpl()->Run();
+    return impl->Run();
 }
 
 bool UILoop::RunOne()
 {
-    return GetImpl()->RunOne();
+    return impl->RunOne();
 }
 
 bool UILoop::Poll()
 {
-    return GetImpl()->Poll();
+    return impl->Poll();
 }
 
 bool UILoop::PollOne()
 {
-    return GetImpl()->PollOne();
+    return impl->PollOne();
 }
 
 int UILoop::Result()
 {
-    return GetImpl()->Result();
+    return impl->Result();
 }
 
 void UILoop::Stop(int result)
 {
-    GetImpl()->Stop(result);
+    impl->Stop(result);
 }
 
 void UILoop::Post(util::FunctionPtr<void ()> cb)
 {
-    GetImpl()->Post(cb);
+    impl->Post(cb);
 }
 
 } // namespace dse::core

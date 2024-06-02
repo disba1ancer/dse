@@ -11,10 +11,13 @@ namespace dse::core {
 using UILoop_impl = class UILoop_win32;
 #endif
 
-class API_DSE_CORE UILoop : dse::util::pimpl<UILoop, UILoop_impl>
+class API_DSE_CORE UILoop
 {
 public:
     UILoop();
+    UILoop(UILoop&& oth);
+    ~UILoop();
+    UILoop& operator=(UILoop&& oth);
     int Run();
     bool RunOne();
     bool Poll();
@@ -22,6 +25,8 @@ public:
     int Result();
     void Stop(int result);
     void Post(util::FunctionPtr<void()> cb);
+private:
+    dse::util::impl_ptr<UILoop_impl> impl;
 };
 
 } // namespace dse::core

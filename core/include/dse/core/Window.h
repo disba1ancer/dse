@@ -14,6 +14,7 @@
 #include "KeyboardKeyState.h"
 #include <dse/math/vec.h>
 #include "detail/impexp.h"
+#include "dse/util/pimpl.h"
 
 namespace dse::core {
 
@@ -35,7 +36,6 @@ typedef const WindowEventData& WndEvtDt;
 typedef const PaintEventData& PntEvtDt;
 
 class API_DSE_CORE Window {
-	std::unique_ptr<Window_impl> impl;
 public:
 	Window();
 	~Window();
@@ -59,6 +59,8 @@ public:
 	auto SubscribePaintEvent(std::function<PaintHandler>&& c) -> notifier::connection<PaintHandler>;
 	typedef void(MouseMoveHandler)(WndEvtDt, int x, int y);
 	auto SubscribeMouseMoveEvent(std::function<MouseMoveHandler>&& c) -> notifier::connection<MouseMoveHandler>;
+private:
+    util::impl_ptr<Window_impl> impl;
 };
 
 } /* namespace dse::core */
