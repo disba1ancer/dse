@@ -10,11 +10,12 @@
 #include <dse/core/WindowEventData_win32.h>
 #include <dse/core/PaintEventData_win32.h>
 #include "errors_win32.h"
+#include "UILoop_win32.h"
 
 namespace dse::core {
 
-Window_win32::Window_win32() try :
-    wnd(makeWindowClsID(), static_cast<HINSTANCE>(GetModuleHandle(0)), this)
+Window_win32::Window_win32(UILoop& loop) try :
+    wnd(MakeWindow(loop, this))
 {} catch (std::system_error& e) {
     if (e.code().category() == swal::win32_category::instance()) {
         throw std::system_error(core::win32_errc(e.code().value()));
@@ -194,7 +195,26 @@ const WindowData& Window_win32::getSysData() {
 
 LRESULT Window_win32::onMouseMove(WindowEventData_win32 &d) {
 	mouseMoveSubscribers.notify(d, GET_X_LPARAM(d.lParam), GET_Y_LPARAM(d.lParam));
-	return 0;
+    return 0;
+}
+
+auto Window_win32::MakeWindow(UILoop& loop, Window_win32 *window) -> swal::Window
+{
+    swal::Window wnd;
+    std::exception_ptr eptr;
+    auto limpl = UILoop_impl::GetImpl(loop);
+    limpl->Send([&eptr, &wnd, window] {
+        try {
+            wnd = swal::Window(makeWindowClsID(), static_cast<HINSTANCE>(GetModuleHandle(0)), window);
+            return 0;
+        } catch(...) {
+            eptr = std::current_exception();
+        }
+    });
+    if (eptr) {
+        std::rethrow_exception(eptr);
+    }
+    return wnd;
 }
 
 notifier::connection<Window::MouseMoveHandler> Window_win32::subscribeMouseMoveEvent(

@@ -38,8 +38,9 @@ class Window_win32 {
 	LRESULT onKeyDown(WindowEventData_win32& d);
 	LRESULT onKeyUp(WindowEventData_win32& d);
 	LRESULT onMouseMove(WindowEventData_win32& d);
+    static auto MakeWindow(UILoop& loop, Window_win32* window) -> swal::Window;
 public:
-	Window_win32();
+	Window_win32(UILoop& loop);
 	~Window_win32();
 	Window_win32(const Window_win32 &other) = delete;
 	Window_win32(Window_win32 &&other) = delete;

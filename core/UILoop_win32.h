@@ -1,6 +1,7 @@
 #ifndef DSE_CORE_UILOOP_WIN32_H
 #define DSE_CORE_UILOOP_WIN32_H
 
+#include "dse/core/UILoop.h"
 #include <swal/window.h>
 #include <dse/util/functional.h>
 
@@ -17,6 +18,8 @@ public:
     int Result();
     void Stop(int result = 0);
     void Post(util::FunctionPtr<void()> cb);
+    int Send(util::FunctionPtr<int()> cb);
+    static auto GetImpl(UILoop& pub) -> UILoop_win32*;
 private:
     static ATOM WindowClass();
     LRESULT WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) noexcept;
@@ -25,7 +28,8 @@ private:
         PollQuit = 0,
         PollEmpty,
         PollNormal,
-        PostMsg = WM_USER + 10
+        PostMsg = WM_USER + 16,
+        SendMsg
     };
     auto PollOneInt() -> Constants;
 

@@ -14,7 +14,8 @@
 #include "KeyboardKeyState.h"
 #include <dse/math/vec.h>
 #include "detail/impexp.h"
-#include "dse/util/pimpl.h"
+#include <dse/core/UILoop.h>
+#include <dse/util/pimpl.h>
 
 namespace dse::core {
 
@@ -37,7 +38,7 @@ typedef const PaintEventData& PntEvtDt;
 
 class API_DSE_CORE Window {
 public:
-	Window();
+	Window(UILoop& loop);
 	~Window();
 	Window(const Window &other) = delete;
 	Window(Window &&other) = delete;

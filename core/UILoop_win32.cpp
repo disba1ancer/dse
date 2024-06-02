@@ -53,6 +53,18 @@ void UILoop_win32::Post(util::FunctionPtr<void ()> cb)
     swal::winapi_call(PostMessage(msgWnd, PostMsg, wParam, lParam));
 }
 
+int UILoop_win32::Send(util::FunctionPtr<int ()> cb)
+{
+    auto wParam = reinterpret_cast<WPARAM>(reinterpret_cast<void*>(cb.GetFunction()));
+    auto lParam = reinterpret_cast<LPARAM>(cb.GetObjectPtr());
+    return SendMessage(msgWnd, SendMsg, wParam, lParam);
+}
+
+auto UILoop_win32::GetImpl(UILoop &pub) -> UILoop_win32*
+{
+    return pub.impl;
+}
+
 ATOM UILoop_win32::WindowClass()
 {
     static ATOM clsID = []{
@@ -84,6 +96,11 @@ LRESULT UILoop_win32::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
         auto obj = reinterpret_cast<void*>(lParam);
         func(obj);
         break;
+    }
+    case SendMsg: {
+        auto func = reinterpret_cast<int(*)(void*)>(reinterpret_cast<void*>(wParam));
+        auto obj = reinterpret_cast<void*>(lParam);
+        return func(obj);
     }
     default:
         return ::DefWindowProc(hWnd, message, wParam, lParam);

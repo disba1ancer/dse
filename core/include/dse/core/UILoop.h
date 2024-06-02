@@ -13,6 +13,7 @@ using UILoop_impl = class UILoop_win32;
 
 class API_DSE_CORE UILoop
 {
+    friend UILoop_impl;
 public:
     UILoop();
     UILoop(UILoop&& oth);

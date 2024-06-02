@@ -46,6 +46,7 @@ private:
 
 App::App(int argc, char *argv[]) :
 //    tpool(2),
+    window(uiLoop),
     framebuffer(window)
 {
     framebuffer.SetDrawCallback({*this, fnTag<&App::Draw>});
