@@ -4,6 +4,7 @@
 #include <dse/core/WindowEventData_win32.h>
 #include <dse/util/scope_exit.h>
 #include <dse/core/ThreadPool.h>
+#include <iostream>
 
 namespace dse::core {
 
@@ -74,11 +75,18 @@ void FrameBuffer_win32::OnPaint(WndEvtDt data)
     bmih.biClrUsed = 0;
     bmih.biClrImportant = 0;
 
+    std::cout << "{"
+    << dc->rcPaint.left << ", "
+    << dc->rcPaint.top << ", "
+    << dc->rcPaint.right << ", "
+    << dc->rcPaint.bottom
+    << "}" << std::endl;
+
     auto xBeg = std::clamp(int(dc->rcPaint.left), 0, size.x());
     auto yBeg = std::clamp(int(dc->rcPaint.top), 0, size.y());
     auto xSiz = std::clamp(int(dc->rcPaint.right), 0, size.x()) - xBeg;
     auto ySiz = std::clamp(int(dc->rcPaint.bottom), 0, size.y()) - yBeg;
-    swal::winapi_call(::StretchDIBits(dc, xBeg, yBeg, xSiz, ySiz, xBeg, yBeg, xSiz, ySiz, frameBuffer.Data(), &bmi, 0, SRCCOPY));
+    swal::winapi_call(::SetDIBitsToDevice(dc, xBeg, yBeg, xSiz, ySiz, xBeg, 0, yBeg, ySiz, frameBuffer.Data(), &bmi, 0));
 }
 
 void FrameBuffer_win32::OnResize(WndEvtDt, int w, int h, WindowShowCommand)
