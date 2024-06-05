@@ -13,13 +13,21 @@ struct impl_ptr {
     impl_ptr(Args&& ... args) :
         impl(std::make_unique<Impl>(std::forward<Args>(args)...))
     {}
-    Impl* operator->()
+    auto get() -> Impl*
     {
-        return *this;
+        return impl.get();
+    }
+    auto get() const -> const Impl*
+    {
+        return impl.get();
+    }
+    auto operator->() -> Impl*
+    {
+        return get();
     }
     auto operator->() const -> const Impl*
     {
-        return *this;
+        return get();
     }
     auto operator*() -> Impl&
     {
@@ -31,11 +39,11 @@ struct impl_ptr {
     }
     operator Impl*()
     {
-        return impl.get();
+        return get();
     }
     operator const Impl*() const
     {
-        return impl.get();
+        return get();
     }
 private:
     std::unique_ptr<Impl> impl;
