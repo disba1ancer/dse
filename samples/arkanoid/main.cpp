@@ -69,11 +69,10 @@ int App::Run()
 void App::Draw(void* buffer, dse::math::ivec2 size)
 {
     ImageManipulator manip(buffer, size, false);
-    manip.BlitImage({0, 0}, size, bg, {0, 0});
-//    manip.Fill({16, 16}, {128, 128}, 0x00000000);
+    manip.Fill({16, 16}, {128, 128}, 0x00000000);
 //    manip.DrawRectFilled({0, 0}, size, {.0f, .0, 1.0, 1.f});
 //    manip.BlendImage({256, 256}, wall.Size(), wall, {0, 0});
-//    manip.DrawText({0, 0}, wSize, u8"Hello, world!", font, {8, 12});
+    manip.DrawText({0, 0}, wSize, u8"Hello, world!", font, {8, 12});
 }
 
 void App::AfterRender()
@@ -118,9 +117,7 @@ Task<void> App::CoRun()
         std::coroutine_handle<> handle;
     };
     BasicBitmapLoader loader(ctx, u8"assets/textures/font.bmp", false);
-    BasicBitmapLoader loader2(ctx, u8"assets/textures/bg.bmp", false);
     font = co_await LoadImage{&loader};
-    bg = co_await LoadImage{&loader2};
     struct UITransfer {
         bool await_ready()
         {
