@@ -1,4 +1,4 @@
-#include "dse/core/UILoop.h"
+#include "dse/core/SystemLoop.h"
 #include <dse/core/BasicBitmapLoader.h>
 #include <dse/core/Image.h>
 #include <dse/util/coroutine.h>
@@ -37,7 +37,7 @@ private:
     auto CoRun() -> Task<void>;
 
     dse::core::IOContext ctx;
-    dse::core::UILoop uiLoop;
+    dse::core::SystemLoop uiLoop;
 //    dse::core::ThreadPool tpool;
     Window window;
     FrameBuffer framebuffer;
@@ -135,7 +135,7 @@ Task<void> App::CoRun()
         {
             handle.resume();
         }
-        dse::core::UILoop& uiLoop;
+        dse::core::SystemLoop& uiLoop;
         std::coroutine_handle<> handle;
     };
     co_await UITransfer { uiLoop };

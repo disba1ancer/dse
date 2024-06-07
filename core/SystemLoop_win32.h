@@ -1,16 +1,16 @@
 #ifndef DSE_CORE_UILOOP_WIN32_H
 #define DSE_CORE_UILOOP_WIN32_H
 
-#include "dse/core/UILoop.h"
+#include "dse/core/SystemLoop.h"
 #include <swal/window.h>
 #include <dse/util/functional.h>
 
 namespace dse::core {
 
-class UILoop_win32
+class SystemLoop_win32
 {
 public:
-    UILoop_win32();
+    SystemLoop_win32();
     int Run();
     bool RunOne();
     bool Poll();
@@ -19,7 +19,7 @@ public:
     void Stop(int result = 0);
     void Post(util::FunctionPtr<void()> cb);
     int Send(util::FunctionPtr<int()> cb);
-    static auto GetImpl(UILoop& pub) -> UILoop_win32*;
+    static auto GetImpl(SystemLoop& pub) -> SystemLoop_win32*;
 private:
     static ATOM WindowClass();
     LRESULT WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) noexcept;

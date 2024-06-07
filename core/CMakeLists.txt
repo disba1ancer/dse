@@ -28,7 +28,7 @@ target_sources(core PUBLIC
     include/dse/core/Scene.h
     include/dse/core/Sphere.h
     include/dse/core/ThreadPool.h
-    include/dse/core/UILoop.h
+    include/dse/core/SystemLoop.h
     include/dse/core/Window.h
     include/dse/core/WindowShowCommand.h
     include/dse/core/detail/impexp.h
@@ -55,7 +55,7 @@ target_sources(core PRIVATE
     Scene.cpp
     Sphere.cpp
     ThreadPool.cpp
-    UILoop.cpp
+    SystemLoop.cpp
     Window.cpp
     errors.cpp
     mcursor.cpp
@@ -82,8 +82,8 @@ target_sources(core PRIVATE
     IOContext_win32.h
     ThreadPool_win32.cpp
     ThreadPool_win32.h
-    UILoop_win32.cpp
-    UILoop_win32.h
+    SystemLoop_win32.cpp
+    SystemLoop_win32.h
     Window_win32.cpp
     Window_win32.h
     errors_win32.cpp

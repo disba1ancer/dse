@@ -10,11 +10,11 @@
 #include <dse/core/WindowEventData_win32.h>
 #include <dse/core/PaintEventData_win32.h>
 #include "errors_win32.h"
-#include "UILoop_win32.h"
+#include "SystemLoop_win32.h"
 
 namespace dse::core {
 
-Window_win32::Window_win32(UILoop& loop) try :
+Window_win32::Window_win32(SystemLoop& loop) try :
     wnd(MakeWindow(loop, this))
 {} catch (std::system_error& e) {
     if (e.code().category() == swal::win32_category::instance()) {
@@ -198,11 +198,11 @@ LRESULT Window_win32::onMouseMove(WindowEventData_win32 &d) {
     return 0;
 }
 
-auto Window_win32::MakeWindow(UILoop& loop, Window_win32 *window) -> swal::Window
+auto Window_win32::MakeWindow(SystemLoop& loop, Window_win32 *window) -> swal::Window
 {
     swal::Window wnd;
     std::exception_ptr eptr;
-    auto limpl = UILoop_impl::GetImpl(loop);
+    auto limpl = SystemLoop_impl::GetImpl(loop);
     limpl->Send([&eptr, &wnd, window] {
         try {
             wnd = swal::Window(makeWindowClsID(), static_cast<HINSTANCE>(GetModuleHandle(0)), window);

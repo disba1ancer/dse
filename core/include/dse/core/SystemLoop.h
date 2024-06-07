@@ -8,17 +8,17 @@
 namespace dse::core {
 
 #ifdef _WIN32
-using UILoop_impl = class UILoop_win32;
+using SystemLoop_impl = class SystemLoop_win32;
 #endif
 
-class API_DSE_CORE UILoop
+class API_DSE_CORE SystemLoop
 {
-    friend UILoop_impl;
+    friend SystemLoop_impl;
 public:
-    UILoop();
-    UILoop(UILoop&& oth);
-    ~UILoop();
-    UILoop& operator=(UILoop&& oth);
+    SystemLoop();
+    SystemLoop(SystemLoop&& oth);
+    ~SystemLoop();
+    SystemLoop& operator=(SystemLoop&& oth);
     int Run();
     bool RunOne();
     bool Poll();
@@ -27,7 +27,7 @@ public:
     void Stop(int result);
     void Post(util::FunctionPtr<void()> cb);
 private:
-    dse::util::impl_ptr<UILoop_impl> impl;
+    dse::util::impl_ptr<SystemLoop_impl> impl;
 };
 
 } // namespace dse::core

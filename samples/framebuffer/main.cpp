@@ -41,7 +41,7 @@ private:
     void OnMouseMove(dse::core::WndEvtDt, int x, int y);
     auto CoRun() -> Task<void>;
 
-    dse::core::UILoop loop;
+    dse::core::SystemLoop loop;
     dse::core::ThreadPool tpool;
     dse::core::IOContext ctx;
     Window window;

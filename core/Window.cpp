@@ -13,7 +13,7 @@
 
 namespace dse::core {
 
-Window::Window(UILoop& loop) : impl(loop)
+Window::Window(SystemLoop& loop) : impl(loop)
 {}
 
 Window::~Window() = default;

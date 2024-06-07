@@ -1,12 +1,12 @@
-#include "UILoop_win32.h"
+#include "SystemLoop_win32.h"
 
 namespace dse::core {
 
-UILoop_win32::UILoop_win32() :
+SystemLoop_win32::SystemLoop_win32() :
     msgWnd(WindowClass(), NULL, this)
 {}
 
-int UILoop_win32::Run()
+int SystemLoop_win32::Run()
 {
     while(Poll()) {
         swal::winapi_call(::WaitMessage());
@@ -14,7 +14,7 @@ int UILoop_win32::Run()
     return Result();
 }
 
-bool UILoop_win32::RunOne()
+bool SystemLoop_win32::RunOne()
 {
     auto r = PollOneInt();
     if (r == PollEmpty) {
@@ -24,55 +24,55 @@ bool UILoop_win32::RunOne()
     return r != PollQuit;
 }
 
-bool UILoop_win32::Poll()
+bool SystemLoop_win32::Poll()
 {
     Constants r;
     while ((r = PollOneInt()) == PollNormal) {}
     return r != PollQuit;
 }
 
-bool UILoop_win32::PollOne()
+bool SystemLoop_win32::PollOne()
 {
     return PollOneInt() != PollQuit;
 }
 
-int UILoop_win32::Result()
+int SystemLoop_win32::Result()
 {
     return msg.wParam;
 }
 
-void UILoop_win32::Stop(int result)
+void SystemLoop_win32::Stop(int result)
 {
     PostQuitMessage(result);
 }
 
-void UILoop_win32::Post(util::FunctionPtr<void ()> cb)
+void SystemLoop_win32::Post(util::FunctionPtr<void ()> cb)
 {
     auto wParam = reinterpret_cast<WPARAM>(reinterpret_cast<void*>(cb.GetFunction()));
     auto lParam = reinterpret_cast<LPARAM>(cb.GetObjectPtr());
     swal::winapi_call(PostMessage(msgWnd, PostMsg, wParam, lParam));
 }
 
-int UILoop_win32::Send(util::FunctionPtr<int ()> cb)
+int SystemLoop_win32::Send(util::FunctionPtr<int ()> cb)
 {
     auto wParam = reinterpret_cast<WPARAM>(reinterpret_cast<void*>(cb.GetFunction()));
     auto lParam = reinterpret_cast<LPARAM>(cb.GetObjectPtr());
     return SendMessage(msgWnd, SendMsg, wParam, lParam);
 }
 
-auto UILoop_win32::GetImpl(UILoop &pub) -> UILoop_win32*
+auto SystemLoop_win32::GetImpl(SystemLoop &pub) -> SystemLoop_win32*
 {
     return pub.impl;
 }
 
-ATOM UILoop_win32::WindowClass()
+ATOM SystemLoop_win32::WindowClass()
 {
     static ATOM clsID = []{
         HINSTANCE hInst = GetModuleHandle(nullptr);
 		WNDCLASSEX wcex;
 		wcex.cbSize = sizeof(WNDCLASSEX);
 		wcex.style = 0;
-		wcex.lpfnWndProc = swal::ClsWndProc<UILoop_win32, &UILoop_win32::WndProc, GwlpThis>;
+                wcex.lpfnWndProc = swal::ClsWndProc<SystemLoop_win32, &SystemLoop_win32::WndProc, GwlpThis>;
 		wcex.cbClsExtra = 0;
 		wcex.cbWndExtra = sizeof(LONG_PTR);
 		wcex.hInstance = hInst;
@@ -88,7 +88,7 @@ ATOM UILoop_win32::WindowClass()
     return clsID;
 }
 
-LRESULT UILoop_win32::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) noexcept
+LRESULT SystemLoop_win32::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) noexcept
 {
     switch (message) {
     case PostMsg: {
@@ -108,7 +108,7 @@ LRESULT UILoop_win32::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
     return 0;
 }
 
-auto UILoop_win32::PollOneInt() -> Constants
+auto SystemLoop_win32::PollOneInt() -> Constants
 {
     if (::PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
         if (msg.message == WM_QUIT) {
