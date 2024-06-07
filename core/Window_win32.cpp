@@ -203,15 +203,15 @@ auto Window_win32::MakeWindow(SystemLoop& loop, Window_win32 *window) -> swal::W
     swal::Window wnd;
     std::exception_ptr eptr;
     auto limpl = SystemLoop_impl::GetImpl(loop);
-    limpl->Send([&eptr, &wnd, window] {
+    if (limpl->Send([&eptr, &wnd, window] {
         try {
             wnd = swal::Window(makeWindowClsID(), static_cast<HINSTANCE>(GetModuleHandle(0)), window);
-            return 0;
         } catch(...) {
             eptr = std::current_exception();
+            return 1;
         }
-    });
-    if (eptr) {
+        return 0;
+    })) {
         std::rethrow_exception(eptr);
     }
     return wnd;
