@@ -16,10 +16,10 @@ public:
     friend IOContext_impl;
     IOContext();
     ~IOContext();
-    void Run();
-    void RunOne();
-    void Poll();
-    void PollOne();
+    int Run();
+    int RunOne();
+    int Poll();
+    int PollOne();
     void StopOne();
 private:
     util::impl_ptr<IOContext_impl> impl;

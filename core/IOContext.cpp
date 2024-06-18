@@ -10,24 +10,24 @@ IOContext::IOContext() :
 IOContext::~IOContext()
 {}
 
-void IOContext::Run()
+int IOContext::Run()
 {
-    impl->Run();
+    return impl->Run();
 }
 
-void IOContext::RunOne()
+int IOContext::RunOne()
 {
-    impl->RunOne();
+    return impl->RunOne();
 }
 
-void IOContext::Poll()
+int IOContext::Poll()
 {
-    impl->Poll();
+    return impl->Poll();
 }
 
-void IOContext::PollOne()
+int IOContext::PollOne()
 {
-    impl->PollOne();
+    return impl->PollOne();
 }
 
 void IOContext::StopOne()

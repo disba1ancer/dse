@@ -11,24 +11,32 @@ thread_local swal::Event thrEvent{true, true};
 IOContext_win32::IOContext_win32()
 {}
 
-void IOContext_win32::Run()
+int IOContext_win32::Run()
 {
-    while (PollOne(INFINITE) != StopSig) {}
+    int queryCount;
+    while (PollOne(queryCount, INFINITE) == StopSig) {}
+    return queryCount;
 }
 
-void IOContext_win32::RunOne()
+int IOContext_win32::RunOne()
 {
-    PollOne(INFINITE);
+    int queryCount;
+    PollOne(queryCount, INFINITE);
+    return queryCount;
 }
 
-void IOContext_win32::Poll()
+int IOContext_win32::Poll()
 {
-    while (PollOne(0) == Enqueue) {}
+    int queryCount;
+    while (PollOne(queryCount, 0) == Dequeue) {}
+    return queryCount;
 }
 
-void IOContext_win32::PollOne()
+int IOContext_win32::PollOne()
 {
-    PollOne(0);
+    int queryCount;
+    PollOne(queryCount, 0);
+    return queryCount;
 }
 
 namespace {
@@ -49,14 +57,14 @@ void IOContext_win32::IOCPAttach(swal::Handle &handle, CompleteCallback cb)
     iocp.AssocFile(handle, reinterpret_cast<ULONG_PTR>(vcb));
 }
 
-void IOContext_win32::Lock()
+int IOContext_win32::Lock()
 {
-    activeOps.fetch_add(1, std::memory_order_release);
+    return activeOps.fetch_add(1, std::memory_order_release) + 1;
 }
 
-bool IOContext_win32::Unlock()
+int IOContext_win32::Unlock()
 {
-    return activeOps.fetch_sub(1, std::memory_order_acquire) == 1;
+    return activeOps.fetch_sub(1, std::memory_order_acquire) - 1;
 }
 
 auto IOContext_win32::GetImplFromObj(IOContext& context) -> IOContext_win32*
@@ -71,11 +79,12 @@ void IOContext_win32::Post(CompleteCallback cb, OVERLAPPED *ovl, DWORD transfere
     iocp.PostQueuedCompletionStatus(transfered, ucb, ovl);
 }
 
-auto IOContext_win32::PollOne(DWORD timeout) -> PollResult
+auto IOContext_win32::PollOne(int& queryCount, DWORD timeout) -> PollResult
 {
     auto enqIO = iocp.GetQueuedCompletionStatus2(0);
     if (enqIO.error != ERROR_SUCCESS) {
         if (enqIO.error == WAIT_TIMEOUT) {
+            queryCount = activeOps.load(std::memory_order_relaxed);
             return Timeout;
         }
         if (enqIO.ovl == nullptr) {
@@ -85,15 +94,15 @@ auto IOContext_win32::PollOne(DWORD timeout) -> PollResult
     auto vcb = reinterpret_cast<void*>(enqIO.key);
     auto cb = reinterpret_cast<CompleteCallback>(vcb);
     if (vcb == nullptr) {
-        Unlock();
+        queryCount = Unlock();
         return StopSig;
     }
     cb(enqIO.ovl, enqIO.bytesTransfered, enqIO.error);
-    if (Unlock()) {
+    if ((queryCount = Unlock()) == 0) {
         Post(StopFunc, nullptr, 0);
         return StopSig;
     }
-    return Enqueue;
+    return Dequeue;
 }
 
 } // namespace dse::core

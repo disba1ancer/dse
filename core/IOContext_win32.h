@@ -24,23 +24,23 @@ class IOContext_win32
 {
 public:
     IOContext_win32();
-    void Run();
-    void RunOne();
-    void Poll();
-    void PollOne();
+    int Run();
+    int RunOne();
+    int Poll();
+    int PollOne();
     void StopOne();
     void IOCPAttach(swal::Handle& handle, CompleteCallback cb);
-    void Lock();
-    bool Unlock();
+    int Lock();
+    int Unlock();
     static auto GetImplFromObj(IOContext& context) -> IOContext_win32*;
 private:
     enum PollResult {
-        Enqueue,
+        Dequeue,
         Timeout,
         StopSig
     };
     void Post(CompleteCallback cb, OVERLAPPED* ovl, DWORD transfered);
-    auto PollOne(DWORD timeout) -> PollResult;
+    auto PollOne(int& queryCount, DWORD timeout) -> PollResult;
 
     swal::IOCompletionPort iocp;
     std::atomic_int activeOps = 0;
