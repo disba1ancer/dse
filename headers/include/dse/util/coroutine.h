@@ -44,16 +44,6 @@ public:
     }
 };
 
-//template <typename ... Tps>
-//void dse_TagInvoke(
-//    TagT<SetValue>,
-//    SenderAwaiterRecv<std::tuple<std::remove_reference_t<Tps>...>>&& recv,
-//    Tps&& ... args
-//) {
-//    recv.value = std::make_tuple(std::forward<Tps>(args)...);
-//    recv.handle.resume();
-//}
-
 template <typename T>
 struct ReturnFromTuple {
     using Type = T;
@@ -116,16 +106,10 @@ struct Task;
 namespace impl {
 
 template <typename T>
-struct TaskSpec;
-
-template <typename T>
 class TaskAwaiter;
 
 template <typename Ret, typename Recv>
 class TaskOpstate;
-
-template <typename T>
-struct TaskBase;
 
 template <typename T>
 struct FinalAwaiter;
@@ -144,157 +128,55 @@ struct CoroReceiver<void> {
     virtual void SetDone() = 0;
 };
 
-template <typename T>
-struct PromiseTypeBase {
-    friend TaskSpec<T>;
-    friend TaskBase<T>;
-    friend FinalAwaiter<T>;
-private:
-    std::variant<std::monostate, T, std::exception_ptr> value;
-public:
-    void return_value(const T& val)
-    {
-        value.template emplace<1>(val);
-    }
-    void SetValueForRecv(CoroReceiver<T>* recv)
-    {
-        recv->SetValue(std::move(std::get<1>(value)));
-    }
-};
-
-template <>
-struct PromiseTypeBase<void> {
-    friend TaskSpec<void>;
-    friend TaskBase<void>;
-    friend FinalAwaiter<void>;
-private:
-    std::variant<std::monostate, std::monostate, std::exception_ptr> value;
-public:
-    void return_void()
-    {
-        value.template emplace<1>();
-    }
-    void SetValueForRecv(CoroReceiver<void>* recv)
-    {
-        recv->SetValue();
-    }
+enum class TypeChoice {
+    Void,
+    Reference,
+    Value
 };
 
 template <typename T>
-struct PromiseTypeBase<T&> {
-    friend TaskSpec<T&>;
-    friend TaskBase<T&>;
-    friend FinalAwaiter<T&>;
+struct type_index {
 private:
-    std::variant<std::monostate, std::reference_wrapper<T>, std::exception_ptr> value;
+    static constexpr auto T_is_void = std::same_as<T, void>;
+    static constexpr auto T_is_reference = std::is_reference_v<T>;
 public:
-    void return_value(T& val)
-    {
-        value.template emplace<1>(std::ref(val));
-    }
-    void SetValueForRecv(CoroReceiver<T&>* recv)
-    {
-        recv->SetValue(static_cast<T&>(std::get<1>(value).get()));
-    }
-};
-
-template <typename T>
-struct PromiseTypeBase<T&&> {
-    friend TaskSpec<T&&>;
-    friend TaskBase<T&&>;
-    friend FinalAwaiter<T&&>;
-private:
-    std::variant<std::monostate, std::reference_wrapper<T>, std::exception_ptr> value;
-public:
-    void return_value(T&& val)
-    {
-        value.template emplace<1>(std::ref(val));
-    }
-    void SetValueForRecv(CoroReceiver<T&&>* recv)
-    {
-        recv->SetValue(static_cast<T&&>(std::get<1>(value).get()));
-    }
-};
-
-template <typename T>
-struct TaskBase {
-    struct PromiseType;
-    using Handle = std::coroutine_handle<PromiseType>;
-    friend class TaskAwaiter<T>;
-    template <typename Ret, typename Recv>
-    friend void dse_TagInvoke(TagT<Start>, TaskOpstate<Ret, Recv>&);
-protected:
-    Handle handle;
-    TaskBase(std::coroutine_handle<PromiseType> handle) : handle(handle)
-    {}
-    void ThrowIfExcept()
-    {
-        auto& promise = handle.promise();
-        if (promise.value.index() == 2) {
-            std::rethrow_exception(std::get<2>(promise.value));
+    static constexpr auto value = []() constexpr -> TypeChoice {
+        if (T_is_void) {
+            return TypeChoice::Void;
         }
-    }
-public:
-    TaskBase(const TaskBase&) = delete;
-    TaskBase(TaskBase&& task) noexcept :
-        handle(task.handle)
-    {
-        task.handle = nullptr;
-    }
-    TaskBase& operator =(const TaskBase&) = delete;
-    TaskBase& operator =(TaskBase&& task) noexcept
-    {
-        std::swap(handle, task.handle);
-    }
-    ~TaskBase()
-    {
-        if (handle) handle.destroy();
-    }
-    void Resume() {
-        handle.resume();
-    }
-    void operator()() {
-        handle();
-    }
-    void ResumeDetached() {
-        auto h = std::exchange(handle, {});
-        h.promise().MakeDetached();
-        h.resume();
-    }
-    bool Done() {
-        return handle.done();
-    }
+        if (T_is_reference) {
+            return TypeChoice::Reference;
+        }
+        return TypeChoice::Value;
+    }();
 };
 
 template <typename T>
-struct TaskBase<T>::PromiseType : PromiseTypeBase<T> {
-    friend class TaskAwaiter<T>;
-    friend struct FinalAwaiter<T>;
-    template <typename Ret, typename Recv>
-    friend void dse_TagInvoke(TagT<Start>, TaskOpstate<Ret, Recv>&);
-    auto get_return_object() -> Task<T>
-    {
-        return { TaskSpec<T>::Handle::from_promise(*this) };
-    }
-    auto initial_suspend() -> std::suspend_always
-    {
-        return {};
-    }
-    void unhandled_exception()
-    {
-        this->value.template emplace<2>(std::current_exception());
-    }
-    auto final_suspend() noexcept -> FinalAwaiter<T>
-    {
-        return {};
-    }
-    void MakeDetached()
-    {
-        detached = true;
-    }
+constexpr auto type_index_v = type_index<T>::value;
+
+template <int n, typename ... Types>
+struct select_type {
 private:
-    std::variant<std::monostate, std::coroutine_handle<>, CoroReceiver<T>*> rsm;
-    bool detached = false;
+    using typelist = std::variant<Types...>;
+public:
+    using type = std::variant_alternative_t<n, typelist>;
+};
+
+template <int n, typename ... Types>
+using select_type_t = select_type<n, Types...>::type;
+
+template <typename D, typename T>
+struct return_unified_t {
+    void return_value(T&& v) {
+        static_cast<D*>(this)->return_unified(std::forward<T>(v));
+    }
+};
+
+template <typename D>
+struct return_unified_t<D, void> {
+    void return_void() {
+        static_cast<D*>(this)->return_unified();
+    }
 };
 
 template <typename T>
@@ -303,7 +185,7 @@ struct FinalAwaiter {
     {
         return false;
     }
-    auto await_suspend(std::coroutine_handle<typename TaskBase<T>::PromiseType> handle) noexcept
+    auto await_suspend(std::coroutine_handle<typename Task<T>::promise_type> handle) noexcept
     -> std::coroutine_handle<>
     {
         auto& promise = handle.promise();
@@ -341,72 +223,74 @@ struct FinalAwaiter {
     {}
 };
 
-template <typename T>
-struct TaskSpec : TaskBase<T> {
-    using TaskBase = TaskBase<T>;
-    using promise_type = typename TaskBase::PromiseType;
-    friend promise_type;
-    TaskSpec(std::coroutine_handle<promise_type> handle) :
-        TaskBase(handle)
-    {}
-    T Result()
-    {
-        this->ThrowIfExcept();
-        return std::move(std::get<1>(this->handle.promise().value));
-    }
-};
-
-template <>
-struct TaskSpec<void> : TaskBase<void> {
-    using TaskBase = TaskBase<void>;
-    using promise_type = typename TaskBase::PromiseType;
-    friend promise_type;
-    TaskSpec(std::coroutine_handle<promise_type> handle) :
-        TaskBase(handle)
-    {}
-    void Result()
-    {
-        this->ThrowIfExcept();
-    }
-};
-
-template <typename T>
-struct TaskSpec<T&> : TaskBase<T&> {
-    using TaskBase = TaskBase<T&>;
-    using promise_type = typename TaskBase::PromiseType;
-    friend promise_type;
-    TaskSpec(std::coroutine_handle<promise_type> handle) :
-        TaskBase(handle)
-    {}
-    T& Result()
-    {
-        this->ThrowIfExcept();
-        return std::get<1>(this->handle.promise().value);
-    }
-};
-
-template <typename T>
-struct TaskSpec<T&&> : TaskBase<T&&> {
-    using TaskBase = TaskBase<T&&>;
-    using promise_type = typename TaskBase::PromiseType;
-    friend promise_type;
-    TaskSpec(std::coroutine_handle<promise_type> handle) :
-        TaskBase(handle)
-    {}
-    T&& Result()
-    {
-        this->ThrowIfExcept();
-        return static_cast<T&&>(std::get<1>(this->handle.promise().value).get());
-    }
-};
-
 }
 
 template <typename T>
-struct Task : impl::TaskSpec<T> {
-    Task(std::coroutine_handle<typename impl::TaskSpec<T>::promise_type> handle) :
-        impl::TaskSpec<T>(handle)
+struct Task {
+    struct promise_type;
+    using handle = std::coroutine_handle<promise_type>;
+    friend class impl::TaskAwaiter<T>;
+    template <typename Ret, typename Recv>
+    friend void impl::dse_TagInvoke(TagT<Start>, impl::TaskOpstate<Ret, Recv>&);
+private:
+    static constexpr auto choice = impl::type_index_v<T>;
+    handle cHandle;
+    Task(std::coroutine_handle<promise_type> handle) : cHandle(handle)
     {}
+    void ThrowIfExcept()
+    {
+        auto& promise = cHandle.promise();
+        if (promise.value.index() == 2) {
+            std::rethrow_exception(std::get<2>(promise.value));
+        }
+    }
+public:
+    Task(const Task&) = delete;
+    Task(Task&& task) noexcept :
+        cHandle(nullptr)
+    {
+        *this = std::move(task);
+    }
+    Task& operator =(const Task&) = delete;
+    Task& operator =(Task&& task) noexcept
+    {
+        std::swap(cHandle, task.cHandle);
+    }
+    ~Task()
+    {
+        if (cHandle) cHandle.destroy();
+    }
+    void Resume() {
+        cHandle.resume();
+    }
+    void operator()() {
+        cHandle();
+    }
+    void ResumeDetached() {
+        auto h = std::exchange(cHandle, {});
+        h.promise().MakeDetached();
+        h.resume();
+    }
+    bool Done() {
+        return cHandle.done();
+    }
+    void Result()
+    requires(promise_type::choice == impl::TypeChoice::Void)
+    {
+        this->ThrowIfExcept();
+    }
+    T Result()
+    requires(promise_type::choice == impl::TypeChoice::Value)
+    {
+        this->ThrowIfExcept();
+        return std::move(std::get<1>(cHandle.promise().value));
+    }
+    T Result()
+    requires(promise_type::choice == impl::TypeChoice::Reference)
+    {
+        this->ThrowIfExcept();
+        return static_cast<T>(std::get<1>(cHandle.promise().value).get());
+    }
     friend void dse_TagInvoke(TagT<StartDetached>, Task<T>&& task)
     {
         task.ResumeDetached();
@@ -418,6 +302,75 @@ struct Task : impl::TaskSpec<T> {
     {
         return { std::move(sndr), std::forward<Recv>(recv) };
     }
+};
+
+template <typename T>
+struct Task<T>::promise_type :
+    public impl::return_unified_t<Task<T>::promise_type, T>
+{
+    friend impl::FinalAwaiter<T>;
+    friend class impl::TaskAwaiter<T>;
+    template <typename Ret, typename Recv>
+    friend void impl::dse_TagInvoke(TagT<Start>, impl::TaskOpstate<Ret, Recv>&);
+private:
+    using type = std::conditional_t<Task::choice == impl::TypeChoice::Void, std::monostate, T>;
+public:
+    auto get_return_object() -> Task<T>
+    {
+        return { Task<T>::handle::from_promise(*this) };
+    }
+    auto initial_suspend() -> std::suspend_always
+    {
+        return {};
+    }
+    void return_unified()
+    requires(Task::choice == impl::TypeChoice::Void)
+    {
+        value.template emplace<1>();
+    }
+    void return_unified(type val)
+    requires(Task::choice == impl::TypeChoice::Reference)
+    {
+        value.template emplace<1>(std::ref(val));
+    }
+    void return_unified(type&& val)
+    requires(Task::choice == impl::TypeChoice::Value)
+    {
+        value.template emplace<1>(std::move(val));
+    }
+    void unhandled_exception()
+    {
+        this->value.template emplace<2>(std::current_exception());
+    }
+    auto final_suspend() noexcept -> impl::FinalAwaiter<T>
+    {
+        return {};
+    }
+    void SetValueForRecv(impl::CoroReceiver<T>* recv)
+    requires(Task::choice == impl::TypeChoice::Void)
+    {
+        recv->SetValue();
+    }
+    void SetValueForRecv(impl::CoroReceiver<T>* recv)
+    requires(Task::choice == impl::TypeChoice::Reference)
+    {
+        recv->SetValue(static_cast<T>(std::get<1>(value).get()));
+    }
+    void SetValueForRecv(impl::CoroReceiver<T>* recv)
+    requires(Task::choice == impl::TypeChoice::Value)
+    {
+        recv->SetValue(std::move(std::get<1>(value)));
+    }
+    void MakeDetached()
+    {
+        detached = true;
+    }
+private:
+    using ref_wrapper = std::reference_wrapper<std::remove_reference_t<T>>;
+    using storage_type = impl::select_type_t<int(choice), std::monostate, ref_wrapper, T>;
+    std::variant<std::monostate, storage_type, std::exception_ptr> value;
+    std::variant<std::monostate, std::coroutine_handle<>, impl::CoroReceiver<T>*> rsm;
+    bool detached = false;
 };
 
 namespace impl {
@@ -433,9 +386,9 @@ public:
         return false;
     }
     auto await_suspend(std::coroutine_handle<> handle) -> std::coroutine_handle<> {
-        auto& promise = task.handle.promise();
+        auto& promise = task.cHandle.promise();
         promise.rsm = handle;
-        return task.handle;
+        return task.cHandle;
     }
     T await_resume()
     {
@@ -510,7 +463,7 @@ public:
         TaskOpstateBase<Ret, Recv>(std::move(task), std::forward<Recv>(receiver))
     {}
     friend void dse_TagInvoke(util::TagT<util::Start>, TaskOpstate<Ret, Recv>& sndr) {
-        auto handle = sndr.task.handle;
+        auto handle = sndr.task.cHandle;
         auto& promise = handle.promise();
         promise.rsm = static_cast<CoroReceiver<Ret>*>(&sndr);
         handle.resume();
