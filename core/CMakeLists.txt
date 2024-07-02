@@ -13,6 +13,7 @@ target_include_directories(core PUBLIC
 
 target_sources(core PUBLIC
     include/dse/core/BasicBitmapLoader.h
+    include/dse/core/CachedFile.h
     include/dse/core/Camera.h
     include/dse/core/Cube.h
     include/dse/core/File.h
@@ -27,8 +28,8 @@ target_sources(core PUBLIC
     include/dse/core/Object.h
     include/dse/core/Scene.h
     include/dse/core/Sphere.h
-    include/dse/core/ThreadPool.h
     include/dse/core/SystemLoop.h
+    include/dse/core/ThreadPool.h
     include/dse/core/Window.h
     include/dse/core/WindowShowCommand.h
     include/dse/core/detail/impexp.h
