@@ -14,7 +14,7 @@ IOContext_win32::IOContext_win32()
 int IOContext_win32::Run()
 {
     int queryCount;
-    while (PollOne(queryCount, INFINITE) == StopSig) {}
+    while (PollOne(queryCount, INFINITE) != StopSig) {}
     return queryCount;
 }
 
