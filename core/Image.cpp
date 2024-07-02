@@ -94,7 +94,7 @@ void Image::LoadByProvider(ITextureDataProvider *provider, util::FunctionPtr<voi
         util::FunctionPtr<void (Image &&)>& callback;
         Image& image;
     };
-    auto coro = +[](ITextureDataProvider *provider, util::FunctionPtr<void (Image &&)> callback) -> util::Task<void> {
+    auto coro = +[](ITextureDataProvider *provider, util::FunctionPtr<void (Image &&)> callback) -> util::task<void> {
         Image image;
         auto [status, params] = co_await LoadParameters{ provider };
         if (IsError(status)) {

@@ -98,7 +98,7 @@ auto BasicBitmapLoader::GetVersion() -> unsigned
     return 1;
 }
 
-util::Task<void> BasicBitmapLoader::LoadParametersInternal(TextureParameters* parameters, util::FunctionPtr<void (Status)> onReady)
+util::task<void> BasicBitmapLoader::LoadParametersInternal(TextureParameters* parameters, util::FunctionPtr<void (Status)> onReady)
 {
     if (format == Unsupported) {
         std::uint_least16_t sign;
@@ -174,7 +174,7 @@ util::Task<void> BasicBitmapLoader::LoadParametersInternal(TextureParameters* pa
     onReady(Make(status::Code::Success));
 }
 
-util::Task<void> BasicBitmapLoader::LoadDataInternal(void* recvBuffer, unsigned lod, util::FunctionPtr<void (Status)> onReady)
+util::task<void> BasicBitmapLoader::LoadDataInternal(void* recvBuffer, unsigned lod, util::FunctionPtr<void (Status)> onReady)
 {
     bitmapFile.Seek(pixelsPos);
     int bytePerPix;

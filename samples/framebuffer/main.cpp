@@ -14,7 +14,7 @@ using dse::util::FunctionPtr;
 using dse::core::ImageManipulator;
 using dse::core::WindowShowCommand;
 using dse::core::Image;
-using dse::util::Task;
+using dse::util::task;
 using dse::core::BasicBitmapLoader;
 using dse::math::vec4;
 using dse::math::ivec2;
@@ -39,7 +39,7 @@ private:
     void OnClose(dse::core::WndEvtDt);
     void OnResize(dse::core::WndEvtDt, int w, int h, WindowShowCommand);
     void OnMouseMove(dse::core::WndEvtDt, int x, int y);
-    auto CoRun() -> Task<void>;
+    auto CoRun() -> task<void>;
 
     dse::core::SystemLoop loop;
     dse::core::ThreadPool tpool;
@@ -129,7 +129,7 @@ void App::OnResize(dse::core::WndEvtDt, int w, int h, WindowShowCommand)
 void App::OnMouseMove(dse::core::WndEvtDt, int x, int y)
 {}
 
-Task<void> App::CoRun()
+task<void> App::CoRun()
 {
     struct ImageCallback {
         void operator()(Image&& img)
