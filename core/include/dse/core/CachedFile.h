@@ -11,13 +11,33 @@ public:
     using Callback = File::Callback;
     using FilePos = File::FilePos;
     using FileOff = File::FileOff;
-    CachedFile() {}
+    CachedFile() :
+        iBegin(0),
+        iCurrent(0),
+        iEnd(0)
+    {}
     CachedFile(IOContext& ctx, std::u8string_view filepath, OpenMode mode) :
-        file(ctx, filepath, mode)
+        file(ctx, filepath, mode),
+        iBegin(0),
+        iCurrent(0),
+        iEnd(0)
     {}
     auto Read(std::byte buf[], std::size_t size) -> impl::FileOpResult
     {
-        return file.Read(buf, size);
+        auto bytesRead = ReadBuffer(buf, size);
+        if (bytesRead == size) {
+            return {bytesRead, Make(status::Code::Success)};
+        }
+        auto remain = size - bytesRead;
+        auto a = std::size(buffer) - iEnd;
+        if (remain > a) {
+            auto result = CycleRead(buf + bytesRead, size - bytesRead);
+            iBegin = iCurrent = iEnd = (result.transfered - a) % CacheSize;
+            return result;
+        }
+        auto [bRead, st] = CycleRead(buffer + iCurrent, remain, a);
+        bytesRead = std::min(remain, bRead);
+        return {bytesRead, st};
     }
 	auto Write(const std::byte buf[], std::size_t size) -> impl::FileOpResult
     {
@@ -63,12 +83,40 @@ public:
         return file.Tell();
     }
 private:
+    auto ReadBuffer(std::byte buf[], std::size_t size) -> std::size_t
+    {
+        auto remain = iEnd - iCurrent;
+        if (remain <= 0) {
+            return 0;
+        }
+        auto bytesRead = std::min<std::size_t>(size, remain);
+        std::memcpy(buf, buffer + iCurrent, bytesRead);
+        iCurrent += bytesRead;
+        return bytesRead;
+    }
+    auto CycleRead(std::byte buf[], std::size_t size) -> impl::FileOpResult
+    {
+        return CycleRead(buf, size, size);
+    }
+    auto CycleRead(std::byte buf[], std::size_t size, std::size_t maxSize) -> impl::FileOpResult
+    {
+        std::size_t bytesRead = 0;
+        while (bytesRead < size) {
+            auto [bRead, st] = file.Read(buf + bytesRead, maxSize - bytesRead);
+            bytesRead += bRead;
+            if (st != status::Code::Success) {
+                return {bytesRead, st};
+            }
+        }
+        return {bytesRead, Make(status::Code::Success)};
+    }
     File file;
     static constexpr auto CacheSize = 8192;
     std::byte buffer[CacheSize];
-    using PtrType = std::remove_cv_t<decltype(CacheSize)>;
-    PtrType current;
-    PtrType end;
+    using IndexType = std::remove_cv_t<decltype(CacheSize)>;
+    IndexType iBegin;
+    IndexType iCurrent;
+    IndexType iEnd;
     Callback callback;
 };
 
