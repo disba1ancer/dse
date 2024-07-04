@@ -16,7 +16,7 @@ inline dse_core_Status dse_core_status_Make(int source, int status)
 {
     constexpr auto m = -0x7FFFFFFFL;
     auto s1 = status < 0;
-    auto s2 = s1 * 2 - 1;
+    auto s2 = -(s1 * 2 - 1);
     status = (status * s2 - s1) & 0x7FFF;
     auto resultBase = m * s1;
     auto resultSource = (source & 0xFFFF) * 0x8000L;
@@ -41,7 +41,7 @@ inline unsigned dse_core_status_Source(dse_core_Status status)
 inline int dse_core_status_GetCode(dse_core_Status status)
 {
     auto s1 = status < 0;
-    auto s2 = s1 * 2 - 1;
+    auto s2 = -(s1 * 2 - 1);
     int result = (unsigned long)status & 0x7FFF;
     return result * s2;
 }

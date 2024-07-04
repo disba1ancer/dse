@@ -36,6 +36,8 @@ public:
             return result;
         }
         auto [bRead, st] = CycleRead(buffer + iCurrent, remain, a);
+        iEnd = iCurrent + bRead;
+        iCurrent += std::min(remain, bRead);
         bytesRead = std::min(remain, bRead);
         return {bytesRead, st};
     }

@@ -56,7 +56,7 @@ swal::File open(std::u8string_view filepath, OpenMode mode) {
 	typedef swal::ShareMode SM;
 
 	auto path = convertFilePath(filepath);
-	return swal::File(path, modeToAccess(mode), SM::Read | SM::Write, modeToCreateMode(mode), FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OVERLAPPED);
+	return swal::File(path, modeToAccess(mode), SM::Read | SM::Write, modeToCreateMode(mode), FILE_FLAG_OVERLAPPED);
 }
 
 }
