@@ -59,6 +59,8 @@ swal::File open(std::u8string_view filepath, OpenMode mode) {
 	return swal::File(path, modeToAccess(mode), SM::Read | SM::Write, modeToCreateMode(mode), FILE_FLAG_OVERLAPPED);
 }
 
+constexpr std::size_t maxTransferSize = std::numeric_limits<DWORD>::max();
+
 }
 
 namespace dse::core {
@@ -91,7 +93,7 @@ auto File_win32::Read(std::byte buf[], std::size_t size) -> impl::FileOpResult
 	OVERLAPPED::OffsetHigh = pos >> std::numeric_limits<DWORD>::digits;
 	DWORD lastTransfered = 0;
 	try {
-		handle.Read(buf, (DWORD)size, *this);
+        handle.Read(buf, std::min(size, maxTransferSize), *this);
         lastError = ERROR_SUCCESS;
 	} catch (std::system_error& err) {
 		SetLastError(err);
@@ -119,7 +121,7 @@ auto File_win32::Write(const std::byte buf[], std::size_t size) -> impl::FileOpR
 	OVERLAPPED::OffsetHigh = pos >> std::numeric_limits<DWORD>::digits;
 	DWORD lastTransfered = 0;
 	try {
-		handle.Write(buf, (DWORD)size, *this);
+        handle.Write(buf, std::min(size, maxTransferSize), *this);
         lastError = ERROR_SUCCESS;
 	} catch (std::system_error& err) {
 		SetLastError(err);
@@ -183,7 +185,7 @@ auto File_win32::ReadAsync(std::byte buf[], std::size_t size, const File::Callba
     lastError = ERROR_IO_PENDING;
     context->Lock();
 	try {
-        handle.Read(buf, (DWORD)size, *this);
+        handle.Read(buf, std::min(size, maxTransferSize), *this);
         lastError = ERROR_SUCCESS;
 	} catch (std::system_error& err) {
         if (SetLastError(err)) {
@@ -204,7 +206,7 @@ auto File_win32::WriteAsync(const std::byte buf[], std::size_t size, const File:
     lastError = ERROR_IO_PENDING;
     context->Lock();
 	try {
-		handle.Write(buf, (DWORD)size, *this);
+        handle.Write(buf, std::min(size, maxTransferSize), *this);
         lastError = ERROR_SUCCESS;
 	} catch (std::system_error& err) {
         if (SetLastError(err)) {
