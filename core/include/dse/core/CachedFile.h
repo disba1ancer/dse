@@ -29,16 +29,16 @@ public:
             return {bytesRead, Make(status::Code::Success)};
         }
         auto remain = size - bytesRead;
-        auto a = std::size(buffer) - iEnd;
-        if (remain > a) {
+        if (remain >= CacheSize) {
             auto result = CycleRead(buf + bytesRead, size - bytesRead);
-            iBegin = iCurrent = iEnd = (result.transfered - a) % CacheSize;
+            iBegin = iCurrent = iEnd = 0;
             return result;
         }
-        auto [bRead, st] = CycleRead(buffer + iCurrent, remain, a);
-        iEnd = iCurrent + bRead;
-        iCurrent += std::min(remain, bRead);
-        bytesRead = std::min(remain, bRead);
+        auto [bRead, st] = CycleRead(buffer, remain, CacheSize);
+        iBegin = 0;
+        iEnd = bRead;
+        iCurrent = std::min(remain, bRead);
+        bytesRead += iCurrent;
         return {bytesRead, st};
     }
 	auto Write(const std::byte buf[], std::size_t size) -> impl::FileOpResult
@@ -70,10 +70,18 @@ public:
     }
 	auto Seek(FilePos pos) -> Status
     {
+        iBegin = iCurrent = iEnd = 0;
         return file.Seek(pos);
     }
 	auto Seek(FileOff offset, StPoint rel) -> Status
     {
+        if (rel == StPoint::CURRENT &&
+                (offset < iBegin - iCurrent || offset > iEnd - iCurrent))
+        {
+            iCurrent += offset;
+        } else {
+            iBegin = iCurrent = iEnd = 0;
+        }
         return file.Seek(offset, rel);
     }
     auto GetStatus() const -> Status
@@ -100,7 +108,8 @@ private:
     {
         return CycleRead(buf, size, size);
     }
-    auto CycleRead(std::byte buf[], std::size_t size, std::size_t maxSize) -> impl::FileOpResult
+    auto CycleRead(std::byte buf[], std::size_t size, std::size_t maxSize)
+    -> impl::FileOpResult
     {
         std::size_t bytesRead = 0;
         while (bytesRead < size) {
