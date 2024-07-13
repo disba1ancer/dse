@@ -38,9 +38,9 @@ enum class OpenMode : unsigned {
 };
 
 enum class StPoint {
-	START,
-	CURRENT,
-	END,
+    Start,
+    Current,
+    End,
 };
 
 class API_DSE_CORE File;

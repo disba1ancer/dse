@@ -96,7 +96,9 @@ auto File_win32::Read(std::byte buf[], std::size_t size) -> impl::FileOpResult
         handle.Read(buf, std::min(size, maxTransferSize), *this);
         lastError = ERROR_SUCCESS;
 	} catch (std::system_error& err) {
-		SetLastError(err);
+        if (SetLastError(err)) {
+            lastError = ERROR_IO_PENDING;
+        }
 	}
 	if (
 		lastError == ERROR_SUCCESS ||
@@ -124,7 +126,9 @@ auto File_win32::Write(const std::byte buf[], std::size_t size) -> impl::FileOpR
         handle.Write(buf, std::min(size, maxTransferSize), *this);
         lastError = ERROR_SUCCESS;
 	} catch (std::system_error& err) {
-		SetLastError(err);
+        if (SetLastError(err)) {
+            lastError = ERROR_IO_PENDING;
+        }
 	}
 	if (
 		lastError == ERROR_SUCCESS ||
@@ -186,7 +190,6 @@ auto File_win32::ReadAsync(std::byte buf[], std::size_t size, const File::Callba
     context->Lock();
 	try {
         handle.Read(buf, std::min(size, maxTransferSize), *this);
-        lastError = ERROR_SUCCESS;
 	} catch (std::system_error& err) {
         if (SetLastError(err)) {
             return status::Make(Code::PendingOperation);
@@ -207,7 +210,6 @@ auto File_win32::WriteAsync(const std::byte buf[], std::size_t size, const File:
     context->Lock();
 	try {
         handle.Write(buf, std::min(size, maxTransferSize), *this);
-        lastError = ERROR_SUCCESS;
 	} catch (std::system_error& err) {
         if (SetLastError(err)) {
             return status::Make(Code::PendingOperation);
@@ -261,14 +263,14 @@ auto File_win32::Seek(FilePos pos) -> Status {
 
 auto File_win32::Seek(FileOff off, StPoint point) -> Status {
 	switch (point) {
-	case StPoint::START:
+	case StPoint::Start:
 		pos = std::max(FileOff(0), off);
 		break;
-	case StPoint::CURRENT:
+	case StPoint::Current:
 		pos += FilePos(off);
 		pos = (off < 0 && pos > FilePos(off) ? FilePos(0) : pos);
 		break;
-	case StPoint::END: {
+	case StPoint::End: {
 		LARGE_INTEGER li;
 		GetFileSizeEx(handle, &li);
 		FilePos eofpos = li.HighPart;
