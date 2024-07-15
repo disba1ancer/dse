@@ -58,6 +58,7 @@ private:
 	swal::File handle;
 	FilePos pos = 0; // be careful with positions and file sizes more than max value for FileOff (unreal large files)
 	bool eof = false;
+    bool append;
 	File::Callback cb;
 };
 

@@ -70,7 +70,8 @@ File_win32::File_win32() : handle() {
 
 File_win32::File_win32(IOContext& ctx, std::u8string_view filepath, OpenMode mode) :
     context(IOContext_impl::GetImplFromObj(ctx)),
-	handle()
+    handle(),
+    append(bool(mode & OpenMode::Append))
 {
 	try {
 		handle = open(filepath, mode);
@@ -118,6 +119,9 @@ auto File_win32::Read(std::byte buf[], std::size_t size) -> impl::FileOpResult
 
 auto File_win32::Write(const std::byte buf[], std::size_t size) -> impl::FileOpResult
 {
+    if (append) {
+        pos = -1;
+    }
 	OVERLAPPED::hEvent = iocontext_detail::IocpDisabledEvent();
 	OVERLAPPED::Offset = (DWORD)pos;
 	OVERLAPPED::OffsetHigh = pos >> std::numeric_limits<DWORD>::digits;
@@ -136,8 +140,8 @@ auto File_win32::Write(const std::byte buf[], std::size_t size) -> impl::FileOpR
 	) {
 		try {
 			lastTransfered = handle.GetOverlappedResult(*this, true);
-			lastError = ERROR_SUCCESS;
-			IncPtr(lastTransfered);
+            lastError = ERROR_SUCCESS;
+            IncPtr(lastTransfered);
 		} catch (std::system_error& err) {
 			SetLastError(err);
 		}
@@ -248,7 +252,11 @@ void File_win32::Complete(OVERLAPPED *ovl, DWORD transfered, DWORD error)
 }
 
 void File_win32::IncPtr(DWORD transfered) {
-	pos += transfered;
+    if (pos == -1) {
+        pos = 0;
+    } else {
+        pos += transfered;
+    }
 }
 
 auto File_win32::Tell() const -> FilePos {

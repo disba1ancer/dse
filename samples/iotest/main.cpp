@@ -10,7 +10,7 @@ using dse::core::status::Code;
 int main(int argc, char* argv[])
 {
     IOContext ctx;
-    CachedFile file(ctx, u8"test.bin", OpenMode::Read | OpenMode::Write);
+    CachedFile file(ctx, u8"test.bin", OpenMode::Read | OpenMode::Append);
     unsigned char byte[1];
     for (int i = 0; i < 4096; ++i) {
         auto [bytesRead, st] = file.Read((std::byte*)byte, 1);
@@ -36,5 +36,5 @@ int main(int argc, char* argv[])
                   << (const char*)SourceName(st) << ":" << (const char*)Message(st)
                   << "]\n";
     }
-    endl(std::cout);
+    endl(std::cout << "\n" << file.Tell());
 }

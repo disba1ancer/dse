@@ -21,7 +21,7 @@ public:
 
     ~CachedFile()
     {
-        FlushBuffer(false);
+        Flush();
     }
 
     auto Read(std::byte buf[], std::size_t size) -> impl::FileOpResult
@@ -35,25 +35,26 @@ public:
             auto result = CycleRead(buf + bytesRead, remain);
             return result;
         }
+        iCurrent = 0;
         auto [bRead, st] = CycleRead(buffer.get(), remain, CacheSize);
         iEnd = bRead;
-        iCurrent = std::min(remain, bRead);
-        std::memcpy(buf + bytesRead, buffer.get(), iCurrent);
-        bytesRead += iCurrent;
+        bytesRead += ReadBuffer(buf, remain);
         return { bytesRead, st };
     }
 
 	auto Write(const std::byte buf[], std::size_t size) -> impl::FileOpResult
     {
         auto [bytesWritten, st] = WriteBuffer(buf, size);
-        if (bytesWritten == size) {
+        if (bytesWritten == size ||
+            st != Make(status::Code::Success))
+        {
             return { bytesWritten, st };
         }
         auto remain = size - bytesWritten;
-        if (remain >= CacheSize) {
-            return file.Write(buf + bytesWritten, remain);
+        if (remain < CacheSize) {
+            return WriteBuffer(buf + bytesWritten, remain);
         }
-        return WriteBuffer(buf, size);
+        return CycleWrite(buf + bytesWritten, remain);
     }
 
     auto Resize() -> Status {
@@ -91,18 +92,30 @@ public:
 
 	auto Seek(FilePos pos) -> Status
     {
-        FlushBuffer(false);
-        iCurrent = iEnd = 0;
+        if (iEnd < iCurrent) {
+            auto st = Flush();
+            if (st != Make(status::Code::Success)) {
+                return st;
+            }
+        } else {
+            iCurrent = iEnd = 0;
+        }
         return file.Seek(pos);
     }
 
 	auto Seek(FileOff offset, StPoint rel) -> Status
     {
-        FlushBuffer(false);
-        if (rel == StPoint::Current) {
-            offset += iCurrent - iEnd;
+        if (iEnd < iCurrent) {
+            auto st = Flush();
+            if (st != Make(status::Code::Success)) {
+                return st;
+            }
+        } else {
+            if (rel == StPoint::Current) {
+                offset += iCurrent - iEnd;
+            }
+            iCurrent = iEnd = 0;
         }
-        iCurrent = iEnd = 0;
         return file.Seek(offset, rel);
     }
 
@@ -118,7 +131,9 @@ public:
 
     auto Flush() -> Status
     {
-        return FlushBuffer();
+        auto [s, err] = file.Write(buffer.get(), iCurrent);
+        iCurrent = iEnd = 0;
+        return err;
     }
 private:
     auto ReadBuffer(std::byte buf[], std::size_t size) -> std::size_t
@@ -159,23 +174,25 @@ private:
         std::memcpy(buffer.get() + iCurrent, buf, bytesWritten);
         iCurrent += bytesWritten;
         if (iCurrent == CacheSize) {
-            return { bytesWritten, FlushBuffer() };
+            return { bytesWritten, Flush() };
         }
         return { bytesWritten, Make(status::Code::Success) };
     }
 
-    auto FlushBuffer(bool seek = true) -> Status
+    auto CycleWrite(const std::byte buf[], std::size_t size) -> impl::FileOpResult
     {
-        if (iEnd < iCurrent) {
-            auto [s, err] = file.Write(buffer.get(), iCurrent);
-            iCurrent = iEnd = 0;
-            return err;
+        std::size_t bytesWritten = 0;
+        while (true) {
+            auto [bWritten, st] = file.Write(buf + bytesWritten, size);
+            bytesWritten += bWritten;
+            size -= bWritten;
+            if (size == 0 ||
+                st != Make(status::Code::Success))
+            {
+                continue;
+            }
+            return { bytesWritten, st };
         }
-        if (seek) {
-            file.Seek(iCurrent - iEnd, StPoint::Current);
-            iCurrent = iEnd = 0;
-        }
-        return Make(status::Code::Success);
     }
 
     File file;
