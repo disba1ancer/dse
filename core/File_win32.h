@@ -32,32 +32,30 @@ public:
 	~File_win32();
 	File_win32(const File_win32 &other) = delete;
 	File_win32(File_win32 &&other) = default;
-	File_win32& operator=(const File_win32 &other) = delete;
-	File_win32& operator=(File_win32 &&other) = default;
-	bool IsValid() const;
+    auto operator=(const File_win32 &other) -> File_win32& = delete;
+    auto operator=(File_win32 &&other) -> File_win32& = default;
 	auto Read(std::byte buf[], std::size_t size) -> impl::FileOpResult;
 	auto Write(const std::byte buf[], std::size_t size) -> impl::FileOpResult;
-	FilePos Tell() const;
+    auto Tell() const -> FilePos;
 	auto Seek(FilePos pos) -> Status;
 	auto Seek(FileOff offset, StPoint rel) -> Status;
-	auto Resize() -> Status;
-	bool IsEOF() const;
+    auto Resize() -> Status;
 	auto ReadAsync(std::byte buf[], std::size_t size, const File::Callback& cb) -> Status;
-	auto WriteAsync(const std::byte buf[], std::size_t size, const File::Callback& cb) -> Status;
-	bool IsBusy();
+    auto WriteAsync(const std::byte buf[], std::size_t size, const File::Callback& cb) -> Status;
 	auto Cancel() -> Status;
-    auto GetStatus() const -> Status;
+    auto OpenStatus() const -> Status;
 private:
     static void Complete(OVERLAPPED* ovl, DWORD transfered, DWORD error);
+    static auto SysErrToStatus(std::system_error& err) -> Status;
 	void Complete(DWORD transfered, DWORD error);
-	void IncPtr(DWORD transfered);
-	bool SetLastError(std::system_error& err);
+    void IncPtr(DWORD transfered);
 
-    IOContext_impl* context;
-	int lastError;
+    union {
+        IOContext_impl* context;
+        int openError;
+    };
 	swal::File handle;
-	FilePos pos = 0; // be careful with positions and file sizes more than max value for FileOff (unreal large files)
-	bool eof = false;
+    FilePos pos = 0; // be careful with positions and file sizes more than max value for FileOff (unreal large files)
     bool append;
 	File::Callback cb;
 };

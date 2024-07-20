@@ -1,5 +1,5 @@
 DEFINE_STATUS(Success           ,   0, u8"Successful operation" )
-DEFINE_STATUS(EndOfStream       ,   1, u8"End of stream"        )
+DEFINE_STATUS(EndOfStream       ,  -1, u8"End of stream"        )
 DEFINE_STATUS(PendingOperation  ,   2, u8"Operation in progress")
 DEFINE_STATUS(InvalidArgument   ,  -3, u8"Invalid argument"     )
 DEFINE_STATUS(Unexpected        ,  -4, u8"Unexpected error"     )

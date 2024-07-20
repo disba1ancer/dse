@@ -27,11 +27,6 @@ File::File(File &&oth) = default;
 File::~File()
 {}
 
-bool File::IsValid() const
-{
-	return impl->IsValid();
-}
-
 auto File::Read(std::byte buf[], std::size_t size) -> impl::FileOpResult
 {
 	return impl->Read(buf, size);
@@ -57,19 +52,14 @@ auto File::Seek(FileOff offset, StPoint rel) -> Status
 	return impl->Seek(offset, rel);
 }
 
-auto File::GetStatus() const -> Status
+auto File::OpenStatus() const -> Status
 {
-    return impl->GetStatus();
+    return impl->OpenStatus();
 }
 
 auto File::Resize() -> Status
 {
 	return impl->Resize();
-}
-
-bool File::IsEOF() const
-{
-	return impl->IsEOF();
 }
 
 auto File::ReadAsync(std::byte buf[], std::size_t size, const Callback& cb) -> Status

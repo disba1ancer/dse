@@ -28,5 +28,5 @@ API_DSE_CORE dse_core_Status dse_core_status_FromSystem(int code)
     GENERATE(ERROR_BAD_ARGUMENTS, InvalidArgument);
     }
 #undef GENERATE
-    return dse_core_status_MakeSystem(code);
+    return dse_core_status_MakeSystem(-code);
 }

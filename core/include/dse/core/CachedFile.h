@@ -21,7 +21,9 @@ public:
 
     ~CachedFile()
     {
-        Flush();
+        if (iEnd < iCurrent) {
+            Flush();
+        }
     }
 
     auto Read(std::byte buf[], std::size_t size) -> impl::FileOpResult
@@ -45,8 +47,7 @@ public:
 	auto Write(const std::byte buf[], std::size_t size) -> impl::FileOpResult
     {
         auto [bytesWritten, st] = WriteBuffer(buf, size);
-        if (bytesWritten == size ||
-            st != Make(status::Code::Success))
+        if (bytesWritten == size || IsError(st))
         {
             return { bytesWritten, st };
         }
@@ -58,8 +59,8 @@ public:
     }
 
     auto Resize() -> Status {
-        auto st = Flush();
-        if (st != Make(status::Code::Success)) {
+        auto st = Seek(0, StPoint::Current);
+        if (IsError(st)) {
             return st;
         }
         return file.Resize();
@@ -80,21 +81,11 @@ public:
         return file.Cancel();
     }
 
-	bool IsEOF() const
-    {
-        return file.IsEOF();
-    }
-
-	bool IsValid() const
-    {
-        return file.IsValid();
-    }
-
 	auto Seek(FilePos pos) -> Status
     {
         if (iEnd < iCurrent) {
             auto st = Flush();
-            if (st != Make(status::Code::Success)) {
+            if (IsError(st)) {
                 return st;
             }
         } else {
@@ -107,7 +98,7 @@ public:
     {
         if (iEnd < iCurrent) {
             auto st = Flush();
-            if (st != Make(status::Code::Success)) {
+            if (IsError(st)) {
                 return st;
             }
         } else {
@@ -119,9 +110,9 @@ public:
         return file.Seek(offset, rel);
     }
 
-    auto GetStatus() const -> Status
+    auto OpenStatus() const -> Status
     {
-        return file.GetStatus();
+        return file.OpenStatus();
     }
 
 	auto Tell() const -> FilePos
@@ -131,9 +122,13 @@ public:
 
     auto Flush() -> Status
     {
-        auto [s, err] = file.Write(buffer.get(), iCurrent);
-        iCurrent = iEnd = 0;
-        return err;
+        auto [bytesWritten, st] = CycleWrite(buffer.get() + iEnd, iCurrent - iEnd);
+        if (IsError(st)) {
+            iEnd += bytesWritten;
+        } else {
+            iEnd = iCurrent = 0;
+        }
+        return st;
     }
 private:
     auto ReadBuffer(std::byte buf[], std::size_t size) -> std::size_t
@@ -160,7 +155,7 @@ private:
         while (bytesRead < size) {
             auto [bRead, st] = file.Read(buf + bytesRead, maxSize - bytesRead);
             bytesRead += bRead;
-            if (st != status::Code::Success) {
+            if (IsError(st)) {
                 return {bytesRead, st};
             }
         }
@@ -186,12 +181,10 @@ private:
             auto [bWritten, st] = file.Write(buf + bytesWritten, size);
             bytesWritten += bWritten;
             size -= bWritten;
-            if (size == 0 ||
-                st != Make(status::Code::Success))
+            if (size == 0 || IsError(st))
             {
-                continue;
+                return { bytesWritten, st };
             }
-            return { bytesWritten, st };
         }
     }
 

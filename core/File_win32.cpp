@@ -65,56 +65,49 @@ constexpr std::size_t maxTransferSize = std::numeric_limits<DWORD>::max();
 
 namespace dse::core {
 
-File_win32::File_win32() : handle() {
-}
+File_win32::File_win32() :
+    handle(),
+    openError(ERROR_FILE_NOT_FOUND)
+{}
 
 File_win32::File_win32(IOContext& ctx, std::u8string_view filepath, OpenMode mode) :
-    context(IOContext_impl::GetImplFromObj(ctx)),
-    handle(),
-    append(bool(mode & OpenMode::Append))
+    File_win32()
 {
 	try {
-		handle = open(filepath, mode);
-		lastError = swal::last_error().value();
-		context->IOCPAttach(handle, Complete);
-	} catch (std::system_error& err) {
-		SetLastError(err);
+        handle = open(filepath, mode);
+        context = IOContext_impl::GetImplFromObj(ctx);
+        context->IOCPAttach(handle, Complete);
+        append = bool(mode & OpenMode::Append);
+    } catch (std::system_error& err) {
+        auto ecode = err.code();
+        if (ecode.category() != swal::win32_category::instance()) {
+            throw;
+        }
+        openError = ecode.value();
 	}
-}
-
-bool File_win32::IsValid() const
-{
-	return handle != INVALID_HANDLE_VALUE;
 }
 
 auto File_win32::Read(std::byte buf[], std::size_t size) -> impl::FileOpResult
 {
 	OVERLAPPED::hEvent = iocontext_detail::IocpDisabledEvent();
 	OVERLAPPED::Offset = (DWORD)pos;
-	OVERLAPPED::OffsetHigh = pos >> std::numeric_limits<DWORD>::digits;
-	DWORD lastTransfered = 0;
+    OVERLAPPED::OffsetHigh = pos >> std::numeric_limits<DWORD>::digits;
 	try {
         handle.Read(buf, std::min(size, maxTransferSize), *this);
-        lastError = ERROR_SUCCESS;
 	} catch (std::system_error& err) {
-        if (SetLastError(err)) {
-            lastError = ERROR_IO_PENDING;
+        auto st = SysErrToStatus(err);
+        if (st != Code::PendingOperation)
+        {
+            return { 0, st };
         }
-	}
-	if (
-		lastError == ERROR_SUCCESS ||
-		lastError == ERROR_IO_PENDING
-	) {
-		try {
-			lastTransfered = handle.GetOverlappedResult(*this, true);
-			lastError = ERROR_SUCCESS;
-			IncPtr(lastTransfered);
-		} catch (std::system_error& err) {
-			SetLastError(err);
-		}
-	}
-	eof = (lastError == ERROR_HANDLE_EOF);
-	return { lastTransfered, status::FromSystem(lastError) };
+    }
+    try {
+        auto lastTransfered = handle.GetOverlappedResult(*this, true);
+        IncPtr(lastTransfered);
+        return { lastTransfered, Make(Code::Success) };
+    } catch (std::system_error& err) {
+        return { 0, SysErrToStatus(err) };
+    }
 }
 
 auto File_win32::Write(const std::byte buf[], std::size_t size) -> impl::FileOpResult
@@ -124,48 +117,36 @@ auto File_win32::Write(const std::byte buf[], std::size_t size) -> impl::FileOpR
     }
 	OVERLAPPED::hEvent = iocontext_detail::IocpDisabledEvent();
 	OVERLAPPED::Offset = (DWORD)pos;
-	OVERLAPPED::OffsetHigh = pos >> std::numeric_limits<DWORD>::digits;
-	DWORD lastTransfered = 0;
+    OVERLAPPED::OffsetHigh = pos >> std::numeric_limits<DWORD>::digits;
 	try {
         handle.Write(buf, std::min(size, maxTransferSize), *this);
-        lastError = ERROR_SUCCESS;
 	} catch (std::system_error& err) {
-        if (SetLastError(err)) {
-            lastError = ERROR_IO_PENDING;
+        auto st = SysErrToStatus(err);
+        if (st != Code::PendingOperation) {
+            return { 0, st };
         }
 	}
-	if (
-		lastError == ERROR_SUCCESS ||
-		lastError == ERROR_IO_PENDING
-	) {
-		try {
-			lastTransfered = handle.GetOverlappedResult(*this, true);
-            lastError = ERROR_SUCCESS;
-            IncPtr(lastTransfered);
-		} catch (std::system_error& err) {
-			SetLastError(err);
-		}
-	}
-	return { lastTransfered, status::FromSystem(lastError) };
+    try {
+        DWORD lastTransfered = handle.GetOverlappedResult(*this, true);
+        IncPtr(lastTransfered);
+        return { lastTransfered, Make(Code::Success) };
+    } catch (std::system_error& err) {
+        return { 0, SysErrToStatus(err) };
+    }
 }
 
 void File_win32::Complete(DWORD transfered, DWORD error)
 {
-	File::Callback cb;
-	{
-		lastError = error;
+    File::Callback cb;
+    {
 		DWORD lastTransfered = transfered;
 		if (error == ERROR_SUCCESS) {
 			IncPtr(lastTransfered);
-		} else {
-			if (error == ERROR_HANDLE_EOF) {
-				eof = true;
-			}
-		}
+        }
 		cb = std::move(this->cb);
 	}
 	if (cb) {
-		cb(transfered, status::MakeSystem(error));
+        cb(transfered, (status::MakeSystem)(error));
 	}
 }
 
@@ -176,12 +157,11 @@ auto File_win32::Resize() -> Status
 	li.HighPart = pos >> std::numeric_limits<DWORD>::digits;
 	try {
 		handle.SetPointerEx(li, swal::SetPointerModes::Begin);
-		handle.SetEndOfFile();
-		lastError = ERROR_SUCCESS;
-	} catch (std::system_error& err) {
-		SetLastError(err);
+        handle.SetEndOfFile();
+    } catch (std::system_error& err) {
+        return SysErrToStatus(err);
 	}
-	return status::FromSystem(lastError);
+    return Make(Code::Success);
 }
 
 auto File_win32::ReadAsync(std::byte buf[], std::size_t size, const File::Callback& cb) -> Status
@@ -189,19 +169,15 @@ auto File_win32::ReadAsync(std::byte buf[], std::size_t size, const File::Callba
 	OVERLAPPED::hEvent = NULL;
 	OVERLAPPED::Offset = (DWORD)pos;
 	OVERLAPPED::OffsetHigh = pos >> std::numeric_limits<DWORD>::digits;
-	this->cb = cb;
-    lastError = ERROR_IO_PENDING;
+    this->cb = cb;
     context->Lock();
 	try {
         handle.Read(buf, std::min(size, maxTransferSize), *this);
-	} catch (std::system_error& err) {
-        if (SetLastError(err)) {
-            return status::Make(Code::PendingOperation);
-        }
+    } catch (std::system_error& err) {
+        return SysErrToStatus(err);
 	}
     context->Unlock();
-	eof = lastError == ERROR_HANDLE_EOF;
-    return status::FromSystem(lastError);
+    return Make(Code::Success);
 }
 
 auto File_win32::WriteAsync(const std::byte buf[], std::size_t size, const File::Callback& cb) -> Status
@@ -209,41 +185,37 @@ auto File_win32::WriteAsync(const std::byte buf[], std::size_t size, const File:
 	OVERLAPPED::hEvent = NULL;
 	OVERLAPPED::Offset = (DWORD)pos;
 	OVERLAPPED::OffsetHigh = pos >> std::numeric_limits<DWORD>::digits;
-	this->cb = cb;
-    lastError = ERROR_IO_PENDING;
+    this->cb = cb;
     context->Lock();
 	try {
         handle.Write(buf, std::min(size, maxTransferSize), *this);
-	} catch (std::system_error& err) {
-        if (SetLastError(err)) {
-            return status::Make(Code::PendingOperation);
-        }
+    } catch (std::system_error& err) {
+        return SysErrToStatus(err);
 	}
     context->Unlock();
-    return status::FromSystem(lastError);
+    return Make(Code::Success);
 }
 
-bool File_win32::IsBusy() {
-//	return event.WaitFor(0) != WAIT_OBJECT_0;
-}
-
-auto File_win32::Cancel() -> Status {
+auto File_win32::Cancel() -> Status
+{
 	try {
-		handle.CancelIoEx();
-		lastError = ERROR_SUCCESS;
+        handle.CancelIoEx();
 	} catch (std::system_error& err) {
-		SetLastError(err);
+        return SysErrToStatus(err);
 	}
-	return status::FromSystem(lastError);
+    return Make(Code::Success);
 }
 
-auto File_win32::GetStatus() const -> Status {
-	return status::FromSystem(lastError);
+auto File_win32::OpenStatus() const -> Status
+{
+    if (handle == INVALID_HANDLE_VALUE) {
+        return status::FromSystem(openError);
+    }
+    return Make(Code::Success);
 }
 
-File_win32::~File_win32() {
-//	event.WaitFor(INFINITE);
-}
+File_win32::~File_win32()
+{}
 
 void File_win32::Complete(OVERLAPPED *ovl, DWORD transfered, DWORD error)
 {
@@ -251,7 +223,17 @@ void File_win32::Complete(OVERLAPPED *ovl, DWORD transfered, DWORD error)
     self->Complete(transfered, error);
 }
 
-void File_win32::IncPtr(DWORD transfered) {
+auto File_win32::SysErrToStatus(std::system_error &err) -> Status
+{
+    auto ecode = err.code();
+    if (ecode.category() != swal::win32_category::instance()) {
+        throw;
+    }
+    return (status::FromSystem)(ecode.value());
+}
+
+void File_win32::IncPtr(DWORD transfered)
+{
     if (pos == -1) {
         pos = 0;
     } else {
@@ -264,8 +246,7 @@ auto File_win32::Tell() const -> FilePos {
 }
 
 auto File_win32::Seek(FilePos pos) -> Status {
-	this->pos = pos;
-	eof = false;
+    this->pos = pos;
 	return {};
 }
 
@@ -278,35 +259,18 @@ auto File_win32::Seek(FileOff off, StPoint point) -> Status {
 		pos += FilePos(off);
 		pos = (off < 0 && pos > FilePos(off) ? FilePos(0) : pos);
 		break;
-	case StPoint::End: {
+    case StPoint::End: {
 		LARGE_INTEGER li;
 		GetFileSizeEx(handle, &li);
 		FilePos eofpos = li.HighPart;
 		eofpos <<= (sizeof(li.LowPart) * CHAR_BIT);
 		eofpos += li.LowPart;
-		pos = eofpos + off;
-		pos = (off < 0 && pos > FilePos(off) ? FilePos(0) : pos);
-	}
-		break;
-	}
-	eof = false;
-	return {};
-}
-
-bool File_win32::IsEOF() const {
-	return eof;
-}
-
-bool File_win32::SetLastError(std::system_error &err) {
-	auto ecode = err.code();
-	if (ecode.category() != swal::win32_category::instance()) {
-        throw;
-	}
-    if (ecode.value() != ERROR_IO_PENDING) {
-        lastError = ecode.value();
-        return false;
+        off = -std::min(FileOff(0), off);
+        pos = eofpos - std::min<FilePos>(off, eofpos);
+        break;
     }
-    return true;
+    }
+    return Make(Code::Success);
 }
 
 } // namespace dse::core

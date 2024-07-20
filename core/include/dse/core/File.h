@@ -147,12 +147,10 @@ public:
 	{
 		return { this, buf, size };
 	}
-	auto Cancel() -> Status;
-	bool IsEOF() const;
-	bool IsValid() const;
+    auto Cancel() -> Status;
 	auto Seek(FilePos pos) -> Status;
 	auto Seek(FileOff offset, StPoint rel) -> Status;
-    auto GetStatus() const -> Status;
+    auto OpenStatus() const -> Status;
 	auto Tell() const -> FilePos;
 private:
     util::impl_ptr<IOTarget_impl> impl;
