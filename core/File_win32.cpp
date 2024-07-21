@@ -174,10 +174,13 @@ auto File_win32::ReadAsync(std::byte buf[], std::size_t size, const File::Callba
 	try {
         handle.Read(buf, std::min(size, maxTransferSize), *this);
     } catch (std::system_error& err) {
-        return SysErrToStatus(err);
-	}
-    context->Unlock();
-    return Make(Code::Success);
+        auto st = SysErrToStatus(err);
+        if (st != Code::PendingOperation) {
+            context->Unlock();
+            return st;
+        }
+    }
+    return Make(Code::PendingOperation);
 }
 
 auto File_win32::WriteAsync(const std::byte buf[], std::size_t size, const File::Callback& cb) -> Status
@@ -190,10 +193,13 @@ auto File_win32::WriteAsync(const std::byte buf[], std::size_t size, const File:
 	try {
         handle.Write(buf, std::min(size, maxTransferSize), *this);
     } catch (std::system_error& err) {
-        return SysErrToStatus(err);
-	}
-    context->Unlock();
-    return Make(Code::Success);
+        auto st = SysErrToStatus(err);
+        if (st != Code::PendingOperation) {
+            context->Unlock();
+            return st;
+        }
+    }
+    return Make(Code::PendingOperation);
 }
 
 auto File_win32::Cancel() -> Status

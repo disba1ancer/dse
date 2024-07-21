@@ -30,7 +30,7 @@ public:
     {
         auto bytesRead = ReadBuffer(buf, size);
         if (bytesRead == size) {
-            return {bytesRead, Make(status::Code::Success)};
+            return {bytesRead, Make(Code::Success)};
         }
         auto remain = size - bytesRead;
         if (remain >= CacheSize) {
@@ -66,9 +66,63 @@ public:
         return file.Resize();
     }
 
-    auto ReadAsync(std::byte buf[], std::size_t size, const Callback& cb) -> Status
+    bool ReadReady(std::size_t size)
     {
-        return file.ReadAsync(buf, size, cb);
+        return size <= iEnd - iCurrent;
+    }
+
+    auto CycleRead(std::byte buf[], std::size_t size, std::size_t maxSize)
+        -> impl::FileOpResult
+    {
+        std::size_t bytesRead = 0;
+        while (bytesRead < size) {
+            auto [bRead, st] = file.Read(buf + bytesRead, maxSize - bytesRead);
+            bytesRead += bRead;
+            if (IsError(st)) {
+                return {bytesRead, st};
+            }
+        }
+        return { bytesRead, Make(Code::Success) };
+    }
+
+    auto ReadAsync(std::byte buf[], std::size_t size, const Callback& cb) -> impl::FileOpResult
+    {
+        auto bytesRead = ReadBuffer(buf, size);
+        if (bytesRead == size) {
+            cb(bytesRead, Make(Code::Success));
+            return Make(Code::Success);
+        }
+        auto remain = size - bytesRead;
+        callback = cb;
+        if (remain >= CacheSize) {
+            while (bytesRead < size) {
+                auto [bRead, st] = file.Read(buf + bytesRead, size - bytesRead);
+                bytesRead += bRead;
+                if (IsError(st)) {
+                    return {bytesRead, st};
+                }
+            }
+            return { bytesRead, Make(Code::Success) };
+        }
+        iCurrent = 0;
+        auto [bRead, st] = CycleRead(buffer.get(), remain, CacheSize);
+        iEnd = bRead;
+        bytesRead += ReadBuffer(buf, remain);
+        return { bytesRead, st };
+        std::size_t bytesRead2 = 0;
+        while (bytesRead2 < size) {
+            auto [bRead, st] = file.Read(buffer.get() + bytesRead2, CacheSize - bytesRead2);
+            bytesRead2 += bRead;
+            if (IsError(st)) {
+                return {bytesRead2, st};
+            }
+        }
+        return { bytesRead, Make(Code::Success) };
+    }
+
+    bool WriteReady(std::size_t size)
+    {
+        return size < CacheSize - iCurrent;
     }
 
 	auto WriteAsync(const std::byte buf[], std::size_t size, const Callback& cb) -> Status
@@ -159,7 +213,7 @@ private:
                 return {bytesRead, st};
             }
         }
-        return { bytesRead, Make(status::Code::Success) };
+        return { bytesRead, Make(Code::Success) };
     }
 
     auto WriteBuffer(const std::byte buf[], std::size_t size) -> impl::FileOpResult
@@ -171,7 +225,7 @@ private:
         if (iCurrent == CacheSize) {
             return { bytesWritten, Flush() };
         }
-        return { bytesWritten, Make(status::Code::Success) };
+        return { bytesWritten, Make(Code::Success) };
     }
 
     auto CycleWrite(const std::byte buf[], std::size_t size) -> impl::FileOpResult
@@ -188,14 +242,53 @@ private:
         }
     }
 
+    void CycleReadAsync(std::size_t bRead, Status st)
+    {
+        auto& buf = cycleReadAsyncBuf;
+        auto& size = cycleReadAsyncSize;
+        auto& maxSize = cycleReadAsyncMaxSize;
+        auto& bytesRead = cycleReadAsyncBytesRead;
+        switch (cycleReadStep) {
+        case 0:
+            bytesRead = 0;
+            while (bytesRead < size) {
+                cycleReadStep = 1;
+                st = file.ReadAsync(buf + bytesRead, maxSize - bytesRead, {this, fnTag<&CachedFile::CycleReadAsync>});
+                if (IsError(st)) {
+                    cycleReadStep = -1;
+                    if (size == maxSize) {
+                        auto cb = std::move(callback);
+                        cb(bytesRead, st);
+                    } else {
+                        iCurrent = 0;
+                        iEnd = bytesRead;
+                    }
+                }
+                return;
+        case 1:
+                bytesRead += bRead;
+                if (IsError(st)) {
+                    return {bytesRead, st};
+                }
+            }
+            return { bytesRead, Make(Code::Success) };
+        case -1:
+        }
+    }
+
     File file;
     static constexpr auto CacheSize = 8192;
     std::unique_ptr<std::byte[]> buffer = std::make_unique<std::byte[]>(CacheSize);
     using IndexType = std::remove_cv_t<decltype(CacheSize)>;
     IndexType iCurrent = 0;
     IndexType iEnd = 0;
-//    bool bufferDirty = false;
     Callback callback;
+
+    int cycleReadStep;
+    std::byte* cycleReadAsyncBuf;
+    std::size_t cycleReadAsyncSize;
+    std::size_t cycleReadAsyncMaxSize;
+    std::size_t cycleReadAsyncBytesRead;
 };
 
 } // namespace dse::core
