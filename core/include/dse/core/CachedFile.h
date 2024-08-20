@@ -95,29 +95,24 @@ public:
         auto remain = size - bytesRead;
         callback = cb;
         if (remain >= CacheSize) {
-            while (bytesRead < size) {
-                auto [bRead, st] = file.Read(buf + bytesRead, size - bytesRead);
-                bytesRead += bRead;
-                if (IsError(st)) {
-                    return {bytesRead, st};
-                }
-            }
-            return { bytesRead, Make(Code::Success) };
+            asyncBytesRead = bytesRead;
+            asyncReadBuf = buf;
+            auto st = file.ReadAsync(buf + bytesRead, remain, {*this, fnTag<&CachedFile::DirectReadCallback>});
+            return { bytesRead, st };
         }
-        iCurrent = 0;
-        auto [bRead, st] = CycleRead(buffer.get(), remain, CacheSize);
-        iEnd = bRead;
-        bytesRead += ReadBuffer(buf, remain);
-        return { bytesRead, st };
-        std::size_t bytesRead2 = 0;
-        while (bytesRead2 < size) {
-            auto [bRead, st] = file.Read(buffer.get() + bytesRead2, CacheSize - bytesRead2);
-            bytesRead2 += bRead;
-            if (IsError(st)) {
-                return {bytesRead2, st};
-            }
+        return { bytesRead, Make(Code::NotImplemented) };
+    }
+
+    void DirectReadCallback(std::size_t read, Status st)
+    {
+        asyncBytesRead += read;
+        if (IsError(st) || asyncBytesRead >= asyncSizeRead) {
+            callback(asyncBytesRead, st);
         }
-        return { bytesRead, Make(Code::Success) };
+        st = file.ReadAsync(buf + asyncBytesRead, remain, {*this, fnTag<&CachedFile::DirectReadCallback>});
+        if (st == Code::PendingOperation) {
+            return;
+        }
     }
 
     bool WriteReady(std::size_t size)
@@ -289,6 +284,9 @@ private:
     std::size_t cycleReadAsyncSize;
     std::size_t cycleReadAsyncMaxSize;
     std::size_t cycleReadAsyncBytesRead;
+    std::size_t asyncBytesRead;
+    std::size_t asyncSizeRead;
+    std::byte* asyncReadBuf;
 };
 
 } // namespace dse::core
