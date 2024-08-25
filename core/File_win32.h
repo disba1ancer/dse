@@ -17,10 +17,10 @@ namespace dse::core {
 
 class File_win32;
 
-struct ExtendedOverlapped {
-	OVERLAPPED ovl;
-	File_win32* target;
-};
+// struct ExtendedOverlapped {
+// 	OVERLAPPED ovl;
+// 	File_win32* target;
+// };
 
 class File_win32 final : private OVERLAPPED {
 public:
@@ -40,8 +40,8 @@ public:
 	auto Seek(FilePos pos) -> Status;
 	auto Seek(FileOff offset, StPoint rel) -> Status;
     auto Resize() -> Status;
-	auto ReadAsync(std::byte buf[], std::size_t size, const File::Callback& cb) -> Status;
-    auto WriteAsync(const std::byte buf[], std::size_t size, const File::Callback& cb) -> Status;
+    auto ReadAsync(std::byte buf[], std::size_t size, const File::Callback& cb) -> impl::FileOpResult;
+    auto WriteAsync(const std::byte buf[], std::size_t size, const File::Callback& cb) -> impl::FileOpResult;
 	auto Cancel() -> Status;
     auto OpenStatus() const -> Status;
 private:
@@ -57,7 +57,7 @@ private:
 	swal::File handle;
     FilePos pos = 0; // be careful with positions and file sizes more than max value for FileOff (unreal large files)
     bool append;
-	File::Callback cb;
+    File::Callback cb;
 };
 
 } // namespace dse::core

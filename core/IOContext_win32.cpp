@@ -13,28 +13,28 @@ IOContext_win32::IOContext_win32()
 
 int IOContext_win32::Run()
 {
-    int queryCount;
+    int queryCount = activeOps.load(std::memory_order_relaxed);
     while (PollOne(queryCount, INFINITE) != StopSig) {}
     return queryCount;
 }
 
 int IOContext_win32::RunOne()
 {
-    int queryCount;
+    int queryCount = activeOps.load(std::memory_order_relaxed);
     PollOne(queryCount, INFINITE);
     return queryCount;
 }
 
 int IOContext_win32::Poll()
 {
-    int queryCount;
+    int queryCount = activeOps.load(std::memory_order_relaxed);
     while (PollOne(queryCount, 0) == Dequeue) {}
     return queryCount;
 }
 
 int IOContext_win32::PollOne()
 {
-    int queryCount;
+    int queryCount = activeOps.load(std::memory_order_relaxed);
     PollOne(queryCount, 0);
     return queryCount;
 }
@@ -81,6 +81,9 @@ void IOContext_win32::Post(CompleteCallback cb, OVERLAPPED *ovl, DWORD transfere
 
 auto IOContext_win32::PollOne(int& queryCount, DWORD timeout) -> PollResult
 {
+    if (queryCount == 0) {
+        return StopSig;
+    }
     auto enqIO = iocp.GetQueuedCompletionStatus2(0);
     if (enqIO.error != ERROR_SUCCESS) {
         if (enqIO.error == WAIT_TIMEOUT) {

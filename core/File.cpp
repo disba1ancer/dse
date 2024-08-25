@@ -62,12 +62,12 @@ auto File::Resize() -> Status
 	return impl->Resize();
 }
 
-auto File::ReadAsync(std::byte buf[], std::size_t size, const Callback& cb) -> Status
+auto File::ReadAsync(std::byte buf[], std::size_t size, const Callback& cb) -> impl::FileOpResult
 {
 	return impl->ReadAsync(buf, size, cb);
 }
 
-auto File::WriteAsync(const std::byte buf[], std::size_t size, const Callback& cb) -> Status
+auto File::WriteAsync(const std::byte buf[], std::size_t size, const Callback& cb) -> impl::FileOpResult
 {
 	return impl->WriteAsync(buf, size, cb);
 }

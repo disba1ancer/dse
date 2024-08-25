@@ -265,6 +265,29 @@ auto Make(T code) -> Status
     return status_traits<T>::to_status(code);
 }
 
+struct StatusException : std::exception {
+    StatusException(Status status) :
+        status(status)
+    {}
+    // exception interface
+public:
+    auto what() const -> const char*
+    {
+        return reinterpret_cast<const char*>(Message(status));
+    }
+
+private:
+    Status status;
+};
+
+inline auto ThrowIfError(Status st) -> Status
+{
+    if (IsError(st)) {
+        throw StatusException(st);
+    }
+    return st;
+}
+
 }
 
 }

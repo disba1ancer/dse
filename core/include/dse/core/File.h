@@ -137,8 +137,8 @@ public:
 	auto Read(std::byte buf[], std::size_t size) -> impl::FileOpResult;
 	auto Write(const std::byte buf[], std::size_t size) -> impl::FileOpResult;
 	auto Resize() -> Status;
-	auto ReadAsync(std::byte buf[], std::size_t size, const Callback& cb) -> Status;
-	auto WriteAsync(const std::byte buf[], std::size_t size, const Callback& cb) -> Status;
+    auto ReadAsync(std::byte buf[], std::size_t size, const Callback& cb) -> impl::FileOpResult;
+    auto WriteAsync(const std::byte buf[], std::size_t size, const Callback& cb) -> impl::FileOpResult;
 	auto ReadAsync(std::byte buf[], std::size_t size) -> impl::FileSender<impl::FileOp::Read>
 	{
 		return { this, buf, size };

@@ -11,30 +11,19 @@ int main(int argc, char* argv[])
 {
     IOContext ctx;
     CachedFile file(ctx, u8"test.bin", OpenMode::Read | OpenMode::Append);
-    unsigned char byte[1];
-    for (int i = 0; i < 4096; ++i) {
-        auto [bytesRead, st] = file.Read((std::byte*)byte, 1);
+    unsigned char buf[16] = {};
+    auto cb = [&buf](std::size_t size, dse::core::Status st) {
         if (IsError(st)) {
-            std::cout << "\n" << bytesRead << " ["
-                      << (const char*)SourceName(st) << ":" << (const char*)Message(st)
-                      << "]\n";
-            break;
+            return;
         }
-        std::cout << int(*byte) << " ";
+        for (int i = 0; i < size; ++i) {
+            std::cout << int(buf[i]) << " ";
+        }
+        endl(std::cout);
+    };
+    auto st = file.ReadAsync(reinterpret_cast<std::byte*>(buf), sizeof(buf), cb);
+    if (st.ecode != Code::PendingOperation) {
+        cb(st.transfered, st.ecode);
     }
-    const char8_t str[] = u8"Hello, World!!!";
-    file.Seek(0, dse::core::StPoint::Current);
-    auto [bytesRead, st] = file.Write((std::byte*)str, sizeof(str));
-    if (IsError(st)) {
-        std::cout << "\n" << bytesRead << " ["
-                  << (const char*)SourceName(st) << ":" << (const char*)Message(st)
-                  << "]\n";
-    }
-    st = file.Flush();
-    if (IsError(st)) {
-        std::cout << "\n" << bytesRead << " ["
-                  << (const char*)SourceName(st) << ":" << (const char*)Message(st)
-                  << "]\n";
-    }
-    endl(std::cout << "\n" << file.Tell());
+    ctx.Run();
 }

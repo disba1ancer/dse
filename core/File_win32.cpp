@@ -77,6 +77,7 @@ File_win32::File_win32(IOContext& ctx, std::u8string_view filepath, OpenMode mod
         handle = open(filepath, mode);
         context = IOContext_impl::GetImplFromObj(ctx);
         context->IOCPAttach(handle, Complete);
+        swal::winapi_call(SetFileCompletionNotificationModes(handle, FILE_SKIP_COMPLETION_PORT_ON_SUCCESS));
         append = bool(mode & OpenMode::Append);
     } catch (std::system_error& err) {
         auto ecode = err.code();
@@ -92,21 +93,20 @@ auto File_win32::Read(std::byte buf[], std::size_t size) -> impl::FileOpResult
 	OVERLAPPED::hEvent = iocontext_detail::IocpDisabledEvent();
 	OVERLAPPED::Offset = (DWORD)pos;
     OVERLAPPED::OffsetHigh = pos >> std::numeric_limits<DWORD>::digits;
+    DWORD lastTransfered = 0;
 	try {
-        handle.Read(buf, std::min(size, maxTransferSize), *this);
-	} catch (std::system_error& err) {
-        auto st = SysErrToStatus(err);
-        if (st != Code::PendingOperation)
-        {
-            return { 0, st };
+        if (!handle.Read(buf, std::min(size, maxTransferSize), lastTransfered, *this)) {
+            handle.GetOverlappedResult(*this, lastTransfered, true);
         }
-    }
-    try {
-        auto lastTransfered = handle.GetOverlappedResult(*this, true);
         IncPtr(lastTransfered);
-        return { lastTransfered, Make(Code::Success) };
+        return {lastTransfered, Make(Code::Success)};
     } catch (std::system_error& err) {
-        return { 0, SysErrToStatus(err) };
+        auto st = SysErrToStatus(err);
+        if (lastTransfered == 0) {
+            ::GetOverlappedResult(handle, this, &lastTransfered, FALSE);
+        }
+        IncPtr(lastTransfered);
+        return {lastTransfered, st};
     }
 }
 
@@ -118,33 +118,28 @@ auto File_win32::Write(const std::byte buf[], std::size_t size) -> impl::FileOpR
 	OVERLAPPED::hEvent = iocontext_detail::IocpDisabledEvent();
 	OVERLAPPED::Offset = (DWORD)pos;
     OVERLAPPED::OffsetHigh = pos >> std::numeric_limits<DWORD>::digits;
+    DWORD lastTransfered = 0;
 	try {
-        handle.Write(buf, std::min(size, maxTransferSize), *this);
-	} catch (std::system_error& err) {
-        auto st = SysErrToStatus(err);
-        if (st != Code::PendingOperation) {
-            return { 0, st };
+        if (!handle.Write(buf, std::min(size, maxTransferSize), lastTransfered, *this)) {
+            handle.GetOverlappedResult(*this, lastTransfered, true);
         }
-	}
-    try {
-        DWORD lastTransfered = handle.GetOverlappedResult(*this, true);
         IncPtr(lastTransfered);
-        return { lastTransfered, Make(Code::Success) };
+        return {lastTransfered, Make(Code::Success)};
     } catch (std::system_error& err) {
-        return { 0, SysErrToStatus(err) };
+        auto st = SysErrToStatus(err);
+        if (lastTransfered == 0) {
+            ::GetOverlappedResult(handle, this, &lastTransfered, FALSE);
+        }
+        IncPtr(lastTransfered);
+        return {lastTransfered, st};
     }
 }
 
 void File_win32::Complete(DWORD transfered, DWORD error)
 {
     File::Callback cb;
-    {
-		DWORD lastTransfered = transfered;
-		if (error == ERROR_SUCCESS) {
-			IncPtr(lastTransfered);
-        }
-		cb = std::move(this->cb);
-	}
+    cb = std::move(this->cb);
+    IncPtr(transfered);
 	if (cb) {
         cb(transfered, (status::MakeSystem)(error));
 	}
@@ -164,42 +159,55 @@ auto File_win32::Resize() -> Status
     return Make(Code::Success);
 }
 
-auto File_win32::ReadAsync(std::byte buf[], std::size_t size, const File::Callback& cb) -> Status
+auto File_win32::ReadAsync(std::byte buf[], std::size_t size, const File::Callback& cb) -> impl::FileOpResult
 {
 	OVERLAPPED::hEvent = NULL;
 	OVERLAPPED::Offset = (DWORD)pos;
 	OVERLAPPED::OffsetHigh = pos >> std::numeric_limits<DWORD>::digits;
+    DWORD lastTransfered = 0;
     this->cb = cb;
     context->Lock();
 	try {
-        handle.Read(buf, std::min(size, maxTransferSize), *this);
+        if (handle.Read(buf, std::min(size, maxTransferSize), lastTransfered, *this)) {
+            IncPtr(lastTransfered);
+            context->Unlock();
+            return { lastTransfered, Make(Code::Success) };
+        }
+        return { lastTransfered, Make(Code::PendingOperation) };
     } catch (std::system_error& err) {
         auto st = SysErrToStatus(err);
-        if (st != Code::PendingOperation) {
-            context->Unlock();
-            return st;
-        }
+        ::GetOverlappedResult(handle, this, &lastTransfered, FALSE);
+        IncPtr(lastTransfered);
+        context->Unlock();
+        return {lastTransfered, st};
     }
-    return Make(Code::PendingOperation);
 }
 
-auto File_win32::WriteAsync(const std::byte buf[], std::size_t size, const File::Callback& cb) -> Status
+auto File_win32::WriteAsync(const std::byte buf[], std::size_t size, const File::Callback& cb) -> impl::FileOpResult
 {
+    if (append) {
+        pos = -1;
+    }
 	OVERLAPPED::hEvent = NULL;
 	OVERLAPPED::Offset = (DWORD)pos;
 	OVERLAPPED::OffsetHigh = pos >> std::numeric_limits<DWORD>::digits;
+    DWORD lastTransfered = 0;
     this->cb = cb;
     context->Lock();
 	try {
-        handle.Write(buf, std::min(size, maxTransferSize), *this);
+        if (handle.Write(buf, std::min(size, maxTransferSize), lastTransfered, *this)) {
+            IncPtr(lastTransfered);
+            context->Unlock();
+            return {lastTransfered, Make(Code::Success)};
+        }
+        return { lastTransfered, Make(Code::PendingOperation) };
     } catch (std::system_error& err) {
         auto st = SysErrToStatus(err);
-        if (st != Code::PendingOperation) {
-            context->Unlock();
-            return st;
-        }
+        ::GetOverlappedResult(handle, this, &lastTransfered, FALSE);
+        IncPtr(lastTransfered);
+        context->Unlock();
+        return {lastTransfered, st};
     }
-    return Make(Code::PendingOperation);
 }
 
 auto File_win32::Cancel() -> Status
