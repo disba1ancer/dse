@@ -103,8 +103,8 @@ public:
             return;
         }
         auto remain = asyncSize - asyncTransfered;
-        st = file.ReadAsync(asyncBuf + asyncTransfered, remain, {*this, util::fnTag<&CachedFile::DirectReadCallback>});
-        if (st != status::Code::PendingOperation) {
+        auto [bytesRead, st2] = file.ReadAsync(asyncBuf + asyncTransfered, remain, {*this, util::fnTag<&CachedFile::DirectReadCallback>});
+        if (st2 != status::Code::PendingOperation) {
             callback(asyncTransfered, st);
             return;
         }
@@ -115,7 +115,7 @@ public:
         return size < CacheSize - iCurrent;
     }
 
-	auto WriteAsync(const std::byte buf[], std::size_t size, const Callback& cb) -> Status
+    auto WriteAsync(const std::byte buf[], std::size_t size, const Callback& cb) -> impl::FileOpResult
     {
         return file.WriteAsync(buf, size, cb);
     }

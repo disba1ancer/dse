@@ -11,7 +11,7 @@ int main(int argc, char* argv[])
 {
     IOContext ctx;
     CachedFile file(ctx, u8"test.bin", OpenMode::Read | OpenMode::Append);
-    unsigned char buf[16] = {};
+    unsigned char buf[4096] = {};
     auto cb = [&buf](std::size_t size, dse::core::Status st) {
         if (IsError(st)) {
             return;

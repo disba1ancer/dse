@@ -95,16 +95,13 @@ auto File_win32::Read(std::byte buf[], std::size_t size) -> impl::FileOpResult
     OVERLAPPED::OffsetHigh = pos >> std::numeric_limits<DWORD>::digits;
     DWORD lastTransfered = 0;
 	try {
-        if (!handle.Read(buf, std::min(size, maxTransferSize), lastTransfered, *this)) {
+        if (!::ReadFile(handle, buf, std::min(size, maxTransferSize), &lastTransfered, this)) {
             handle.GetOverlappedResult(*this, lastTransfered, true);
         }
         IncPtr(lastTransfered);
         return {lastTransfered, Make(Code::Success)};
     } catch (std::system_error& err) {
         auto st = SysErrToStatus(err);
-        if (lastTransfered == 0) {
-            ::GetOverlappedResult(handle, this, &lastTransfered, FALSE);
-        }
         IncPtr(lastTransfered);
         return {lastTransfered, st};
     }
@@ -120,16 +117,13 @@ auto File_win32::Write(const std::byte buf[], std::size_t size) -> impl::FileOpR
     OVERLAPPED::OffsetHigh = pos >> std::numeric_limits<DWORD>::digits;
     DWORD lastTransfered = 0;
 	try {
-        if (!handle.Write(buf, std::min(size, maxTransferSize), lastTransfered, *this)) {
+        if (!::WriteFile(handle, buf, std::min(size, maxTransferSize), &lastTransfered, this)) {
             handle.GetOverlappedResult(*this, lastTransfered, true);
         }
         IncPtr(lastTransfered);
         return {lastTransfered, Make(Code::Success)};
     } catch (std::system_error& err) {
         auto st = SysErrToStatus(err);
-        if (lastTransfered == 0) {
-            ::GetOverlappedResult(handle, this, &lastTransfered, FALSE);
-        }
         IncPtr(lastTransfered);
         return {lastTransfered, st};
     }
