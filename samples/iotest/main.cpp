@@ -23,7 +23,7 @@ int main(int argc, char* argv[])
     };
     auto st = file.ReadAsync(reinterpret_cast<std::byte*>(buf), sizeof(buf), cb);
     if (st.ecode != Code::PendingOperation) {
-        cb(st.transfered, st.ecode);
+        cb(st.transferred, st.ecode);
     }
     ctx.Run();
 }
