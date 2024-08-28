@@ -135,7 +135,7 @@ void File_win32::Complete(DWORD transfered, DWORD error)
     cb = std::move(this->cb);
     IncPtr(transfered);
 	if (cb) {
-        cb(transfered, (status::MakeSystem)(error));
+        cb(transfered, (status::FromSystem)(error));
 	}
 }
 

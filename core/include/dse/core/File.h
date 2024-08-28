@@ -48,7 +48,7 @@ class API_DSE_CORE File;
 namespace impl {
 
 struct FileOpResult {
-	std::size_t transfered;
+    std::size_t transferred;
 	Status ecode;
 };
 
