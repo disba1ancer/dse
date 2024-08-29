@@ -33,26 +33,33 @@ public:
         auto remain = size - bytesRead;
         if (remain >= CacheSize) {
             auto result = CycleRead(buf + bytesRead, remain);
+            result.transferred += bytesRead;
             return result;
         }
         iCurrent = 0;
         auto [bRead, st] = CycleRead(buffer.get(), remain, CacheSize);
         iEnd = bRead;
-        bytesRead += ReadBuffer(buf, remain);
-        return {bytesRead, st};
+        return {bytesRead + ReadBuffer(buf, remain), st};
     }
 
     auto Write(const std::byte buf[], std::size_t size) -> impl::FileOpResult
     {
-        auto [bytesWritten, st] = WriteBuffer(buf, size);
-        if (bytesWritten == size || IsError(st)) {
+        auto bytesWritten = WriteBuffer(buf, size);
+        if (bytesWritten == size) {
+            return {bytesWritten, Make(status::Code::Success)};
+        }
+        auto st = Flush();
+        if (status::IsError(st)) {
             return {bytesWritten, st};
         }
         auto remain = size - bytesWritten;
         if (remain < CacheSize) {
-            return WriteBuffer(buf + bytesWritten, remain);
+            bytesWritten += WriteBuffer(buf + bytesWritten, remain);
+            return {bytesWritten, st};
         }
-        return CycleWrite(buf + bytesWritten, remain);
+        auto r = CycleWrite(buf + bytesWritten, remain);
+        r.transferred += bytesWritten;
+        return r;
     }
 
     auto Resize() -> Status
@@ -71,17 +78,15 @@ public:
     {
         auto bytesRead = ReadBuffer(buf, size);
         if (bytesRead == size) {
-            cb(bytesRead, Make(status::Code::Success));
             return {0, Make(status::Code::Success)};
         }
         iCurrent = 0;
-        syncTransfered = bytesRead;
-        auto remain = size - bytesRead;
+        iEnd = 0;
         callback = cb;
-        asyncTransfered = 0;
-        asyncSize = remain;
-        asyncBuf = buf + bytesRead;
-        if (remain >= CacheSize) {
+        asyncTransfered = bytesRead;
+        asyncSize = size;
+        asyncBuf = buf;
+        if (asyncSize >= CacheSize) {
             return DoDirectRead(0, Make(status::Code::Success));
         }
         return DoBufferedRead(0, Make(status::Code::Success));
@@ -92,7 +97,79 @@ public:
     auto WriteAsync(const std::byte buf[], std::size_t size, const Callback &cb)
         -> impl::FileOpResult
     {
-        return file.WriteAsync(buf, size, cb);
+        auto bytesWritten = WriteBuffer(buf, size);
+        if (bytesWritten == size) {
+            return {bytesWritten, Make(status::Code::Success)};
+        }
+        callback = cb;
+        asyncTransfered = bytesWritten;
+        asyncSize = size;
+        asyncBuf = const_cast<std::byte *>(buf);
+        return DoFlushBuffer(0, Make(status::Code::Success));
+    }
+
+    auto DoFlushBuffer(std::size_t bytesWritten, Status st) -> impl::FileOpResult
+    {
+        do {
+            iEnd += bytesWritten;
+            if (IsError(st)) {
+                return {asyncTransfered, st};
+            }
+            if (iEnd >= iCurrent) {
+                iCurrent = iEnd = 0;
+                if (asyncSize == 0) {
+                    return {asyncTransfered, st};
+                }
+                auto remain = asyncSize - asyncTransfered;
+                if (remain >= CacheSize) {
+                    return DoDirectWrite(0, st);
+                }
+                bytesWritten = WriteBuffer(asyncBuf + asyncTransfered, remain);
+                return {bytesWritten + asyncTransfered, st};
+            }
+            auto remain = iCurrent - iEnd;
+            auto r = file.WriteAsync(
+                buffer.get() + iEnd, remain,
+                {*this, util::fnTag<&CachedFile::FlushBufferCallback>}
+            );
+            bytesWritten = r.transferred;
+            st = r.ecode;
+        } while (st != status::Code::PendingOperation);
+        return {0, st};
+    }
+
+    void FlushBufferCallback(std::size_t bytesWritten, Status st)
+    {
+        auto r = DoFlushBuffer(bytesWritten, st);
+        if (r.ecode != status::Code::PendingOperation) {
+            callback(r.transferred, r.ecode);
+        }
+    }
+
+    auto DoDirectWrite(std::size_t bytesRead, Status st) -> impl::FileOpResult
+    {
+        do {
+            asyncTransfered += bytesRead;
+            if (IsError(st) || asyncTransfered >= asyncSize) {
+                return {asyncTransfered, st};
+            }
+            auto remain = asyncSize - asyncTransfered;
+            auto r = file.ReadAsync(
+                asyncBuf + asyncTransfered, remain,
+                {*this, util::fnTag<&CachedFile::DirectWriteCallback>}
+            );
+            bytesRead = r.transferred;
+            st = r.ecode;
+        } while (st != status::Code::PendingOperation);
+        return {0, st};
+    }
+
+    void DirectWriteCallback(std::size_t bytesRead, Status st)
+    {
+        auto r = DoDirectWrite(bytesRead, st);
+        if (r.ecode != status::Code::PendingOperation) {
+            callback(r.transferred, r.ecode);
+        }
     }
 
     auto Cancel() -> Status { return file.Cancel(); }
@@ -132,6 +209,10 @@ public:
 
     auto Flush() -> Status
     {
+        if (iCurrent == iEnd) {
+            iEnd = iCurrent = 0;
+            return Make(status::Code::Success);
+        }
         auto [bytesWritten, st]
             = CycleWrite(buffer.get() + iEnd, iCurrent - iEnd);
         if (IsError(st)) {
@@ -174,17 +255,16 @@ private:
         return {bytesRead, Make(status::Code::Success)};
     }
 
-    auto WriteBuffer(const std::byte buf[], std::size_t size)
-        -> impl::FileOpResult
+    auto WriteBuffer(const std::byte buf[], std::size_t size) -> std::size_t
     {
         auto remain = CacheSize - iCurrent;
+        if (remain < size && iEnd == iCurrent) {
+            return 0;
+        }
         auto bytesWritten = std::min<std::size_t>(size, remain);
         std::memcpy(buffer.get() + iCurrent, buf, bytesWritten);
         iCurrent += bytesWritten;
-        if (iCurrent == CacheSize) {
-            return {bytesWritten, Flush()};
-        }
-        return {bytesWritten, Make(status::Code::Success)};
+        return bytesWritten;
     }
 
     auto CycleWrite(const std::byte buf[], std::size_t size) -> impl::FileOpResult
@@ -205,7 +285,7 @@ private:
         do {
             asyncTransfered += bytesRead;
             if (IsError(st) || asyncTransfered >= asyncSize) {
-                return {asyncTransfered + syncTransfered, st};
+                return {asyncTransfered, st};
             }
             auto remain = asyncSize - asyncTransfered;
             auto r = file.ReadAsync(
@@ -215,7 +295,7 @@ private:
             bytesRead = r.transferred;
             st = r.ecode;
         } while (st != status::Code::PendingOperation);
-        return {0, Make(status::Code::PendingOperation)};
+        return {0, st};
     }
 
     void DirectReadCallback(std::size_t bytesRead, Status st)
@@ -229,21 +309,21 @@ private:
     auto DoBufferedRead(std::size_t bytesRead, Status st) -> impl::FileOpResult
     {
         do {
-            asyncTransfered += bytesRead;
-            if (IsError(st) || asyncTransfered >= asyncSize) {
-                iEnd = asyncTransfered;
-                auto r = ReadBuffer(asyncBuf + syncTransfered, asyncSize);
-                return {r + syncTransfered, st};
+            iEnd += bytesRead;
+            auto remain = asyncSize - asyncTransfered;
+            if (IsError(st) || iEnd >= remain) {
+                auto r = ReadBuffer(asyncBuf + asyncTransfered, remain);
+                return {r + asyncTransfered, st};
             }
-            auto remain = CacheSize - asyncTransfered;
+            remain = CacheSize - iEnd;
             auto r = file.ReadAsync(
-                buffer.get() + asyncTransfered, remain,
+                buffer.get() + iEnd, remain,
                 {*this, util::fnTag<&CachedFile::BufferedReadCallback>}
             );
             bytesRead = r.transferred;
             st = r.ecode;
         } while (st != status::Code::PendingOperation);
-        return {0, Make(status::Code::PendingOperation)};
+        return {0, st};
     }
 
     void BufferedReadCallback(std::size_t bytesRead, Status st)
@@ -263,7 +343,6 @@ private:
     IndexType iEnd = 0;
     Callback callback;
 
-    std::size_t syncTransfered;
     std::size_t asyncTransfered;
     std::size_t asyncSize;
     std::byte *asyncBuf;
