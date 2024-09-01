@@ -20,7 +20,7 @@ int main(int argc, char* argv[])
         ctx.Run();
         return task.Result();
     } catch (dse::core::status::StatusException& e) {
-        std::cerr << e.what() << "\n";
+        std::cerr << "[ERROR] " << e.what() << "\n";
         return 1;
     }
 }

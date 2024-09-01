@@ -12,7 +12,9 @@ const char8_t *StatusProvider::Name() const
 }
 
 const char8_t *StatusProvider::Message(int status) const {
-    return u8"";
+    static std::u8string msg;
+    msg = swal::u8fromTString(swal::get_error_string(-status));
+    return msg.c_str();
 }
 
 }

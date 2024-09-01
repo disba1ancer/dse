@@ -76,13 +76,13 @@ File_win32::File_win32(IOContext& ctx, std::u8string_view filepath, OpenMode mod
         swal::winapi_call(SetFileCompletionNotificationModes(
             handle, FILE_SKIP_COMPLETION_PORT_ON_SUCCESS
         ));
-        append = bool(mode & OpenMode::Append);
         if (static_cast<unsigned>(mode & OpenMode::Clear)) {
             FILE_ALLOCATION_INFO info = {0};
             swal::winapi_call(::SetFileInformationByHandle(
                 handle, FileAllocationInfo, &info, sizeof(info)
             ));
         }
+        append = bool(mode & OpenMode::Append);
     } catch (std::system_error& err) {
         auto ecode = err.code();
         handle = swal::File();
