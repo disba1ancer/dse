@@ -149,13 +149,21 @@ public:
             if (IsError(st)) {
                 return st;
             }
-        } else {
-            if (rel == StPoint::Current) {
-                offset += iCurrent - iEnd;
-            }
-            iCurrent = iEnd = 0;
+            return file.Seek(offset, rel);
         }
-        return file.Seek(offset, rel);
+        if (rel != StPoint::Current) {
+            iCurrent = iEnd = 0;
+            return file.Seek(offset, rel);
+        }
+        offset += iCurrent;
+        if (offset < 0 || offset >= iEnd) {
+            offset -= iEnd;
+            iCurrent = iEnd = 0;
+            return file.Seek(offset, rel);
+        } else {
+            iCurrent = offset;
+            return Make(status::Code::Success);
+        }
     }
 
     auto OpenStatus() const -> Status { return file.OpenStatus(); }
@@ -435,8 +443,8 @@ inline bool do_test<TagWrite>(CachedFile* file, std::size_t size)
 
 template <typename TagOp>
 struct file_awaiter {
-    file_awaiter(file_sender<TagOp>&& sender) :
-        sender(std::move(sender))
+    file_awaiter(file_sender<TagOp>& sender) :
+        sender(sender)
     {}
     bool await_ready()
     {
@@ -468,7 +476,7 @@ struct file_awaiter {
     auto await_resume() -> FileOpResult { return result; }
 
 private:
-    file_sender<TagOp> sender;
+    file_sender<TagOp>& sender;
     FileOpResult result;
     std::coroutine_handle<> resumable;
 };
@@ -486,13 +494,13 @@ struct file_sender {
     friend auto operator co_await(file_sender<TagOp>&& sndr
     ) -> file_awaiter<TagOp>
     {
-        return {std::move(sndr)};
+        return {sndr};
     }
 
     friend auto operator co_await(file_sender<TagOp>& sndr
     ) -> file_awaiter<TagOp>
     {
-        return {std::move(sndr)};
+        return {sndr};
     }
 
 private:
