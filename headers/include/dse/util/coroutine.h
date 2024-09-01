@@ -275,18 +275,18 @@ public:
         return cHandle.done();
     }
     void Result()
-    requires(promise_type::choice == impl::TypeChoice::Void)
+    requires(choice == impl::TypeChoice::Void)
     {
         this->ThrowIfExcept();
     }
     T Result()
-    requires(promise_type::choice == impl::TypeChoice::Value)
+    requires(choice == impl::TypeChoice::Value)
     {
         this->ThrowIfExcept();
         return std::move(std::get<1>(cHandle.promise().value));
     }
     T Result()
-    requires(promise_type::choice == impl::TypeChoice::Reference)
+    requires(choice == impl::TypeChoice::Reference)
     {
         this->ThrowIfExcept();
         return static_cast<T>(std::get<1>(cHandle.promise().value).get());
@@ -310,6 +310,7 @@ struct task<T>::promise_type :
 {
     friend impl::FinalAwaiter<T>;
     friend class impl::TaskAwaiter<T>;
+    friend class task<T>;
     template <typename Ret, typename Recv>
     friend void impl::dse_TagInvoke(TagT<Start>, impl::TaskOpstate<Ret, Recv>&);
 private:
@@ -488,12 +489,6 @@ private:
     std::coroutine_handle<> handle;
 };
 
-}
-
-template <dse::util::Sender S>
-auto operator co_await(S&& sndr) -> dse::util::impl::SenderAwaiter<S>
-{
-    return { std::forward<S>(sndr) };
 }
 
 #endif // DSE_UTIL_COROUTINE_H

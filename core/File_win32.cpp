@@ -33,30 +33,23 @@ std::wstring convertFilePath(std::u8string_view filepath) {
 }
 
 DWORD modeToAccess(OpenMode mode) {
-	DWORD result = 0;
+    DWORD result = 0;
 	if (static_cast<unsigned>(mode & OpenMode::Read) != 0) {
-		result += FILE_READ_DATA;
+        result |= FILE_READ_DATA;
 	}
 	if (static_cast<unsigned>(mode & OpenMode::Write) != 0) {
-		result += FILE_WRITE_DATA;
+        result |= FILE_WRITE_DATA;
 	} else if (static_cast<unsigned>(mode & OpenMode::Append) != 0) {
-		result += FILE_APPEND_DATA;
+        result |= FILE_APPEND_DATA;
 	}
-	return result;
+    return result;
 }
 
 swal::CreateMode modeToCreateMode(OpenMode mode) {
 	typedef swal::CreateMode CM;
 	if ((mode & (OpenMode::Read | OpenMode::Write | OpenMode::Append)) == OpenMode::Read) mode |= OpenMode::Existing;
-	static const CM modeMap[] = { CM::OpenAlways, CM::CreateAlways, CM::OpenExisting, CM::TruncateExisting };
-	return modeMap[ static_cast<unsigned>(mode & (OpenMode::Clear | OpenMode::Existing)) >> 3 ];
-}
-
-swal::File open(std::u8string_view filepath, OpenMode mode) {
-	typedef swal::ShareMode SM;
-
-	auto path = convertFilePath(filepath);
-	return swal::File(path, modeToAccess(mode), SM::Read | SM::Write, modeToCreateMode(mode), FILE_FLAG_OVERLAPPED);
+    static const CM modeMap[] = { CM::OpenAlways, CM::OpenExisting };
+    return modeMap[ static_cast<unsigned>(mode & OpenMode::Clear) >> 3 ];
 }
 
 constexpr std::size_t maxTransferSize = std::numeric_limits<DWORD>::max();
@@ -65,30 +58,43 @@ constexpr std::size_t maxTransferSize = std::numeric_limits<DWORD>::max();
 
 namespace dse::core {
 
-File_win32::File_win32() :
-    handle(),
-    openError(ERROR_FILE_NOT_FOUND)
+File_win32::File_win32()
 {}
 
-File_win32::File_win32(IOContext& ctx, std::u8string_view filepath, OpenMode mode) :
-    File_win32()
+File_win32::File_win32(IOContext& ctx, std::u8string_view filepath, OpenMode mode)
 {
-	try {
-        handle = open(filepath, mode);
+    typedef swal::ShareMode SM;
+    try {
+        auto path = convertFilePath(filepath);
+        handle = swal::File(
+            path, modeToAccess(mode), SM::Read | SM::Write,
+            modeToCreateMode(mode), FILE_FLAG_OVERLAPPED
+        );
+        openError = status::FromSystem(::GetLastError());
         context = IOContext_impl::GetImplFromObj(ctx);
         context->IOCPAttach(handle, Complete);
-        swal::winapi_call(SetFileCompletionNotificationModes(handle, FILE_SKIP_COMPLETION_PORT_ON_SUCCESS));
+        swal::winapi_call(SetFileCompletionNotificationModes(
+            handle, FILE_SKIP_COMPLETION_PORT_ON_SUCCESS
+        ));
         append = bool(mode & OpenMode::Append);
+        if (static_cast<unsigned>(mode & OpenMode::Clear)) {
+            FILE_ALLOCATION_INFO info = {0};
+            swal::winapi_call(::SetFileInformationByHandle(
+                handle, FileAllocationInfo, &info, sizeof(info)
+            ));
+        }
     } catch (std::system_error& err) {
         auto ecode = err.code();
+        handle = swal::File();
         if (ecode.category() != swal::win32_category::instance()) {
             throw;
         }
-        openError = ecode.value();
-	}
+        openError = status::FromSystem(ecode.value());
+    }
 }
 
-auto File_win32::Read(std::byte buf[], std::size_t size) -> impl::FileOpResult
+auto File_win32::Read(void* buf, std::size_t size)
+    -> raw_file_impl::FileOpResult
 {
 	OVERLAPPED::hEvent = iocontext_detail::IocpDisabledEvent();
 	OVERLAPPED::Offset = (DWORD)pos;
@@ -107,7 +113,8 @@ auto File_win32::Read(std::byte buf[], std::size_t size) -> impl::FileOpResult
     }
 }
 
-auto File_win32::Write(const std::byte buf[], std::size_t size) -> impl::FileOpResult
+auto File_win32::Write(const void* buf, std::size_t size)
+    -> raw_file_impl::FileOpResult
 {
     if (append) {
         pos = -1;
@@ -153,7 +160,8 @@ auto File_win32::Resize() -> Status
     return Make(Code::Success);
 }
 
-auto File_win32::ReadAsync(std::byte buf[], std::size_t size, const File::Callback& cb) -> impl::FileOpResult
+auto File_win32::ReadAsync(void* buf, std::size_t size, const Callback& cb)
+    -> raw_file_impl::FileOpResult
 {
 	OVERLAPPED::hEvent = NULL;
 	OVERLAPPED::Offset = (DWORD)pos;
@@ -177,7 +185,8 @@ auto File_win32::ReadAsync(std::byte buf[], std::size_t size, const File::Callba
     }
 }
 
-auto File_win32::WriteAsync(const std::byte buf[], std::size_t size, const File::Callback& cb) -> impl::FileOpResult
+auto File_win32::WriteAsync(const void* buf, std::size_t size, const Callback& cb)
+    -> raw_file_impl::FileOpResult
 {
     if (append) {
         pos = -1;
@@ -217,7 +226,7 @@ auto File_win32::Cancel() -> Status
 auto File_win32::OpenStatus() const -> Status
 {
     if (handle == INVALID_HANDLE_VALUE) {
-        return status::FromSystem(openError);
+        return openError;
     }
     return Make(Code::Success);
 }
@@ -227,8 +236,7 @@ File_win32::~File_win32()
 
 void File_win32::Complete(OVERLAPPED *ovl, DWORD transfered, DWORD error)
 {
-    auto self = static_cast<File_win32*>(ovl);
-    self->Complete(transfered, error);
+    static_cast<File_win32*>(ovl)->Complete(transfered, error);
 }
 
 auto File_win32::SysErrToStatus(std::system_error &err) -> Status

@@ -27,12 +27,13 @@ File::File(File &&oth) = default;
 File::~File()
 {}
 
-auto File::Read(std::byte buf[], std::size_t size) -> impl::FileOpResult
+auto File::Read(void* buf, std::size_t size) -> raw_file_impl::FileOpResult
 {
 	return impl->Read(buf, size);
 }
 
-auto File::Write(const std::byte buf[], std::size_t size) -> impl::FileOpResult
+auto File::Write(const void* buf, std::size_t size)
+    -> raw_file_impl::FileOpResult
 {
 	return impl->Write(buf, size);
 }
@@ -62,12 +63,14 @@ auto File::Resize() -> Status
 	return impl->Resize();
 }
 
-auto File::ReadAsync(std::byte buf[], std::size_t size, const Callback& cb) -> impl::FileOpResult
+auto File::ReadAsync(void* buf, std::size_t size, const Callback& cb)
+    -> raw_file_impl::FileOpResult
 {
 	return impl->ReadAsync(buf, size, cb);
 }
 
-auto File::WriteAsync(const std::byte buf[], std::size_t size, const Callback& cb) -> impl::FileOpResult
+auto File::WriteAsync(const void* buf, std::size_t size, const Callback& cb)
+    -> raw_file_impl::FileOpResult
 {
 	return impl->WriteAsync(buf, size, cb);
 }
