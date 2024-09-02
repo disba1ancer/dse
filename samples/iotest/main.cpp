@@ -1,4 +1,5 @@
 #include "dse/util/coroutine.h"
+#include <cstring>
 #include <dse/core/CachedFile.h>
 #include <dse/core/IOContext.h>
 #include <iostream>

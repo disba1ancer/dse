@@ -271,7 +271,7 @@ struct StatusException : std::exception {
     {}
     // exception interface
 public:
-    auto what() const -> const char*
+    auto what() const noexcept -> const char*
     {
         return reinterpret_cast<const char*>(Message(status));
     }

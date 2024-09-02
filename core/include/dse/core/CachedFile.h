@@ -1,6 +1,7 @@
 #ifndef DSE_CORE_CACHEDFILE_H
 #define DSE_CORE_CACHEDFILE_H
 
+#include <cstring>
 #include "File.h"
 
 namespace dse::core {

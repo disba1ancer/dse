@@ -310,7 +310,7 @@ struct task<T>::promise_type :
 {
     friend impl::FinalAwaiter<T>;
     friend class impl::TaskAwaiter<T>;
-    friend class task<T>;
+    friend struct task<T>;
     template <typename Ret, typename Recv>
     friend void impl::dse_TagInvoke(TagT<Start>, impl::TaskOpstate<Ret, Recv>&);
 private:

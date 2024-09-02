@@ -1,6 +1,7 @@
 #ifndef DSE_CORE_IOCONTEXT_WIN32_H
 #define DSE_CORE_IOCONTEXT_WIN32_H
 
+#include <atomic>
 #include <dse/core/IOContext.h>
 #include <swal/handle.h>
 
