@@ -372,8 +372,8 @@ RenderOpenGL31_impl::RenderOpenGL31_impl(core::Window& wnd) : wnd(&wnd),
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
 
-//    glClearColor(.03125f, .03125f, .0625f, 1.f);
-    glClearColor(.5f, .5f, .25f, 1.f);
+    glClearColor(.03125f, .03125f, .0625f, 1.f);
+//    glClearColor(.5f, .5f, .25f, 1.f);
 }
 
 void RenderOpenGL31_impl::RebuildViewport(unsigned width, unsigned height)
