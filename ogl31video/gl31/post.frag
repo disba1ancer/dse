@@ -22,5 +22,5 @@ vec4 ltos(vec4 c) {
 }
 
 void main() {
-    outColor = ltos(texelFetch(colorBuffer, ivec2(gl_FragCoord.xy), 0));
+    outColor = ltos(clamp(texelFetch(colorBuffer, ivec2(gl_FragCoord.xy), 0), 0.f, 1.f));
 }

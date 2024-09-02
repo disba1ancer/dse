@@ -100,7 +100,7 @@ auto File_win32::Read(void* buf, std::size_t size)
 	OVERLAPPED::Offset = (DWORD)pos;
     OVERLAPPED::OffsetHigh = pos >> std::numeric_limits<DWORD>::digits;
     DWORD lastTransfered = 0;
-	try {
+    try {
         if (!::ReadFile(handle, buf, std::min(size, maxTransferSize), &lastTransfered, this)) {
             handle.GetOverlappedResult(*this, lastTransfered, true);
         }
@@ -123,7 +123,7 @@ auto File_win32::Write(const void* buf, std::size_t size)
 	OVERLAPPED::Offset = (DWORD)pos;
     OVERLAPPED::OffsetHigh = pos >> std::numeric_limits<DWORD>::digits;
     DWORD lastTransfered = 0;
-	try {
+    try {
         if (!::WriteFile(handle, buf, std::min(size, maxTransferSize), &lastTransfered, this)) {
             handle.GetOverlappedResult(*this, lastTransfered, true);
         }
