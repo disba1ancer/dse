@@ -43,5 +43,5 @@ void main() {
     vec3 pos = (object.transform * vec4(vPos, 1.f)).xyz;
     viewDir = camera.pos.xyz - pos;
     gl_Position = camera.viewProj * vec4(pos, 1.f);
-    lightDir = vec3(1.f, 1.f, -1.f);
+    lightDir = -vec3(1.f, 1.f, -1.f);
 }
