@@ -112,7 +112,7 @@ auto File_win32::Read(std::byte buf[], std::size_t size) -> impl::FileOpResult {
 		lastError == win32_errc(ERROR_IO_PENDING)
 	) {
 		try {
-			lastTransfered = handle.GetOverlappedResult(*this, true);
+            lastTransfered = handle.GetOverlappedResult(*this, true);
 			lastError = win32_errc(ERROR_SUCCESS);
 			IncPtr(lastTransfered);
 		} catch (std::system_error& err) {
@@ -140,7 +140,7 @@ auto File_win32::Write(const std::byte buf[], std::size_t size) -> impl::FileOpR
 		lastError == win32_errc(ERROR_IO_PENDING)
 	) {
 		try {
-			lastTransfered = handle.GetOverlappedResult(*this, true);
+            lastTransfered = handle.GetOverlappedResult(*this, true);
 			lastError = win32_errc(ERROR_SUCCESS);
 			IncPtr(lastTransfered);
 		} catch (std::system_error& err) {
