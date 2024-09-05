@@ -11,12 +11,12 @@ using dse::core::status::Code;
 
 IOContext ctx;
 
-auto MainTask() -> dse::util::task<int>;
+auto MainTask(int argc, char* argv[]) -> dse::util::task<int>;
 
 int main(int argc, char* argv[])
 {
     try {
-        auto task = MainTask();
+        auto task = MainTask(argc, argv);
         task.Resume();
         ctx.Run();
         return task.Result();
@@ -26,7 +26,7 @@ int main(int argc, char* argv[])
     }
 }
 
-auto MainTask() -> dse::util::task<int>
+auto MainTask(int argc, char* argv[]) -> dse::util::task<int>
 {
     CachedFile file(ctx, u8"testsrc.txt", OpenMode::Read);
     CachedFile out(ctx, u8"testout.txt", OpenMode::Write | OpenMode::Clear);
@@ -39,7 +39,7 @@ auto MainTask() -> dse::util::task<int>
         if (!IsError(st)) {
             continue;
         }
-        ThrowIfError((co_await out.WriteAsync("\n[ERROR] ", 9)).ecode);
+        ThrowIfError((co_await out.WriteAsync("[ERROR] ", 9)).ecode);
         auto msg = reinterpret_cast<const char*>(Message(st));
         ThrowIfError((co_await out.WriteAsync(msg, std::strlen(msg))).ecode);
         ThrowIfError((co_await out.WriteAsync("\n", 1)).ecode);
