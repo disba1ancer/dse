@@ -92,12 +92,12 @@ auto mainTask(Window& window, RenderOpenGL31& render) -> dse::util::Task<void>
     Cube cubeMesh;
     Sphere sphereMesh(32, 48);
     BasicBitmapLoader texture(thrPool, u8"assets/textures/wall_test.bmp");
-    BasicBitmapLoader mapTex(thrPool, u8"assets/textures/earth.bmp");
+    BasicBitmapLoader mapTex(thrPool, u8"assets/textures/svi.bmp");
     BasicBitmapLoader mapNorm(thrPool, u8"assets/textures/earthnormalfull.bmp", true);
     Material mat(&texture);
     Material mapMat(&mapTex);
-    mapMat.SetNormalMap(&mapNorm);
-    auto cube = scene.createObject( Object(&cubeMesh));
+    // mapMat.SetNormalMap(&mapNorm);
+    auto cube = scene.createObject(Object(&cubeMesh));
     auto sphere = scene.createObject(Object(&sphereMesh));
     cube->SetPos({-1.f, -1.f, -1.f});
     //cube1->setScale({.25f, .25f, .25f});
