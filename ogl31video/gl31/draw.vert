@@ -5,12 +5,12 @@ in vec2 vUV;
 in float vBTangSign;
 
 layout(std140) uniform Camera {
-    mat4 viewProj;
-    vec4 pos;
-} camera;
+    mat4 camera_viewProj;
+    vec4 camera_pos;
+};
 layout(std140) uniform ObjectInstance {
-    layout(row_major) mat4x3 transform;
-} object;
+    layout(row_major) mat4x3 object_transform;
+};
 
 out vec3 fNorm;
 out vec3 fTang;
@@ -36,12 +36,12 @@ vec3 vecrotquat(vec3 vec, vec4 quat) {
 }
 
 void main() {
-    fNorm = (object.transform * vec4(vNorm, 0.f)).xyz;
-    fTang = (object.transform * vec4(vTang, 0.f)).xyz;
+    fNorm = (object_transform * vec4(vNorm, 0.f)).xyz;
+    fTang = (object_transform * vec4(vTang, 0.f)).xyz;
     fBitang = cross(fNorm, fTang) * vBTangSign;
     fUV = vUV;
-    vec3 pos = (object.transform * vec4(vPos, 1.f)).xyz;
-    viewDir = camera.pos.xyz - pos;
-    gl_Position = camera.viewProj * vec4(pos, 1.f);
+    vec3 pos = (object_transform * vec4(vPos, 1.f)).xyz;
+    viewDir = camera_pos.xyz - pos;
+    gl_Position = camera_viewProj * vec4(pos, 1.f);
     lightDir = -vec3(1.f, 1.f, -1.f);
 }
