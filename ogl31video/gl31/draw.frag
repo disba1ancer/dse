@@ -7,12 +7,12 @@ in vec3 lightDir;
 
 uniform vec2 windowSize;
 layout(std140) uniform Camera {
-    mat4 viewProj;
-    vec4 pos;
-} camera;
+    mat4 camera_viewProj;
+    vec4 camera_pos;
+};
 layout(std140) uniform Material {
-    vec4 color;
-} material;
+    vec4 material_color;
+};
 uniform sampler2D diffuse;
 uniform sampler2D normalMap;
 
@@ -36,9 +36,9 @@ float getBlurCoef(float rA, float rB, float x)
     return max(0, min(rA, x + rB) - max(-rA, x - rB)) * .5 / rB;
 }
 
-vec3 getAmbientColor(vec3 normal, vec3 half, float blur)
+vec3 getAmbientColor(vec3 normal, vec3 halfN, float blur)
 {
-    float cos2NH = dot (normal, half);
+    float cos2NH = dot (normal, halfN);
     if (cos2NH <= 0.f) {
         return ambientColor;
     }
@@ -69,7 +69,7 @@ vec3 fresnel(float cosVN, vec3 r0)
 
 void main() {
     vec4 diffuseCol = texture(diffuse, fUV);
-    diffuseCol = mix(material.color, diffuseCol, diffuseCol.a);
+    diffuseCol = mix(material_color, diffuseCol, diffuseCol.a);
     vec3 normal = normalize(texture(normalMap, fUV).xyz * 2.f - 1.f);
     float normK = 1.f / sqrt(dot(fNorm, fNorm));
     vec3 nLightDir = normalize(lightDir);
@@ -80,8 +80,8 @@ void main() {
     vec3 specDir = 2 * nNorm * dot(nNorm, nViewDir) - nViewDir;
     vec3 reflColor = mix(ambientColor, getAmbientColor(nNorm, normalize(.5f * (nViewDir + nLightDir)), .5f), brightness);
     float cosVN = max(0.f, dot(nViewDir, nNorm));
-    vec3 kF = fresnel(cosVN, vec3(diffuseCol.xyz));
-    fragColor = vec4(reflColor * kF, 1.f); //mix(mix(ambientColor, lightCol, brightness) * diffuseCol, reflColor, kF);
+    vec3 kF = fresnel(cosVN, vec3(reflColor));
+    fragColor = vec4(mix(mix(ambientColor, lightCol, brightness).xyz * diffuseCol.xyz, reflColor.xyz, kF), 1.f);
     //fragColor = diffuseCol * ambientColor + max(0.f, brightness) * lightCol * diffuseCol + pow(max(0.f, dot(specDir, nViewDir)), 16.f) * lightCol * diffuseCol;
     //fragColor = vec4(tbn[2] * .5f + .5f, 1.f);reflColor
 }
