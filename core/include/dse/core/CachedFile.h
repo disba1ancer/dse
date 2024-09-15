@@ -2,7 +2,7 @@
 #define DSE_CORE_CACHEDFILE_H
 
 #include <cstring>
-#include "detail/CachedFile.h"
+#include "File.h"
 
 namespace dse::core {
 
@@ -97,7 +97,7 @@ public:
     }
 
     auto ReadAsync(void* buf_, std::size_t size)
-        -> cached_file_impl::file_sender3<
+        -> raw_file_impl::file_sender3<
             &CachedFile::ReadAsync,
             [](decltype(this) self, void* buf, std::size_t size) {
                 return self->ReadReady(size);
@@ -130,7 +130,7 @@ public:
     }
 
     auto WriteAsync(const void* buf_, std::size_t size)
-        -> cached_file_impl::file_sender3<
+        -> raw_file_impl::file_sender3<
             &CachedFile::WriteAsync,
             [](decltype(this) self, const void* buf, std::size_t size) {
                 return self->WriteReady(size);
@@ -176,7 +176,7 @@ public:
     }
 
     auto SeekAsync(FilePos pos)
-        -> cached_file_impl::file_sender3<
+        -> raw_file_impl::file_sender3<
             &CachedFile::SeekAsync,
             &std::remove_pointer_t<decltype(this)>::SeekReady, decltype(this),
             decltype(pos)>
@@ -226,7 +226,7 @@ public:
     }
 
     auto SeekAsync(FileOff offset, StPoint rel)
-        -> cached_file_impl::file_sender3<
+        -> raw_file_impl::file_sender3<
             [](decltype(this) self, FileOff offset, StPoint rel, Callback cb) {
                 return self->SeekAsync(offset, rel, cb);
             },
@@ -271,7 +271,7 @@ public:
         return DoFlushBuffer<&CachedFile::FlushEnding>(0, Make(status::Code::Success)).ecode;
     }
 
-    auto FlushAsync() -> cached_file_impl::file_sender3<
+    auto FlushAsync() -> raw_file_impl::file_sender3<
                           &CachedFile::FlushAsync,
                           [](decltype(this) self) { return false; },
                           decltype(this)>

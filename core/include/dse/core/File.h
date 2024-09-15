@@ -8,14 +8,15 @@
 #ifndef DSE_CORE_FILE_H_
 #define DSE_CORE_FILE_H_
 
+#include "detail/RawFile.h"
 #include "IOContext.h"
-#include "detail/impexp.h"
-#include "status.h"
-#include <coroutine>
+// #include "detail/impexp.h"
+// #include "status.h"
+// #include <coroutine>
 #include <dse/util/enum_bitwise.h>
-#include <dse/util/execution.h>
-#include <dse/util/functional.h>
-#include <string_view>
+// #include <dse/util/execution.h>
+// #include <dse/util/functional.h>
+// #include <string_view>
 
 namespace dse::core {
 
@@ -27,109 +28,11 @@ typedef File_win32 File_impl;
 
 #endif
 
-enum class OpenMode : unsigned {
-	Read = 0x1U,
-	Write = 0x2U,
-	Append = 0x4U,
-	Clear = 0x8U, // clear file contents when opened
-	Existing = 0x10U, // open only existing
-};
-
-enum class StPoint {
-    Start,
-    Current,
-    End,
-};
-
-class API_DSE_CORE File;
-
-namespace raw_file_impl {
-
-struct FileOpResult {
-    std::size_t transferred;
-	Status ecode;
-};
-
-struct TagRead;
-struct TagWrite;
-
-template <typename op>
-struct FileOpBuf;
-
-template <>
-struct FileOpBuf<TagRead> {
-    using Type = void;
-};
-
-template <>
-struct FileOpBuf<TagWrite> {
-    using Type = const void;
-};
-
-template <typename TagOp>
-using FileOpBufT = typename FileOpBuf<TagOp>::Type;
-
-template <typename TagOp, typename R>
-class FileOpstate;
-
-template <typename R>
-void dse_TagInvoke(util::TagT<util::Start>, FileOpstate<TagRead, R>& opstate);
-template <typename R>
-void dse_TagInvoke(util::TagT<util::Start>, FileOpstate<TagWrite, R>& opstate);
-
-template <typename TagOp, typename R>
-class FileOpstate {
-	File *file;
-    FileOpBufT<TagOp> *buf;
-	std::size_t size;
-	std::remove_cvref_t<R> recv;
-	void callback(std::size_t size, Status error)
-	{
-		util::SetValue(std::move(recv), size, error);
-	}
-public:
-	FileOpstate(
-		File *file,
-        FileOpBufT<TagOp> *buf,
-		std::size_t size,
-		std::remove_cvref_t<R> recv
-	) : file(file), buf(buf), size(size), recv(recv)
-	{}
-    friend void dse_TagInvoke<TagOp, R>(util::TagT<util::Start>, FileOpstate& opstate);
-};
-
-template <typename TagOp>
-class file_awaiter;
-
-template <typename TagOp>
-class FileSender {
-	File *file;
-    FileOpBufT<TagOp> *buf;
-	std::size_t size;
-public:
-	template <template<typename ...> typename T>
-	using ValueTypes = T<std::size_t, Status>;
-	using ErrorType = std::exception_ptr;
-    static constexpr bool SendsDone = false;
-    friend class file_awaiter<TagOp>;
-    FileSender(File *file, FileOpBufT<TagOp>* buf, std::size_t size) :
-		file(file), buf(buf), size(size)
-	{}
-	template <util::ReceiverOf<std::size_t, Status> R>
-	friend auto dse_TagInvoke(util::TagT<util::Connect>, FileSender&& sndr, R&& recv)
-    -> FileOpstate<TagOp, R>
-	{
-		return { sndr.file, sndr.buf, sndr.size, std::forward<R>(recv) };
-	}
-};
-
-}
-
 class API_DSE_CORE File {
 public:
 	using FilePos = std::uint_least64_t;
 	using FileOff = std::int_least64_t;
-	using Callback = util::FunctionPtr<void(std::size_t, Status)>;
+	using Callback = raw_file_impl::Callback;
 public:
 	File();
 	File(IOContext& ctx, std::u8string_view filepath, OpenMode mode);
@@ -141,14 +44,33 @@ public:
 	auto Resize() -> Status;
     auto ReadAsync(void* buf, std::size_t size, const Callback& cb) -> raw_file_impl::FileOpResult;
     auto WriteAsync(const void* buf, std::size_t size, const Callback& cb) -> raw_file_impl::FileOpResult;
-    auto ReadAsync(void* buf, std::size_t size) -> raw_file_impl::FileSender<raw_file_impl::TagRead>
-	{
-		return { this, buf, size };
-	}
-    auto WriteAsync(const void* buf, std::size_t size) -> raw_file_impl::FileSender<raw_file_impl::TagWrite>
-	{
-		return { this, buf, size };
-	}
+    auto ReadAsync(void* buf, std::size_t size)
+        -> raw_file_impl::file_sender3<
+            &File::ReadAsync,
+            [](decltype(this) self, void* buf, std::size_t size) {
+                return false;
+            },
+            decltype(this), decltype(buf), decltype(size)>
+    {
+        return {
+            std::forward<decltype(this)>(this),
+            std::forward<decltype(buf)>(buf), std::forward<decltype(size)>(size)
+        };
+    }
+    auto WriteAsync(const void* buf, std::size_t size)
+        -> raw_file_impl::file_sender3<
+            &File::WriteAsync,
+            [](decltype(this) self, const void* buf, std::size_t size) {
+                return false;
+            },
+            decltype(this), decltype(buf), decltype(size)>
+    {
+        return {
+            std::forward<decltype(this)>(this),
+            std::forward<decltype(buf)>(buf),
+            std::forward<decltype(size)>(size)
+        };
+    }
     auto Cancel() -> Status;
 	auto Seek(FilePos pos) -> Status;
 	auto Seek(FileOff offset, StPoint rel) -> Status;
