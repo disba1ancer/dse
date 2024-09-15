@@ -32,6 +32,7 @@ target_sources(core PUBLIC
     include/dse/core/ThreadPool.h
     include/dse/core/Window.h
     include/dse/core/WindowShowCommand.h
+    include/dse/core/detail/CachedFile.h
     include/dse/core/detail/impexp.h
     include/dse/core/detail/staticmod.h
     include/dse/core/errors.h

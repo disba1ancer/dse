@@ -2,21 +2,9 @@
 #define DSE_CORE_CACHEDFILE_H
 
 #include <cstring>
-#include "File.h"
+#include "detail/CachedFile.h"
 
 namespace dse::core {
-
-namespace cached_file_impl {
-
-template <typename TagOp>
-struct file_sender;
-
-struct flush_sender;
-
-template <auto op, auto op2>
-struct file_sender2;
-
-} // namespace cached_file_impl
 
 class CachedFile {
 public:
@@ -109,8 +97,19 @@ public:
     }
 
     auto ReadAsync(void* buf_, std::size_t size)
-        -> cached_file_impl::file_sender2<
-            &CachedFile::ReadReady, &CachedFile::ReadAsync>;
+        -> cached_file_impl::file_sender3<
+            &CachedFile::ReadAsync,
+            [](decltype(this) self, void* buf, std::size_t size) {
+                return self->ReadReady(size);
+            },
+            decltype(this), decltype(buf_), decltype(size)>
+    {
+        return {
+            std::forward<decltype(this)>(this),
+            std::forward<decltype(buf_)>(buf_),
+            std::forward<decltype(size)>(size)
+        };
+    }
 
     bool WriteReady(std::size_t size) { return size < CacheSize - iCurrent; }
 
@@ -131,8 +130,19 @@ public:
     }
 
     auto WriteAsync(const void* buf_, std::size_t size)
-        -> cached_file_impl::file_sender2<
-            &CachedFile::WriteReady, &CachedFile::WriteAsync>;
+        -> cached_file_impl::file_sender3<
+            &CachedFile::WriteAsync,
+            [](decltype(this) self, const void* buf, std::size_t size) {
+                return self->WriteReady(size);
+            },
+            decltype(this), decltype(buf_), decltype(size)>
+    {
+        return {
+            std::forward<decltype(this)>(this),
+            std::forward<decltype(buf_)>(buf_),
+            std::forward<decltype(size)>(size)
+        };
+    }
 
     auto Cancel() -> Status { return file.Cancel(); }
 
@@ -163,6 +173,17 @@ public:
             iCurrent = iEnd = 0;
         }
         return file.Seek(pos);
+    }
+
+    auto SeekAsync(FilePos pos)
+        -> cached_file_impl::file_sender3<
+            &CachedFile::SeekAsync,
+            &std::remove_pointer_t<decltype(this)>::SeekReady, decltype(this),
+            decltype(pos)>
+    {
+        return {
+            std::forward<decltype(this)>(this), std::forward<decltype(pos)>(pos)
+        };
     }
 
     auto Seek(FileOff offset, StPoint rel) -> Status
@@ -204,6 +225,23 @@ public:
         return Seek(offset, rel);
     }
 
+    auto SeekAsync(FileOff offset, StPoint rel)
+        -> cached_file_impl::file_sender3<
+            [](decltype(this) self, FileOff offset, StPoint rel, Callback cb) {
+                return self->SeekAsync(offset, rel, cb);
+            },
+            [](decltype(this) self, FileOff offset, StPoint rel) {
+                return self->SeekReady(offset, rel);
+            },
+            decltype(this), decltype(offset), decltype(rel)>
+    {
+        return {
+            std::forward<decltype(this)>(this),
+            std::forward<decltype(offset)>(offset),
+            std::forward<decltype(rel)>(rel)
+        };
+    }
+
     auto OpenStatus() const -> Status { return file.OpenStatus(); }
 
     auto Tell() const -> FilePos { return file.Tell() + iCurrent - iEnd; }
@@ -233,7 +271,13 @@ public:
         return DoFlushBuffer<&CachedFile::FlushEnding>(0, Make(status::Code::Success)).ecode;
     }
 
-    auto FlushAsync() -> cached_file_impl::flush_sender;
+    auto FlushAsync() -> cached_file_impl::file_sender3<
+                          &CachedFile::FlushAsync,
+                          [](decltype(this) self) { return false; },
+                          decltype(this)>
+    {
+        return {std::forward<decltype(this)>(this)};
+    }
 
 private:
     auto ReadBuffer(std::byte buf[], std::size_t size) -> std::size_t
@@ -468,315 +512,6 @@ private:
     };
     std::byte *asyncBuf;
 };
-
-namespace cached_file_impl {
-
-using raw_file_impl::FileOpBufT;
-using raw_file_impl::FileOpResult;
-using raw_file_impl::TagRead;
-using raw_file_impl::TagWrite;
-
-template <typename TagOp>
-struct file_sender;
-
-template <typename TagOp>
-auto do_op(
-    CachedFile* file, FileOpBufT<TagOp>* buf, std::size_t size, File::Callback cb
-) -> FileOpResult;
-
-template <>
-inline auto do_op<TagRead>(
-    CachedFile* file, void* buf, std::size_t size, File::Callback cb
-) -> FileOpResult
-{
-    return file->ReadAsync(buf, size, cb);
-}
-
-template <>
-inline auto do_op<TagWrite>(
-    CachedFile* file, const void* buf, std::size_t size, File::Callback cb
-) -> FileOpResult
-{
-    return file->WriteAsync(buf, size, cb);
-}
-
-template <typename TagOp>
-bool do_test(CachedFile* file, std::size_t size);
-
-template <>
-inline bool do_test<TagRead>(CachedFile* file, std::size_t size)
-{
-    return file->ReadReady(size);
-}
-
-template <>
-inline bool do_test<TagWrite>(CachedFile* file, std::size_t size)
-{
-    return file->WriteReady(size);
-}
-
-template <typename TagOp>
-struct file_awaiter {
-    file_awaiter(file_sender<TagOp>& sender) :
-        sender(sender)
-    {}
-    bool await_ready()
-    {
-        if (!do_test<TagOp>(sender.file, sender.size)) {
-            return false;
-        }
-        result = do_op<TagOp>(sender.file, sender.buf, sender.size, nullptr);
-        return true;
-    }
-    void callback(std::size_t size, Status st)
-    {
-        result.transferred = size;
-        result.ecode = st;
-        resumable.resume();
-    }
-    bool await_suspend(std::coroutine_handle<> handle)
-    {
-        FileOpResult r = do_op<TagOp>(
-            sender.file, sender.buf, sender.size,
-            {*this, util::fnTag<&file_awaiter::callback>}
-        );
-        if (r.ecode != status::Code::PendingOperation) {
-            result = r;
-            return false;
-        }
-        resumable = handle;
-        return true;
-    }
-    auto await_resume() -> FileOpResult { return result; }
-
-private:
-    file_sender<TagOp>& sender;
-    FileOpResult result;
-    std::coroutine_handle<> resumable;
-};
-
-template <typename TagOp>
-struct file_sender {
-    file_sender(CachedFile* file, FileOpBufT<TagOp>* buf, std::size_t size) :
-        file(file),
-        buf(buf),
-        size(size)
-    {}
-
-    friend class file_awaiter<TagOp>;
-
-    friend auto operator co_await(file_sender<TagOp>&& sndr
-    ) -> file_awaiter<TagOp>
-    {
-        return {sndr};
-    }
-
-    friend auto operator co_await(file_sender<TagOp>& sndr
-    ) -> file_awaiter<TagOp>
-    {
-        return {sndr};
-    }
-
-private:
-    CachedFile* file;
-    FileOpBufT<TagOp>* buf;
-    std::size_t size;
-};
-
-struct flush_sender;
-
-struct flush_awaiter {
-    flush_awaiter(flush_sender& sender) :
-        sender(sender)
-    {}
-    bool await_ready() { return false; }
-    void callback(std::size_t size, Status st)
-    {
-        result = st;
-        resumable.resume();
-    }
-    bool await_suspend(std::coroutine_handle<> handle);
-    auto await_resume() -> Status { return result; }
-
-private:
-    flush_sender& sender;
-    Status result;
-    std::coroutine_handle<> resumable;
-};
-
-struct flush_sender {
-    flush_sender(CachedFile* file) :
-        file(file)
-    {}
-
-    friend class flush_awaiter;
-
-    friend auto operator co_await(flush_sender&& sndr) -> flush_awaiter
-    {
-        return {sndr};
-    }
-
-    friend auto operator co_await(flush_sender& sndr) -> flush_awaiter
-    {
-        return {sndr};
-    }
-
-private:
-    CachedFile* file;
-};
-
-inline bool flush_awaiter::await_suspend(std::coroutine_handle<> handle)
-{
-    Status st = sender.file->FlushAsync(
-        {*this, util::fnTag<&flush_awaiter::callback>}
-    );
-    if (st != status::Code::PendingOperation) {
-        result = st;
-        return false;
-    }
-    resumable = handle;
-    return true;
-}
-
-template <typename T>
-struct return_traits;
-
-template <>
-struct return_traits<Status> {
-    static auto to_status(const Status& st) -> Status { return st; }
-    static auto from_callback(const std::size_t&, const Status& st) -> Status
-    {
-        return st;
-    }
-};
-
-template <>
-struct return_traits<FileOpResult> {
-    static auto to_status(const FileOpResult& r) -> Status { return r.ecode; }
-    static auto from_callback(const std::size_t& size, const Status& st)
-        -> FileOpResult
-    {
-        return {size, st};
-    }
-};
-
-template <auto op, auto op2>
-struct file_awaiter2;
-
-template <
-    typename Return, typename... Args, bool (CachedFile::*op)(Args...),
-    Return (CachedFile::*op2)(Args..., const CachedFile::Callback&)>
-struct file_awaiter2<op, op2> {
-    file_awaiter2(file_sender2<op, op2>& sender) :
-        sender(sender)
-    {}
-    bool await_ready()
-    {
-        if (!std::apply(op, sender.args)) {
-            return false;
-        }
-        result = std::apply(
-            [](Args&&... args) {
-                return std::invoke(op2, std::forward<Args>(args)..., nullptr);
-            },
-            sender.args
-        );
-        return true;
-    }
-    bool await_suspend(std::coroutine_handle<> handle)
-    {
-        Return r = std::apply(
-            [this](Args&&... args) {
-                return std::invoke(
-                    op2, std::forward<Args>(args)...,
-                    {*this, util::fnTag<&file_awaiter2::callback>}
-                );
-            },
-            sender.args
-        );
-        if (return_traits<Return>::to_status(r)
-            != status::Code::PendingOperation)
-        {
-            result = r;
-            return false;
-        }
-        resumable = handle;
-        return true;
-    }
-    auto await_resume() -> Return { return result; }
-
-private:
-    void callback(std::size_t size, Status st)
-    {
-        result = return_traits<Return>::from_callback(size, st);
-        resumable.resume();
-    }
-
-    file_sender2<op, op2>& sender;
-    Return result;
-    std::coroutine_handle<> resumable;
-};
-
-template <typename Arg>
-struct file_sender_base;
-
-template <typename... Args>
-struct file_sender_base<std::tuple<Args...>> {
-    file_sender_base(CachedFile* file, Args... args) :
-        file(file),
-        args(args...)
-    {}
-
-protected:
-    CachedFile* file;
-    std::tuple<Args...> args;
-};
-// using base = file_sender_base<
-//     decltype([]<size_t... i>(std::index_sequence<i...>) -> std::tuple<decltype(std::get<i>(std::declval<std::tuple<Args...>>()))...> {
-//     }(std::make_index_sequence<sizeof...(Args) - 1>{}))>;
-
-template <
-    typename Return, typename... Args, bool (CachedFile::*op)(Args...),
-    Return (CachedFile::*op2)(Args..., const CachedFile::Callback&)>
-struct file_sender2<op, op2> {
-    file_sender2(CachedFile* file, Args... args) :
-        args(file, args...)
-    {}
-
-    friend class file_awaiter2<op, op2>;
-
-    friend auto operator co_await(file_sender2&& sndr) -> file_awaiter2<op, op2>
-    {
-        return {sndr};
-    }
-
-    friend auto operator co_await(file_sender2& sndr) -> file_awaiter2<op, op2>
-    {
-        return {sndr};
-    }
-
-private:
-    std::tuple<CachedFile*, Args...> args;
-};
-
-} // namespace cached_file_impl
-
-auto CachedFile::ReadAsync(void* buf, std::size_t size)
-    -> cached_file_impl::file_sender2<&CachedFile::ReadReady, static_cast<cached_file_impl::FileOpResult(CachedFile::*)(void*, std::size_t, const Callback&)>(&CachedFile::ReadAsync)>
-{
-    return {this, buf, size};
-}
-
-auto CachedFile::WriteAsync(const void* buf, std::size_t size)
-    -> cached_file_impl::file_sender2<&CachedFile::WriteReady, static_cast<cached_file_impl::FileOpResult(CachedFile::*)(const void*, std::size_t, const Callback&)>(&CachedFile::WriteAsync)>
-{
-    return {this, buf, size};
-}
-
-auto CachedFile::FlushAsync() -> cached_file_impl::flush_sender
-{
-    return {this};
-}
 
 } // namespace dse::core
 
