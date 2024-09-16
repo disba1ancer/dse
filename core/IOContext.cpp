@@ -35,4 +35,9 @@ void IOContext::StopOne()
     impl->StopOne();
 }
 
+void IOContext::MakePersistent(bool persist)
+{
+    impl->MakePersistent(persist);
+}
+
 } // namespace dse::core

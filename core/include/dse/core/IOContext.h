@@ -21,6 +21,7 @@ public:
     int Poll();
     int PollOne();
     void StopOne();
+    void MakePersistent(bool persist = true);
 private:
     util::impl_ptr<IOContext_impl> impl;
 };

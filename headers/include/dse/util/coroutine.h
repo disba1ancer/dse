@@ -260,12 +260,12 @@ public:
     {
         if (cHandle) cHandle.destroy();
     }
-    void Resume() {
-        cHandle.resume();
-    }
-    void operator()() {
-        cHandle();
-    }
+    // void Resume() {
+    //     cHandle.resume();
+    // }
+    // void operator()() {
+    //     cHandle();
+    // }
     void ResumeDetached() {
         auto h = std::exchange(cHandle, {});
         h.promise().MakeDetached();

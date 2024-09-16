@@ -17,7 +17,8 @@ int main(int argc, char* argv[])
 {
     try {
         auto task = MainTask(argc, argv);
-        task.Resume();
+        auto t = operator co_await(task);
+        t.await_suspend(std::noop_coroutine())();
         ctx.Run();
         return task.Result();
     } catch (dse::core::status::StatusException& e) {

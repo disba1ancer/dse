@@ -33,6 +33,7 @@ public:
     void IOCPAttach(swal::Handle& handle, CompleteCallback cb);
     int Lock();
     int Unlock();
+    void MakePersistent(bool persist);
     static auto GetImplFromObj(IOContext& context) -> IOContext_win32*;
 private:
     enum PollResult {
@@ -41,10 +42,12 @@ private:
         StopSig
     };
     void Post(CompleteCallback cb, OVERLAPPED* ovl, DWORD transfered);
+    void PostDirect(CompleteCallback cb, OVERLAPPED* ovl, DWORD transfered);
     auto PollOne(int& queryCount, DWORD timeout) -> PollResult;
 
     swal::IOCompletionPort iocp;
     std::atomic_int activeOps = 0;
+    bool persistent = false;
 };
 
 } // namespace dse::core

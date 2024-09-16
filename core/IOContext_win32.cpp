@@ -67,6 +67,19 @@ int IOContext_win32::Unlock()
     return activeOps.fetch_sub(1, std::memory_order_acquire) - 1;
 }
 
+void IOContext_win32::MakePersistent(bool persist)
+{
+    if (persist == persistent) {
+        return;
+    }
+    if (persist) {
+        Lock();
+    } else {
+        PostDirect(StopFunc, nullptr, 0);
+    }
+    persistent = persist;
+}
+
 auto IOContext_win32::GetImplFromObj(IOContext& context) -> IOContext_win32*
 {
     return context.impl;
@@ -74,8 +87,15 @@ auto IOContext_win32::GetImplFromObj(IOContext& context) -> IOContext_win32*
 
 void IOContext_win32::Post(CompleteCallback cb, OVERLAPPED *ovl, DWORD transfered)
 {
-    auto ucb = reinterpret_cast<ULONG_PTR>(reinterpret_cast<void*>(cb));
     Lock();
+    PostDirect(cb, ovl, transfered);
+}
+
+void IOContext_win32::PostDirect(
+    CompleteCallback cb, OVERLAPPED *ovl, DWORD transfered
+)
+{
+    auto ucb = reinterpret_cast<ULONG_PTR>(reinterpret_cast<void *>(cb));
     iocp.PostQueuedCompletionStatus(transfered, ucb, ovl);
 }
 
