@@ -20,7 +20,7 @@ int main(int argc, char* argv[])
         auto t = operator co_await(task);
         t.await_suspend(std::noop_coroutine())();
         ctx.Run();
-        return task.Result();
+        return t.await_resume();
     } catch (dse::core::status::StatusException& e) {
         std::cerr << "[ERROR] " << e.what() << "\n";
         return 1;

@@ -195,7 +195,7 @@ template <auto op, auto check, typename... Args> struct file_sender3 {
         args(args...)
     {}
 
-    friend class file_awaiter3<op, check, Args...>;
+    friend struct file_awaiter3<op, check, Args...>;
 
     friend auto operator co_await(file_sender3 &&sndr)
         -> file_awaiter3<op, check, Args...>
