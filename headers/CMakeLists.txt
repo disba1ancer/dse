@@ -25,6 +25,7 @@ target_sources(headers PRIVATE
     include/dse/util/execution.h
     include/dse/util/functional.h
     include/dse/util/impl_exec/base.h
+    include/dse/util/impl_exec/ensure_started.h
     include/dse/util/impl_exec/start_detached.h
     include/dse/util/impl_exec/then.h
     include/dse/util/impl_exec/wait.h

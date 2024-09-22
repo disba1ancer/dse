@@ -60,7 +60,10 @@ int App::Run()
     auto resizeCon = window.SubscribeResizeEvent(FunctionPtr{*this, fnTag<&App::OnResize>});
     auto mMoveCon = window.SubscribeMouseMoveEvent(FunctionPtr{*this, fnTag<&App::OnMouseMove>});
     auto task = CoRun();
-    task();
+    auto awaitable = task.operator co_await();
+    if (!awaitable.await_ready()) {
+        awaitable.await_suspend(std::noop_coroutine()).resume();
+    }
     ctx.Run();
 //    tpool.Schedule(task);
     return uiLoop.Run();

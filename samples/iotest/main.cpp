@@ -3,6 +3,7 @@
 #include <dse/core/CachedFile.h>
 #include <dse/core/IOContext.h>
 #include <iostream>
+#include <dse/util/execution.h>
 
 using dse::core::IOContext;
 using dse::core::CachedFile;
@@ -16,11 +17,9 @@ auto MainTask(int argc, char* argv[]) -> dse::util::task<int>;
 int main(int argc, char* argv[])
 {
     try {
-        auto task = MainTask(argc, argv);
-        auto t = operator co_await(task);
-        t.await_suspend(std::noop_coroutine())();
+        auto future = dse::util::ensure_started_impl::ensure_started(MainTask(argc, argv));
         ctx.Run();
-        return t.await_resume();
+        return future.get();
     } catch (dse::core::status::StatusException& e) {
         std::cerr << "[ERROR] " << e.what() << "\n";
         return 1;

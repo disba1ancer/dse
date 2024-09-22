@@ -26,8 +26,8 @@ public:
     virtual auto LoadData(void* recvBuffer, unsigned lod, util::FunctionPtr<void (Status)> onReady) -> Status  override;
     virtual unsigned GetVersion() override;
 private:
-    auto LoadParametersInternal(TextureParameters* parameters, util::FunctionPtr<void (Status)> onReady) -> util::task<void>;
-    auto LoadDataInternal(void* recvBuffer, unsigned lod, util::FunctionPtr<void (Status)> onReady) -> util::task<void>;
+    auto LoadParametersInternal(TextureParameters* parameters) -> util::task<Status>;
+    auto LoadDataInternal(void* recvBuffer, unsigned lod) -> util::task<Status>;
 };
 
 } // namespace dse::core

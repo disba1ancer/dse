@@ -67,7 +67,7 @@ int App::Run()
     auto resizeCon = window.SubscribeResizeEvent(FunctionPtr{*this, fnTag<&App::OnResize>});
     auto mMoveCon = window.SubscribeMouseMoveEvent(FunctionPtr{*this, fnTag<&App::OnMouseMove>});
     auto task = CoRun();
-    tpool.Schedule(task);
+    tpool.Schedule(task.operator co_await().await_suspend(std::noop_coroutine()));
     return tpool.Run(dse::core::PoolCaps::UI);
 }
 

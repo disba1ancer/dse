@@ -119,7 +119,7 @@ void Image::LoadByProvider(ITextureDataProvider *provider, util::FunctionPtr<voi
         status = co_await LoadData{ provider, image.data.get() };
         callback(std::move(image));
     };
-    util::StartDetached(coro(provider, callback));
+    // util::StartDetached(coro(provider, callback));
 }
 
 } // namespace dse::core
