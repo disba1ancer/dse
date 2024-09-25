@@ -2,7 +2,8 @@
 #define DSE_UTIL_COROUTINE_H
 
 #include <coroutine>
-
+#include <exception>
+#include <functional>
 #include <variant>
 
 namespace dse::util {
@@ -55,15 +56,28 @@ public:
 template <int n, typename ... Types>
 using select_type_t = select_type<n, Types...>::type;
 
-template <typename D, typename T>
-struct return_unified_t {
+template <typename T = void>
+struct return_unified_base {
+    using type = T;
+};
+
+template <>
+struct return_unified_base<void> {
+    using type = struct {};
+};
+
+template <typename T = void>
+using return_unified_base_t = typename return_unified_base<T>::type;
+
+template <typename D, typename T, typename B = void>
+struct return_unified_t : return_unified_base_t<B> {
     void return_value(T&& v) {
         static_cast<D*>(this)->return_unified(std::forward<T>(v));
     }
 };
 
-template <typename D>
-struct return_unified_t<D, void> {
+template <typename D, typename B>
+struct return_unified_t<D, void, B> : return_unified_base_t<B> {
     void return_void() {
         static_cast<D*>(this)->return_unified();
     }
