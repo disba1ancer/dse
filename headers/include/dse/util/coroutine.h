@@ -74,6 +74,9 @@ struct return_unified_t : return_unified_base_t<B> {
     void return_value(T&& v) {
         static_cast<D*>(this)->return_unified(std::forward<T>(v));
     }
+    void return_value(const T& v) requires(!std::is_reference_v<T>) {
+        static_cast<D*>(this)->return_unified(v);
+    }
 };
 
 template <typename D, typename B>
@@ -181,6 +184,11 @@ public:
     requires(task::choice == coroutine_impl::TypeChoice::Value)
     {
         value.template emplace<1>(std::move(val));
+    }
+    void return_unified(const type& val)
+    requires(task::choice == coroutine_impl::TypeChoice::Value)
+    {
+        value.template emplace<1>(val);
     }
     void unhandled_exception()
     {
