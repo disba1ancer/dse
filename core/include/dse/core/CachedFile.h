@@ -18,6 +18,11 @@ public:
         file(ctx, filepath, mode)
     {}
 
+    CachedFile(CachedFile&&) = default;
+    CachedFile(const CachedFile&) = delete;
+    CachedFile& operator=(CachedFile&&) = default;
+    CachedFile& operator=(const CachedFile&) = delete;
+
     ~CachedFile()
     {
         if (iEnd < iCurrent) {

@@ -1,10 +1,9 @@
 #ifndef DSE_CORE_BASICBITMAPLOADER_H
 #define DSE_CORE_BASICBITMAPLOADER_H
 
-#include <fstream>
 #include "ITextureDataProvider.h"
 #include <dse/util/coroutine.h>
-#include <dse/core/File.h>
+#include <dse/core/CachedFile.h>
 #include "detail/impexp.h"
 
 namespace dse::core {
@@ -14,7 +13,7 @@ class API_DSE_CORE BasicBitmapLoader : public ITextureDataProvider
 public:
     BasicBitmapLoader(IOContext& ctx, const char8_t* file = nullptr, bool linear = false);
 private:
-    File bitmapFile;
+    CachedFile bitmapFile;
     int width, height;
     PixelFormat format;
     File::FilePos pixelsPos;
@@ -26,8 +25,8 @@ public:
     virtual auto LoadData(void* recvBuffer, unsigned lod, util::FunctionPtr<void (Status)> onReady) -> Status  override;
     virtual unsigned GetVersion() override;
 private:
-    auto LoadParametersInternal(TextureParameters* parameters) -> util::task<Status>;
-    auto LoadDataInternal(void* recvBuffer, unsigned lod) -> util::task<Status>;
+    auto LoadParametersInternal(TextureParameters* parameters) -> util::auto_task<Status>;
+    auto LoadDataInternal(void* recvBuffer, unsigned lod) -> util::auto_task<Status>;
 };
 
 } // namespace dse::core

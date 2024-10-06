@@ -94,12 +94,11 @@ void Image::LoadByProvider(ITextureDataProvider *provider, util::FunctionPtr<voi
         util::FunctionPtr<void (Image &&)>& callback;
         Image& image;
     };
-    auto coro = +[](ITextureDataProvider *provider, util::FunctionPtr<void (Image &&)> callback) -> util::task<void> {
+    auto coro = +[](ITextureDataProvider *provider) -> util::auto_task<Image&&> {
         Image image;
         auto [status, params] = co_await LoadParameters{ provider };
         if (IsError(status)) {
-            callback(std::move(image));
-            co_return;
+            co_return image;
         }
         image.linear = false;
         switch (params.format) {
@@ -111,15 +110,14 @@ void Image::LoadByProvider(ITextureDataProvider *provider, util::FunctionPtr<voi
         case ITextureDataProvider::BGRX8sRGB:
             break;
         default:
-            callback(std::move(image));
-            co_return;
+            co_return image;
         }
         image.size = { params.width, params.height };
         image.data.reset(::operator new(params.height * params.width * ImageManipulator::PixelSize));
         status = co_await LoadData{ provider, image.data.get() };
-        callback(std::move(image));
+        co_return image;
     };
-    // util::StartDetached(coro(provider, callback));
+    coro(provider).start(callback);
 }
 
 } // namespace dse::core

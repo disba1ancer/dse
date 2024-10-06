@@ -83,14 +83,14 @@ BasicBitmapLoader::BasicBitmapLoader(IOContext& ctx, const char8_t* file, bool l
 
 auto BasicBitmapLoader::LoadParameters(TextureParameters* parameters, util::FunctionPtr<void (Status)> onReady) -> Status
 {
-    // util::StartDetached(LoadParametersInternal(parameters, onReady));
-    return Make(status::Code::NotImplemented);
+    LoadParametersInternal(parameters).start(onReady);
+    return Make(status::Code::PendingOperation);
 }
 
 auto BasicBitmapLoader::LoadData(void* recvBuffer, unsigned lod, util::FunctionPtr<void (Status)> onReady) -> Status
 {
-    // util::StartDetached(LoadDataInternal(recvBuffer, lod, onReady));
-    return Make(status::Code::NotImplemented);
+    LoadDataInternal(recvBuffer, lod).start(onReady);
+    return Make(status::Code::PendingOperation);
 }
 
 auto BasicBitmapLoader::GetVersion() -> unsigned
@@ -98,7 +98,8 @@ auto BasicBitmapLoader::GetVersion() -> unsigned
     return 1;
 }
 
-util::task<Status> BasicBitmapLoader::LoadParametersInternal(TextureParameters* parameters)
+auto BasicBitmapLoader::LoadParametersInternal(TextureParameters* parameters)
+-> util::auto_task<Status>
 {
     if (format == Unsupported) {
         std::uint_least16_t sign;
@@ -170,7 +171,8 @@ util::task<Status> BasicBitmapLoader::LoadParametersInternal(TextureParameters* 
     co_return Make(status::Code::Success);
 }
 
-util::task<Status> BasicBitmapLoader::LoadDataInternal(void* recvBuffer, unsigned lod)
+auto BasicBitmapLoader::LoadDataInternal(void* recvBuffer, unsigned lod)
+-> util::auto_task<Status>
 {
     bitmapFile.Seek(pixelsPos);
     int bytePerPix;
