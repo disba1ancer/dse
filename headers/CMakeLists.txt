@@ -28,6 +28,7 @@ FILES
     include/dse/util/execution.h
     include/dse/util/functional.h
     include/dse/util/impl_coro/auto_task.h
+    include/dse/util/impl_coro/eager_task.h
     include/dse/util/impl_coro/generic.h
     include/dse/util/impl_coro/task.h
     include/dse/util/impl_exec/base.h

@@ -28,8 +28,7 @@ struct auto_task {
     {
         auto& promise = _handle.promise();
         promise.set_value_func = resultCallback;
-        _handle.resume();
-        _handle = nullptr;
+        std::exchange(_handle, nullptr).resume();
     }
 private:
     auto_task(handle _handle) : _handle(_handle) {}
