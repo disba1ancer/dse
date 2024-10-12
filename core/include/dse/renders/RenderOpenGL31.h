@@ -41,7 +41,7 @@ public:
 	RenderOpenGL31(RenderOpenGL31&&) = delete;
 	auto operator=(const RenderOpenGL31&) -> RenderOpenGL31& = delete;
 	auto operator=(RenderOpenGL31&&) -> RenderOpenGL31& = delete;
-	void Render(const util::FunctionPtr<void()>& cb);
+	void Render(const util::function_ptr<void()>& cb);
 	auto Render() -> oglimpl::RenderSender;
 	void SetScene(dse::core::Scene& scene);
 	void SetCamera(dse::core::Camera& camera);

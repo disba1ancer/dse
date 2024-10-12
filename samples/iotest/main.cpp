@@ -9,15 +9,16 @@ using dse::core::IOContext;
 using dse::core::CachedFile;
 using dse::core::OpenMode;
 using dse::core::status::Code;
+using dse::util::eager_task_t;
 
 IOContext ctx;
 
-auto MainTask(int argc, char* argv[]) -> dse::util::task<int>;
+auto MainTask(eager_task_t, int argc, char* argv[]) -> std::future<int>;
 
 int main(int argc, char* argv[])
 {
     try {
-        auto future = dse::util::ensure_started_impl::ensure_started(MainTask(argc, argv));
+        auto future = MainTask({}, argc, argv);
         ctx.Run();
         return future.get();
     } catch (dse::core::status::StatusException& e) {
@@ -26,7 +27,7 @@ int main(int argc, char* argv[])
     }
 }
 
-auto MainTask(int argc, char* argv[]) -> dse::util::task<int>
+auto MainTask(eager_task_t, int argc, char* argv[]) -> std::future<int>
 {
     CachedFile file(ctx, u8"testsrc.txt", OpenMode::Read);
     CachedFile out(ctx, u8"testout.txt", OpenMode::Write | OpenMode::Clear);

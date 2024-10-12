@@ -46,17 +46,17 @@ void SystemLoop_win32::Stop(int result)
     PostQuitMessage(result);
 }
 
-void SystemLoop_win32::Post(util::FunctionPtr<void ()> cb)
+void SystemLoop_win32::Post(util::function_ptr<void ()> cb)
 {
-    auto wParam = reinterpret_cast<WPARAM>(reinterpret_cast<void*>(cb.GetFunction()));
-    auto lParam = reinterpret_cast<LPARAM>(cb.GetObjectPtr());
+    auto wParam = reinterpret_cast<WPARAM>(reinterpret_cast<void*>(cb.get_function()));
+    auto lParam = reinterpret_cast<LPARAM>(cb.get_object_ptr());
     swal::winapi_call(PostMessage(msgWnd, PostMsg, wParam, lParam));
 }
 
-int SystemLoop_win32::Send(util::FunctionPtr<int ()> cb)
+int SystemLoop_win32::Send(util::function_ptr<int ()> cb)
 {
-    auto wParam = reinterpret_cast<WPARAM>(reinterpret_cast<void*>(cb.GetFunction()));
-    auto lParam = reinterpret_cast<LPARAM>(cb.GetObjectPtr());
+    auto wParam = reinterpret_cast<WPARAM>(reinterpret_cast<void*>(cb.get_function()));
+    auto lParam = reinterpret_cast<LPARAM>(cb.get_object_ptr());
     return SendMessage(msgWnd, SendMsg, wParam, lParam);
 }
 

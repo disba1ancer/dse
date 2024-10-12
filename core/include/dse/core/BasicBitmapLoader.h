@@ -21,8 +21,8 @@ private:
 
     // ITextureDataProvider interface
 public:
-    virtual auto LoadParameters(TextureParameters* parameters, util::FunctionPtr<void (Status)>) -> Status override;
-    virtual auto LoadData(void* recvBuffer, unsigned lod, util::FunctionPtr<void (Status)> onReady) -> Status  override;
+    virtual auto LoadParameters(TextureParameters* parameters, util::function_ptr<void (Status)>) -> Status override;
+    virtual auto LoadData(void* recvBuffer, unsigned lod, util::function_ptr<void (Status)> onReady) -> Status  override;
     virtual unsigned GetVersion() override;
 private:
     auto LoadParametersInternal(TextureParameters* parameters) -> util::auto_task<Status>;

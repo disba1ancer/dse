@@ -17,8 +17,8 @@ public:
     bool PollOne();
     int Result();
     void Stop(int result = 0);
-    void Post(util::FunctionPtr<void()> cb);
-    int Send(util::FunctionPtr<int()> cb);
+    void Post(util::function_ptr<void()> cb);
+    int Send(util::function_ptr<int()> cb);
     static auto GetImpl(SystemLoop& pub) -> SystemLoop_win32*;
 private:
     static ATOM WindowClass();

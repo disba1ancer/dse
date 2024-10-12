@@ -20,16 +20,16 @@ public:
     FrameBuffer_win32& operator=(const FrameBuffer_win32&) = delete;
     FrameBuffer_win32& operator=(FrameBuffer_win32&&) = delete;
     ~FrameBuffer_win32();
-    void Render(util::FunctionPtr<void()> callback);
-    void SetDrawCallback(util::FunctionPtr<void(void*, math::ivec2)> callback);
+    void Render(util::function_ptr<void()> callback);
+    void SetDrawCallback(util::function_ptr<void(void*, math::ivec2)> callback);
 private:
     void OnPaint(core::WndEvtDt);
     void OnResize(core::WndEvtDt, int w, int h, WindowShowCommand);
 
     core::Window& window;
     std::atomic_flag sync;
-    util::FunctionPtr<void (void*, math::ivec2)> renderCallback = nullptr;
-    util::FunctionPtr<void ()> exitCallback = nullptr;
+    util::function_ptr<void (void*, math::ivec2)> renderCallback = nullptr;
+    util::function_ptr<void ()> exitCallback = nullptr;
     Image frameBuffer;
 //    math::ivec2 size = { 0, 0 };
 //    std::unique_ptr<unsigned char, FrameBuffer_win32_Deleter> frameBuffer;

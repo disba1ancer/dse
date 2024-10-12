@@ -65,25 +65,25 @@ static const auto subranges = std::to_array<IMesh::submesh_range>({
 });
 }
 
-void Cube::LoadMeshParameters(mesh_parameters* parameters, util::FunctionPtr<void ()> callback)
+void Cube::LoadMeshParameters(mesh_parameters* parameters, util::function_ptr<void ()> callback)
 {
     *parameters = { std::size(vertices), std::size(elements), std::size(subranges) };
     callback();
 }
 
-void Cube::LoadSubmeshRanges(submesh_range* ranges, util::FunctionPtr<void ()> callback)
+void Cube::LoadSubmeshRanges(submesh_range* ranges, util::function_ptr<void ()> callback)
 {
     std::copy(std::begin(subranges), std::end(subranges), ranges);
     callback();
 }
 
-void Cube::LoadVertices(vertex* vertexBuffer, util::FunctionPtr<void ()> callback)
+void Cube::LoadVertices(vertex* vertexBuffer, util::function_ptr<void ()> callback)
 {
     std::copy(std::begin(vertices), std::end(vertices), vertexBuffer);
     callback();
 }
 
-void Cube::LoadElements(uint32_t* elementBuffer, util::FunctionPtr<void ()> callback)
+void Cube::LoadElements(uint32_t* elementBuffer, util::function_ptr<void ()> callback)
 {
     std::copy(std::begin(elements), std::end(elements), elementBuffer);
     callback();

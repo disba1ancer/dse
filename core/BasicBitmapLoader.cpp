@@ -81,13 +81,13 @@ BasicBitmapLoader::BasicBitmapLoader(IOContext& ctx, const char8_t* file, bool l
     bitmapFile = { ctx, file, OpenMode::Read };
 }
 
-auto BasicBitmapLoader::LoadParameters(TextureParameters* parameters, util::FunctionPtr<void (Status)> onReady) -> Status
+auto BasicBitmapLoader::LoadParameters(TextureParameters* parameters, util::function_ptr<void (Status)> onReady) -> Status
 {
     LoadParametersInternal(parameters).start(onReady);
     return Make(status::Code::PendingOperation);
 }
 
-auto BasicBitmapLoader::LoadData(void* recvBuffer, unsigned lod, util::FunctionPtr<void (Status)> onReady) -> Status
+auto BasicBitmapLoader::LoadData(void* recvBuffer, unsigned lod, util::function_ptr<void (Status)> onReady) -> Status
 {
     LoadDataInternal(recvBuffer, lod).start(onReady);
     return Make(status::Code::PendingOperation);
@@ -113,7 +113,7 @@ auto BasicBitmapLoader::LoadParametersInternal(TextureParameters* parameters)
             throw std::runtime_error("Negative height not supported");
         }*/
         if (bitmapMeta.info.compression != BMCOMPR_RGB && bitmapMeta.info.compression != BMCOMPR_BITFIELDS) {
-            co_return Make(status::Code::Unexpected); // Compression in not supported
+            co_return Make(status::Code::Unexpected); // Compression is not supported
         }
         if (bitmapMeta.info.bpp == 24) {
             format = BGR8;

@@ -21,10 +21,10 @@ public:
     auto Size() -> math::ivec2;
     void* Data();
     auto Manipulator() -> ImageManipulator;
-    static void LoadByProvider(ITextureDataProvider* provider, util::FunctionPtr<void(Image&&)> callback);
+    static void LoadByProvider(ITextureDataProvider* provider, util::function_ptr<void(Image&&)> callback);
 private:
-    math::ivec2 size;
     std::unique_ptr<void, ImageDataDeleter> data;
+    math::ivec2 size;
     bool linear;
 };
 

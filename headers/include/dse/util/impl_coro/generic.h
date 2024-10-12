@@ -100,6 +100,27 @@ struct non_copyable_coro_handle : std::coroutine_handle<Promise> {
     }
 };
 
+struct suspend_destroy : std::suspend_always
+{
+    void await_suspend(std::coroutine_handle<> handle) const noexcept
+    {
+        handle.destroy();
+    }
+};
+
+template <typename T>
+struct replace_void {
+    using type = T;
+};
+
+template <>
+struct replace_void<void> {
+    using type = std::monostate;
+};
+
+template <typename T>
+using replace_void_t = typename replace_void<T>::type;
+
 } // namespace dse::util::coroutine_impl
 
 #endif // DSE_UTIL_IMPL_CORO_GENERIC_H

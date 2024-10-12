@@ -38,10 +38,10 @@ public:
         std::uint32_t end;
         Draw drawType;
     };
-    virtual void LoadMeshParameters(mesh_parameters* parameters, util::FunctionPtr<void()> callback) = 0;
-    virtual void LoadVertices(vertex* vertexBuffer, util::FunctionPtr<void()> callback) = 0;
-    virtual void LoadElements(std::uint32_t* elementBuffer, util::FunctionPtr<void()> callback) = 0;
-    virtual void LoadSubmeshRanges(submesh_range* ranges, util::FunctionPtr<void()> callback) = 0;
+    virtual void LoadMeshParameters(mesh_parameters* parameters, util::function_ptr<void()> callback) = 0;
+    virtual void LoadVertices(vertex* vertexBuffer, util::function_ptr<void()> callback) = 0;
+    virtual void LoadElements(std::uint32_t* elementBuffer, util::function_ptr<void()> callback) = 0;
+    virtual void LoadSubmeshRanges(submesh_range* ranges, util::function_ptr<void()> callback) = 0;
     virtual auto GetVersion() -> unsigned = 0;
 protected:
     ~IMesh() = default;

@@ -13,10 +13,10 @@ public:
 
     // IMesh interface
 public:
-    void LoadMeshParameters(mesh_parameters *parameters, util::FunctionPtr<void ()> callback) override;
-    void LoadVertices(vertex *vertexBuffer, util::FunctionPtr<void ()> callback) override;
-    void LoadElements(std::uint32_t *elementBuffer, util::FunctionPtr<void ()> callback) override;
-    void LoadSubmeshRanges(submesh_range *ranges, util::FunctionPtr<void ()> callback) override;
+    void LoadMeshParameters(mesh_parameters *parameters, util::function_ptr<void ()> callback) override;
+    void LoadVertices(vertex *vertexBuffer, util::function_ptr<void ()> callback) override;
+    void LoadElements(std::uint32_t *elementBuffer, util::function_ptr<void ()> callback) override;
+    void LoadSubmeshRanges(submesh_range *ranges, util::function_ptr<void ()> callback) override;
     unsigned int GetVersion() override;
 private:
     std::vector<IMesh::vertex> vertices;

@@ -14,8 +14,8 @@ Image::Image() :
 {}
 
 Image::Image(math::ivec2 size, bool linear) :
-    size(size),
     data(::operator new(size.y() * size.x() * ImageManipulator::PixelSize)),
+    size(size),
     linear(linear)
 {
     ImageManipulator manip(data.get(), size);
@@ -37,7 +37,7 @@ ImageManipulator Image::Manipulator()
     return { data.get(), size, linear };
 }
 
-void Image::LoadByProvider(ITextureDataProvider *provider, util::FunctionPtr<void (Image &&)> callback)
+void Image::LoadByProvider(ITextureDataProvider *provider, util::function_ptr<void (Image &&)> callback)
 {
     struct LoadParameters {
         bool await_ready() { return false; }
@@ -91,7 +91,7 @@ void Image::LoadByProvider(ITextureDataProvider *provider, util::FunctionPtr<voi
             return false;
         }
         void await_resume() {}
-        util::FunctionPtr<void (Image &&)>& callback;
+        util::function_ptr<void (Image &&)>& callback;
         Image& image;
     };
     auto coro = +[](ITextureDataProvider *provider) -> util::auto_task<Image&&> {

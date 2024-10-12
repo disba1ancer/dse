@@ -56,7 +56,7 @@ struct ITextureDataProvider {
      * @note
      * The thread on which the callback will be called is implementation-defined
      */
-    virtual auto LoadParameters(TextureParameters* parameters, util::FunctionPtr<void(Status)> onReady) -> Status = 0;
+    virtual auto LoadParameters(TextureParameters* parameters, util::function_ptr<void(Status)> onReady) -> Status = 0;
     /**
      * @brief LoadData
      * Loads texture data for single level of detail asynchronously
@@ -72,7 +72,7 @@ struct ITextureDataProvider {
      * The thread on which the callback will be called is implementation-defined.
      * Size of buffer to be filled defined by texture parameters.
      */
-    virtual auto LoadData(void* recvBuffer, unsigned lod, util::FunctionPtr<void(Status)> onReady) -> Status = 0;
+    virtual auto LoadData(void* recvBuffer, unsigned lod, util::function_ptr<void(Status)> onReady) -> Status = 0;
     /**
      * @brief GetVersion
      * @return

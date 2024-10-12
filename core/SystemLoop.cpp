@@ -41,7 +41,7 @@ void SystemLoop::Stop(int result)
     impl->Stop(result);
 }
 
-void SystemLoop::Post(util::FunctionPtr<void ()> cb)
+void SystemLoop::Post(util::function_ptr<void ()> cb)
 {
     impl->Post(cb);
 }

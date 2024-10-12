@@ -34,7 +34,7 @@ struct FileOpResult {
     Status ecode;
 };
 
-using Callback = util::FunctionPtr<void(std::size_t, Status)>;
+using Callback = util::function_ptr<void(std::size_t, Status)>;
 
 struct TagRead;
 struct TagWrite;
@@ -163,7 +163,7 @@ template <auto op, auto check, typename... Args> struct file_awaiter3 {
             [this](Args &&...args) {
                 return std::invoke(
                     op, std::forward<Args>(args)...,
-                    util::FunctionPtr{*this, util::fn_tag<&file_awaiter3::callback>}
+                    util::function_ptr{*this, util::fn_tag<&file_awaiter3::callback>}
                 );
             },
             std::move(sender.args)

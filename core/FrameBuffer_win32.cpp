@@ -14,14 +14,14 @@ void FrameBuffer_win32_Deleter::operator()(unsigned char*ptr) const
 
 FrameBuffer_win32::FrameBuffer_win32(core::Window& wnd) :
     window(wnd),
-    paintCon(window.SubscribePaintEvent(util::FunctionPtr{*this, util::fn_tag<&FrameBuffer_win32::OnPaint>})),
-    resizeCon(window.SubscribeResizeEvent(util::FunctionPtr{*this, util::fn_tag<&FrameBuffer_win32::OnResize>}))
+    paintCon(window.SubscribePaintEvent(util::function_ptr{*this, util::fn_tag<&FrameBuffer_win32::OnPaint>})),
+    resizeCon(window.SubscribeResizeEvent(util::function_ptr{*this, util::fn_tag<&FrameBuffer_win32::OnResize>}))
 {}
 
 FrameBuffer_win32::~FrameBuffer_win32()
 {}
 
-void FrameBuffer_win32::Render(util::FunctionPtr<void ()> callback)
+void FrameBuffer_win32::Render(util::function_ptr<void ()> callback)
 {
     while (sync.test_and_set(std::memory_order_relaxed));
     std::atomic_thread_fence(std::memory_order_acquire);
@@ -30,7 +30,7 @@ void FrameBuffer_win32::Render(util::FunctionPtr<void ()> callback)
     swal::Wnd(window.GetSysData().hWnd).InvalidateRect(true);
 }
 
-void FrameBuffer_win32::SetDrawCallback(util::FunctionPtr<void (void *, math::ivec2)> callback)
+void FrameBuffer_win32::SetDrawCallback(util::function_ptr<void (void *, math::ivec2)> callback)
 {
     renderCallback = callback;
 }

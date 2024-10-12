@@ -6,29 +6,17 @@
 
 namespace dse::util {
 
-namespace coroutine_impl {
-
-struct suspend_destroy : std::suspend_always
-{
-    void await_suspend(std::coroutine_handle<> handle) const noexcept
-    {
-        handle.destroy();
-    }
-};
-
-}
-
 template <typename T>
 struct auto_task {
     struct promise_type;
     using handle = std::coroutine_handle<promise_type>;
     using set_value_func = void(T);
-    using set_value_ptr = FunctionPtr<set_value_func>;
+    using set_value_ptr = function_ptr<set_value_func>;
     void start(set_value_ptr resultCallback)
     {
         auto& promise = _handle.promise();
         promise.set_value_func = resultCallback;
-        std::exchange(_handle, nullptr).resume();
+        std::exchange<handle>(_handle, nullptr).resume();
     }
 private:
     auto_task(handle _handle) : _handle(_handle) {}
@@ -43,21 +31,25 @@ private:
     using task = auto_task<T>;
     friend task;
     static constexpr auto choice = coroutine_impl::type_index_v<T>;
+    using type = coroutine_impl::replace_void_t<T>;
 public:
     task get_return_object() { return {task::handle::from_promise(*this)}; }
     auto initial_suspend() -> std::suspend_always { return {}; }
-    auto final_suspend() noexcept -> coroutine_impl::suspend_destroy { return {}; }
+    auto final_suspend() noexcept -> coroutine_impl::suspend_destroy
+    {
+        return {};
+    }
     void return_unified()
     requires (choice == coroutine_impl::TypeChoice::Void)
     {
         set_value_func();
     }
-    void return_unified(T&& val)
+    void return_unified(type&& val)
     requires (choice != coroutine_impl::TypeChoice::Void)
     {
         set_value_func(static_cast<decltype(val)>(val));
     }
-    void return_unified(const T& val)
+    void return_unified(const type& val)
     requires (choice == coroutine_impl::TypeChoice::Value)
     {
         set_value_func(val);

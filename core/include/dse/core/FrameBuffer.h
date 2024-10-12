@@ -27,9 +27,9 @@ class API_DSE_CORE FrameBuffer
 public:
     FrameBuffer(core::Window& wnd);
     ~FrameBuffer();
-    void Render(util::FunctionPtr<void()> callback);
+    void Render(util::function_ptr<void()> callback);
     auto Render() -> fbimpl::RenderSender;
-    void SetDrawCallback(util::FunctionPtr<void(void*, math::ivec2)> callback);
+    void SetDrawCallback(util::function_ptr<void(void*, math::ivec2)> callback);
 private:
     std::unique_ptr<FrameBuffer_impl> impl;
 };

@@ -524,7 +524,7 @@ template <auto fn>
 fn_tag_t<fn> fn_tag = {};
 
 template <function_ptr_impl::UnqualifiedFunction T>
-struct FunctionPtr {
+struct function_ptr {
 	using fn = T;
 	using fnnx = function_ptr_impl::AddNoExceptT<T>;
 	using fptr = fn *;
@@ -536,14 +536,14 @@ private:
 	void* object;
 	sfn* function;
 public:
-    constexpr FunctionPtr() noexcept :
+    constexpr function_ptr() noexcept :
         object(nullptr),
         function(nullptr)
     {}
-    constexpr FunctionPtr(std::nullptr_t) noexcept :
-        FunctionPtr()
+    constexpr function_ptr(std::nullptr_t) noexcept :
+        function_ptr()
     {}
-    constexpr FunctionPtr(void* s, sfptr f) noexcept :
+    constexpr function_ptr(void* s, sfptr f) noexcept :
         object(s),
         function(f)
     {}
@@ -552,8 +552,8 @@ public:
         std::same_as<F, fn> ||
         std::same_as<F, fnnx>
     )
-    constexpr FunctionPtr(fn_tag_t<f>) noexcept :
-        FunctionPtr(nullptr,
+    constexpr function_ptr(fn_tag_t<f>) noexcept :
+        function_ptr(nullptr,
         function_ptr_impl::PrepandArgument<f>::Function)
     {}
     template <typename Cls, typename F, F *f>
@@ -561,9 +561,9 @@ public:
         std::same_as<F, function_ptr_impl::PrependArgT<fn, Cls&&>> ||
         std::same_as<F, function_ptr_impl::PrependArgT<fnnx, Cls&&>>
     )
-    constexpr FunctionPtr(Cls&& obj, fn_tag_t<f>) noexcept
+    constexpr function_ptr(Cls&& obj, fn_tag_t<f>) noexcept
     :
-        FunctionPtr(function_ptr_impl::ToPtr(obj),
+        function_ptr(function_ptr_impl::ToPtr(obj),
         function_ptr_impl::ReplaceThisTypeByPtr<f>::Function)
     {}
     template <typename Cls, typename F, F std::remove_cvref_t<Cls>::*m>
@@ -571,20 +571,20 @@ public:
         std::same_as<function_ptr_impl::RemoveThisQualifiersT<F>, fn> ||
         std::same_as<function_ptr_impl::RemoveThisQualifiersT<F>, fnnx>
     )
-    constexpr FunctionPtr(Cls&& obj, fn_tag_t<m>) noexcept :
-        FunctionPtr(static_cast<Cls&&>(obj),
+    constexpr function_ptr(Cls&& obj, fn_tag_t<m>) noexcept :
+        function_ptr(static_cast<Cls&&>(obj),
         fn_tag<function_ptr_impl::InternalSelect<F, Cls&&>(function_ptr_impl::ToExplicitThis<m>::Function)>)
     {}
     template <typename C>
     requires (
-        !std::same_as<std::remove_cvref_t<C>, FunctionPtr<fn>> &&
-        !std::same_as<std::remove_cvref_t<C>, FunctionPtr<fnnx>> &&
+        !std::same_as<std::remove_cvref_t<C>, function_ptr<fn>> &&
+        !std::same_as<std::remove_cvref_t<C>, function_ptr<fnnx>> &&
         !std::is_function_v<std::remove_cvref_t<C>> &&
         requires {
             { function_ptr_impl::ExtractCallable<fn, C>::Function } -> std::convertible_to<sfn&>;
         }
     )
-    constexpr FunctionPtr(C&& callable) :
+    constexpr function_ptr(C&& callable) :
         object(function_ptr_impl::ToPtr(callable)),
         function(function_ptr_impl::ExtractCallable<fn, C>::Function)
     {}
@@ -594,13 +594,13 @@ public:
     {
         return function(object, std::forward<Args>(args)...);
     }
-    constexpr operator FunctionPtr<fnx>() const
+    constexpr operator function_ptr<fnx>() const noexcept
     {
         return { object, function };
     }
-    sfptr GetFunction() const noexcept
+    sfptr get_function() const noexcept
     { return function; }
-    void* GetObjectPtr() const noexcept
+    void* get_object_ptr() const noexcept
     { return object; }
     explicit operator bool() const noexcept
     {
@@ -609,15 +609,15 @@ public:
 };
 
 template<function_ptr_impl::UnqualifiedFunction F, F *f>
-FunctionPtr(fn_tag_t<f>) -> FunctionPtr<F>;
+function_ptr(fn_tag_t<f>) -> function_ptr<F>;
 
 template<typename Ret, typename Cls, typename ... Args, Ret(*f)(std::type_identity_t<Cls&&>, Args...)>
-FunctionPtr(Cls&&, fn_tag_t<f>) -> FunctionPtr<Ret(Args...)>;
+function_ptr(Cls&&, fn_tag_t<f>) -> function_ptr<Ret(Args...)>;
 template<typename Ret, typename Cls, typename ... Args, Ret(*f)(std::type_identity_t<Cls&&>, Args...) noexcept>
-FunctionPtr(Cls&&, fn_tag_t<f>) -> FunctionPtr<Ret(Args...) noexcept>;
+function_ptr(Cls&&, fn_tag_t<f>) -> function_ptr<Ret(Args...) noexcept>;
 
 template<typename Cls, typename F, F std::remove_cvref_t<Cls>::*f>
-FunctionPtr(Cls&&, fn_tag_t<f>) -> FunctionPtr<function_ptr_impl::RemoveThisQualifiersT<F>>;
+function_ptr(Cls&&, fn_tag_t<f>) -> function_ptr<function_ptr_impl::RemoveThisQualifiersT<F>>;
 
 } // namespace dse::util
 

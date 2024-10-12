@@ -10,11 +10,11 @@
 using dse::core::Window;
 using dse::core::FrameBuffer;
 using dse::util::fn_tag;
-using dse::util::FunctionPtr;
+using dse::util::function_ptr;
 using dse::core::ImageManipulator;
 using dse::core::WindowShowCommand;
 using dse::core::Image;
-using dse::util::task;
+using dse::util::eager_task_t;
 using dse::core::BasicBitmapLoader;
 using dse::math::vec4;
 using dse::math::ivec2;
@@ -39,7 +39,7 @@ private:
     void OnClose(dse::core::WndEvtDt);
     void OnResize(dse::core::WndEvtDt, int w, int h, WindowShowCommand);
     void OnMouseMove(dse::core::WndEvtDt, int x, int y);
-    auto CoRun() -> task<void>;
+    auto CoRun(eager_task_t) -> std::future<void>;
 
     dse::core::SystemLoop loop;
     dse::core::ThreadPool tpool;
@@ -63,12 +63,14 @@ App::App(int argc, char *argv[]) :
 
 int App::Run()
 {
-    auto closeCon = window.SubscribeCloseEvent(FunctionPtr{*this, fn_tag<&App::OnClose>});
-    auto resizeCon = window.SubscribeResizeEvent(FunctionPtr{*this, fn_tag<&App::OnResize>});
-    auto mMoveCon = window.SubscribeMouseMoveEvent(FunctionPtr{*this, fn_tag<&App::OnMouseMove>});
-    auto task = CoRun();
-    tpool.Schedule(task.operator co_await().await_suspend(std::noop_coroutine()));
-    return tpool.Run(dse::core::PoolCaps::UI);
+    auto closeCon = window.SubscribeCloseEvent(function_ptr{*this, fn_tag<&App::OnClose>});
+    auto resizeCon = window.SubscribeResizeEvent(function_ptr{*this, fn_tag<&App::OnResize>});
+    auto mMoveCon = window.SubscribeMouseMoveEvent(function_ptr{*this, fn_tag<&App::OnMouseMove>});
+    auto task = CoRun({});
+    ctx.Run();
+    loop.Run();
+    task.get();
+    return 0;
 }
 
 void App::Draw(void* buffer, dse::math::ivec2 size)
@@ -118,7 +120,7 @@ void App::AfterRender()
 
 void App::OnClose(dse::core::WndEvtDt)
 {
-    tpool.Stop();
+    loop.Stop(0);
 }
 
 void App::OnResize(dse::core::WndEvtDt, int w, int h, WindowShowCommand)
@@ -129,27 +131,29 @@ void App::OnResize(dse::core::WndEvtDt, int w, int h, WindowShowCommand)
 void App::OnMouseMove(dse::core::WndEvtDt, int x, int y)
 {}
 
-task<void> App::CoRun()
+auto App::CoRun(eager_task_t) -> std::future<void>
 {
-    struct ImageCallback {
-        void operator()(Image&& img)
+    struct ImageAwaitable {
+        bool await_ready() const noexcept { return false; }
+        void await_suspend(std::coroutine_handle<> h)
         {
-            image = std::move(img);
+            handle = h;
+            Image::LoadByProvider(&provider,
+                {*this, fn_tag<&ImageAwaitable::callback>});
         }
-        Image& image;
+        void await_resume() const noexcept {}
+        void callback(Image &&img) {
+            image = std::move(img);
+            handle.resume();
+        }
+        Image &image;
+        dse::core::ITextureDataProvider& provider;
+        std::coroutine_handle<> handle;
     };
     BasicBitmapLoader loader(ctx, u8"assets/textures/font.bmp", false);
     BasicBitmapLoader loader2(ctx, u8"assets/textures/wall_alpha.bmp", false);
-    {
-        ImageCallback cb{font};
-        Image::LoadByProvider(&loader, cb);
-        ctx.Run();
-    }
-    {
-        ImageCallback cb{wall};
-        Image::LoadByProvider(&loader2, cb);
-        ctx.Run();
-    }
+    co_await ImageAwaitable{font, loader};
+    co_await ImageAwaitable{wall, loader2};
     window.Show();
     framebuffer.Render(nullptr);
     co_return;

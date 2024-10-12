@@ -96,7 +96,7 @@ Sphere::Sphere(int hseg, int vseg) :
     elements[index++] = j * (hseg + 1) + hseg;
 }
 
-void Sphere::LoadMeshParameters(mesh_parameters *parameters, util::FunctionPtr<void ()> callback)
+void Sphere::LoadMeshParameters(mesh_parameters *parameters, util::function_ptr<void ()> callback)
 {
     parameters->submeshCount = 1;
     parameters->elementsCount = elements.size();
@@ -104,19 +104,19 @@ void Sphere::LoadMeshParameters(mesh_parameters *parameters, util::FunctionPtr<v
     callback();
 }
 
-void Sphere::LoadVertices(vertex *vertexBuffer, util::FunctionPtr<void ()> callback)
+void Sphere::LoadVertices(vertex *vertexBuffer, util::function_ptr<void ()> callback)
 {
     std::copy(std::begin(vertices), std::end(vertices), vertexBuffer);
     callback();
 }
 
-void Sphere::LoadElements(uint32_t *elementBuffer, util::FunctionPtr<void ()> callback)
+void Sphere::LoadElements(uint32_t *elementBuffer, util::function_ptr<void ()> callback)
 {
     std::copy(std::begin(elements), std::end(elements), elementBuffer);
     callback();
 }
 
-void Sphere::LoadSubmeshRanges(submesh_range *ranges, util::FunctionPtr<void ()> callback)
+void Sphere::LoadSubmeshRanges(submesh_range *ranges, util::function_ptr<void ()> callback)
 {
     ranges->drawType = Draw::Stripes;
     ranges->start = 0;

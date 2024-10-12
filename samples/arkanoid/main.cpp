@@ -11,7 +11,7 @@
 using dse::core::Window;
 using dse::core::FrameBuffer;
 using dse::util::fn_tag;
-using dse::util::FunctionPtr;
+using dse::util::function_ptr;
 using dse::core::ImageManipulator;
 using dse::core::WindowShowCommand;
 using dse::core::Image;
@@ -56,9 +56,9 @@ App::App(int argc, char *argv[]) :
 
 int App::Run()
 {
-    auto closeCon = window.SubscribeCloseEvent(FunctionPtr{*this, fn_tag<&App::OnClose>});
-    auto resizeCon = window.SubscribeResizeEvent(FunctionPtr{*this, fn_tag<&App::OnResize>});
-    auto mMoveCon = window.SubscribeMouseMoveEvent(FunctionPtr{*this, fn_tag<&App::OnMouseMove>});
+    auto closeCon = window.SubscribeCloseEvent(function_ptr{*this, fn_tag<&App::OnClose>});
+    auto resizeCon = window.SubscribeResizeEvent(function_ptr{*this, fn_tag<&App::OnResize>});
+    auto mMoveCon = window.SubscribeMouseMoveEvent(function_ptr{*this, fn_tag<&App::OnMouseMove>});
     auto task = CoRun();
     auto awaitable = task.operator co_await();
     if (!awaitable.await_ready()) {

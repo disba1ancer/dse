@@ -65,7 +65,7 @@ struct task<T>::promise_type :
     friend class coroutine_impl::TaskAwaiter<T>;
     friend struct task<T>;
 private:
-    using type = std::conditional_t<task::choice == coroutine_impl::TypeChoice::Void, std::monostate, T>;
+    using type = coroutine_impl::replace_void_t<T>;
 public:
     auto get_return_object() -> task<T>
     {

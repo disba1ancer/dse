@@ -10,12 +10,12 @@ FrameBuffer::FrameBuffer(core::Window& wnd) :
 FrameBuffer::~FrameBuffer()
 {}
 
-void FrameBuffer::Render(util::FunctionPtr<void ()> callback)
+void FrameBuffer::Render(util::function_ptr<void ()> callback)
 {
     impl->Render(callback);
 }
 
-void FrameBuffer::SetDrawCallback(util::FunctionPtr<void (void *, math::ivec2)> callback)
+void FrameBuffer::SetDrawCallback(util::function_ptr<void (void *, math::ivec2)> callback)
 {
     impl->SetDrawCallback(callback);
 }

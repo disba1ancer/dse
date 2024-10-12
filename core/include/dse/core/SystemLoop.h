@@ -25,7 +25,7 @@ public:
     bool PollOne();
     int Result();
     void Stop(int result);
-    void Post(util::FunctionPtr<void()> cb);
+    void Post(util::function_ptr<void()> cb);
 private:
     dse::util::impl_ptr<SystemLoop_impl> impl;
 };

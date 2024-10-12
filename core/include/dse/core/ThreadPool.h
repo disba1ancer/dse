@@ -36,7 +36,7 @@ public:
     friend ThreadPool_impl;
 	friend IAsyncIO;
 
-	using Task = util::FunctionPtr<void()>;
+	using Task = util::function_ptr<void()>;
 public:
 	ThreadPool(unsigned int concurrency = std::thread::hardware_concurrency());
     ~ThreadPool();

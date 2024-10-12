@@ -26,9 +26,9 @@ public:
     void Fill(math::ivec2 begin, math::ivec2 size, std::uint32_t color);
     void BlitImage(math::ivec2 dstPos, math::ivec2 size, Image& srcImage,
                    math::ivec2 srcPos);
-    using EarlyBlendFunc = util::FunctionPtr<bool(std::uint32_t)>;
+    using EarlyBlendFunc = util::function_ptr<bool(std::uint32_t)>;
     auto SetEarlyBlendFunc(EarlyBlendFunc blendFunc) -> EarlyBlendFunc;
-    using BlendFunc = util::FunctionPtr<std::uint32_t(std::uint32_t, math::vec4)>;
+    using BlendFunc = util::function_ptr<std::uint32_t(std::uint32_t, math::vec4)>;
     auto SetBlendFunc(BlendFunc blendFunc) -> BlendFunc;
     void SetClipRect(math::ivec2 begin, math::ivec2 size);
     void BlendImage(math::ivec2 dstPos, math::ivec2 dstSize, Image& srcImage,
