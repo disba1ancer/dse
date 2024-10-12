@@ -7,7 +7,7 @@
 
 namespace {
 
-using dse::util::fnTag;
+using dse::util::fn_tag;
 using dse::math::ivec2;
 using dse::math::ivec4;
 using dse::math::vec4;

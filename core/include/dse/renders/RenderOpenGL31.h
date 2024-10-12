@@ -64,7 +64,7 @@ public:
 	{}
 	friend void dse_TagInvoke(util::TagT<util::Start>, RenderOpstate& opstate)
 	{
-		opstate.render.Render({opstate, util::fnTag<&RenderOpstate::EndCallback>});
+		opstate.render.Render({opstate, util::fn_tag<&RenderOpstate::EndCallback>});
 	}
 };
 

@@ -87,7 +87,7 @@ void dse_TagInvoke(util::TagT<util::Start>, FileOpstate<TagRead, R>& opstate)
 {
     opstate.file->ReadAsync(
         opstate.buf, opstate.size,
-        {opstate, util::fnTag<&FileOpstate<TagRead, R>::callback>}
+        {opstate, util::fn_tag<&FileOpstate<TagRead, R>::callback>}
     );
 }
 
@@ -96,7 +96,7 @@ void dse_TagInvoke(util::TagT<util::Start>, FileOpstate<TagWrite, R>& opstate)
 {
     opstate.file->WriteAsync(
         opstate.buf, opstate.size,
-        {opstate, util::fnTag<&FileOpstate<TagWrite, R>::callback>}
+        {opstate, util::fn_tag<&FileOpstate<TagWrite, R>::callback>}
     );
 }
 
@@ -137,7 +137,7 @@ struct file_awaiter {
     {
         FileOpResult r = do_op<TagOp>(
             sender.file, sender.buf, sender.size,
-            {*this, util::fnTag<&file_awaiter::callback>}
+            {*this, util::fn_tag<&file_awaiter::callback>}
         );
         if (r.ecode != status::Code::PendingOperation) {
             result = r;

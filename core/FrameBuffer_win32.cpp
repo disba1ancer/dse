@@ -14,8 +14,8 @@ void FrameBuffer_win32_Deleter::operator()(unsigned char*ptr) const
 
 FrameBuffer_win32::FrameBuffer_win32(core::Window& wnd) :
     window(wnd),
-    paintCon(window.SubscribePaintEvent(util::FunctionPtr{*this, util::fnTag<&FrameBuffer_win32::OnPaint>})),
-    resizeCon(window.SubscribeResizeEvent(util::FunctionPtr{*this, util::fnTag<&FrameBuffer_win32::OnResize>}))
+    paintCon(window.SubscribePaintEvent(util::FunctionPtr{*this, util::fn_tag<&FrameBuffer_win32::OnPaint>})),
+    resizeCon(window.SubscribeResizeEvent(util::FunctionPtr{*this, util::fn_tag<&FrameBuffer_win32::OnResize>}))
 {}
 
 FrameBuffer_win32::~FrameBuffer_win32()
@@ -25,7 +25,7 @@ void FrameBuffer_win32::Render(util::FunctionPtr<void ()> callback)
 {
     while (sync.test_and_set(std::memory_order_relaxed));
     std::atomic_thread_fence(std::memory_order_acquire);
-    exitCallback = (callback ? callback : util::fnTag<+[]{}>);
+    exitCallback = (callback ? callback : util::fn_tag<+[]{}>);
     sync.clear(std::memory_order_release);
     swal::Wnd(window.GetSysData().hWnd).InvalidateRect(true);
 }

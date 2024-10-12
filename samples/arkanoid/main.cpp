@@ -10,7 +10,7 @@
 
 using dse::core::Window;
 using dse::core::FrameBuffer;
-using dse::util::fnTag;
+using dse::util::fn_tag;
 using dse::util::FunctionPtr;
 using dse::core::ImageManipulator;
 using dse::core::WindowShowCommand;
@@ -50,15 +50,15 @@ App::App(int argc, char *argv[]) :
     window(uiLoop),
     framebuffer(window)
 {
-    framebuffer.SetDrawCallback({*this, fnTag<&App::Draw>});
+    framebuffer.SetDrawCallback({*this, fn_tag<&App::Draw>});
     window.Resize(wSize);
 }
 
 int App::Run()
 {
-    auto closeCon = window.SubscribeCloseEvent(FunctionPtr{*this, fnTag<&App::OnClose>});
-    auto resizeCon = window.SubscribeResizeEvent(FunctionPtr{*this, fnTag<&App::OnResize>});
-    auto mMoveCon = window.SubscribeMouseMoveEvent(FunctionPtr{*this, fnTag<&App::OnMouseMove>});
+    auto closeCon = window.SubscribeCloseEvent(FunctionPtr{*this, fn_tag<&App::OnClose>});
+    auto resizeCon = window.SubscribeResizeEvent(FunctionPtr{*this, fn_tag<&App::OnResize>});
+    auto mMoveCon = window.SubscribeMouseMoveEvent(FunctionPtr{*this, fn_tag<&App::OnMouseMove>});
     auto task = CoRun();
     auto awaitable = task.operator co_await();
     if (!awaitable.await_ready()) {
@@ -104,7 +104,7 @@ task<void> App::CoRun()
         bool await_suspend(std::coroutine_handle<> h)
         {
             handle = h;
-            Image::LoadByProvider(provider, {*this, fnTag<&LoadImage::Callback>});
+            Image::LoadByProvider(provider, {*this, fn_tag<&LoadImage::Callback>});
             return true;
         }
         Image await_resume() {
@@ -129,7 +129,7 @@ task<void> App::CoRun()
         bool await_suspend(std::coroutine_handle<> h)
         {
             handle = h;
-            uiLoop.Post({*this, fnTag<&UITransfer::Callback>});
+            uiLoop.Post({*this, fn_tag<&UITransfer::Callback>});
             return true;
         }
         void await_resume() {

@@ -44,7 +44,7 @@ void Image::LoadByProvider(ITextureDataProvider *provider, util::FunctionPtr<voi
         bool await_suspend(std::coroutine_handle<> handle)
         {
             this->handle = handle;
-            provider->LoadParameters(&result.result, {*this, util::fnTag<&LoadParameters::Callback>});
+            provider->LoadParameters(&result.result, {*this, util::fn_tag<&LoadParameters::Callback>});
             return true;
         }
         struct Result {
@@ -68,7 +68,7 @@ void Image::LoadByProvider(ITextureDataProvider *provider, util::FunctionPtr<voi
         bool await_suspend(std::coroutine_handle<> handle)
         {
             this->handle = handle;
-            provider->LoadData(data, 0, {*this, util::fnTag<&LoadData::Callback>});
+            provider->LoadData(data, 0, {*this, util::fn_tag<&LoadData::Callback>});
             return true;
         }
         auto await_resume() -> Status

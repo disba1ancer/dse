@@ -50,6 +50,6 @@ struct eager_task<T>::promise_type :
     void unhandled_exception() { set_exception(std::current_exception()); }
 };
 
-}
+} // namespace dse::util
 
 #endif // DSE_UTIL_IMPL_CORO_EAGER_TASK_H

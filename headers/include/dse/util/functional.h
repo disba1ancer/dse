@@ -518,10 +518,10 @@ GENERATE_VARIANT(const volatile&&)
 #undef GENERATE_VARIANT
 
 template <auto fn>
-struct FnTag {};
+struct fn_tag_t {};
 
 template <auto fn>
-FnTag<fn> fnTag = {};
+fn_tag_t<fn> fn_tag = {};
 
 template <function_ptr_impl::UnqualifiedFunction T>
 struct FunctionPtr {
@@ -552,7 +552,7 @@ public:
         std::same_as<F, fn> ||
         std::same_as<F, fnnx>
     )
-    constexpr FunctionPtr(FnTag<f>) noexcept :
+    constexpr FunctionPtr(fn_tag_t<f>) noexcept :
         FunctionPtr(nullptr,
         function_ptr_impl::PrepandArgument<f>::Function)
     {}
@@ -561,7 +561,7 @@ public:
         std::same_as<F, function_ptr_impl::PrependArgT<fn, Cls&&>> ||
         std::same_as<F, function_ptr_impl::PrependArgT<fnnx, Cls&&>>
     )
-    constexpr FunctionPtr(Cls&& obj, FnTag<f>) noexcept
+    constexpr FunctionPtr(Cls&& obj, fn_tag_t<f>) noexcept
     :
         FunctionPtr(function_ptr_impl::ToPtr(obj),
         function_ptr_impl::ReplaceThisTypeByPtr<f>::Function)
@@ -571,9 +571,9 @@ public:
         std::same_as<function_ptr_impl::RemoveThisQualifiersT<F>, fn> ||
         std::same_as<function_ptr_impl::RemoveThisQualifiersT<F>, fnnx>
     )
-    constexpr FunctionPtr(Cls&& obj, FnTag<m>) noexcept :
+    constexpr FunctionPtr(Cls&& obj, fn_tag_t<m>) noexcept :
         FunctionPtr(static_cast<Cls&&>(obj),
-        fnTag<function_ptr_impl::InternalSelect<F, Cls&&>(function_ptr_impl::ToExplicitThis<m>::Function)>)
+        fn_tag<function_ptr_impl::InternalSelect<F, Cls&&>(function_ptr_impl::ToExplicitThis<m>::Function)>)
     {}
     template <typename C>
     requires (
@@ -609,15 +609,15 @@ public:
 };
 
 template<function_ptr_impl::UnqualifiedFunction F, F *f>
-FunctionPtr(FnTag<f>) -> FunctionPtr<F>;
+FunctionPtr(fn_tag_t<f>) -> FunctionPtr<F>;
 
 template<typename Ret, typename Cls, typename ... Args, Ret(*f)(std::type_identity_t<Cls&&>, Args...)>
-FunctionPtr(Cls&&, FnTag<f>) -> FunctionPtr<Ret(Args...)>;
+FunctionPtr(Cls&&, fn_tag_t<f>) -> FunctionPtr<Ret(Args...)>;
 template<typename Ret, typename Cls, typename ... Args, Ret(*f)(std::type_identity_t<Cls&&>, Args...) noexcept>
-FunctionPtr(Cls&&, FnTag<f>) -> FunctionPtr<Ret(Args...) noexcept>;
+FunctionPtr(Cls&&, fn_tag_t<f>) -> FunctionPtr<Ret(Args...) noexcept>;
 
 template<typename Cls, typename F, F std::remove_cvref_t<Cls>::*f>
-FunctionPtr(Cls&&, FnTag<f>) -> FunctionPtr<function_ptr_impl::RemoveThisQualifiersT<F>>;
+FunctionPtr(Cls&&, fn_tag_t<f>) -> FunctionPtr<function_ptr_impl::RemoveThisQualifiersT<F>>;
 
 } // namespace dse::util
 

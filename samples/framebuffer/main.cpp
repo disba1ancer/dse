@@ -9,7 +9,7 @@
 
 using dse::core::Window;
 using dse::core::FrameBuffer;
-using dse::util::fnTag;
+using dse::util::fn_tag;
 using dse::util::FunctionPtr;
 using dse::core::ImageManipulator;
 using dse::core::WindowShowCommand;
@@ -57,15 +57,15 @@ App::App(int argc, char *argv[]) :
     window(loop),
     framebuffer(window)
 {
-    framebuffer.SetDrawCallback({*this, fnTag<&App::Draw>});
+    framebuffer.SetDrawCallback({*this, fn_tag<&App::Draw>});
     window.Resize({640, 480});
 }
 
 int App::Run()
 {
-    auto closeCon = window.SubscribeCloseEvent(FunctionPtr{*this, fnTag<&App::OnClose>});
-    auto resizeCon = window.SubscribeResizeEvent(FunctionPtr{*this, fnTag<&App::OnResize>});
-    auto mMoveCon = window.SubscribeMouseMoveEvent(FunctionPtr{*this, fnTag<&App::OnMouseMove>});
+    auto closeCon = window.SubscribeCloseEvent(FunctionPtr{*this, fn_tag<&App::OnClose>});
+    auto resizeCon = window.SubscribeResizeEvent(FunctionPtr{*this, fn_tag<&App::OnResize>});
+    auto mMoveCon = window.SubscribeMouseMoveEvent(FunctionPtr{*this, fn_tag<&App::OnMouseMove>});
     auto task = CoRun();
     tpool.Schedule(task.operator co_await().await_suspend(std::noop_coroutine()));
     return tpool.Run(dse::core::PoolCaps::UI);

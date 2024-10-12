@@ -163,7 +163,7 @@ template <auto op, auto check, typename... Args> struct file_awaiter3 {
             [this](Args &&...args) {
                 return std::invoke(
                     op, std::forward<Args>(args)...,
-                    util::FunctionPtr{*this, util::fnTag<&file_awaiter3::callback>}
+                    util::FunctionPtr{*this, util::fn_tag<&file_awaiter3::callback>}
                 );
             },
             std::move(sender.args)

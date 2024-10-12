@@ -357,7 +357,7 @@ private:
             asyncSize = remain;
             auto r = file.ReadAsync(
                 asyncBuf + transferred, remain,
-                {*this, util::fnTag<&CachedFile::DirectReadCallback>}
+                {*this, util::fn_tag<&CachedFile::DirectReadCallback>}
             );
             bytesRead = r.transferred;
             st = r.ecode;
@@ -385,7 +385,7 @@ private:
             auto remain = CacheSize - iEnd;
             auto r = file.ReadAsync(
                 buffer.get() + iEnd, remain,
-                {*this, util::fnTag<&CachedFile::BufferedReadCallback>}
+                {*this, util::fn_tag<&CachedFile::BufferedReadCallback>}
             );
             bytesRead = r.transferred;
             st = r.ecode;
@@ -417,7 +417,7 @@ private:
             auto remain = iCurrent - iEnd;
             auto r = file.WriteAsync(
                 buffer.get() + iEnd, remain,
-                {*this, util::fnTag<&CachedFile::FlushBufferCallback<ending>>});
+                {*this, util::fn_tag<&CachedFile::FlushBufferCallback<ending>>});
             bytesWritten = r.transferred;
             st = r.ecode;
         } while (st != status::Code::PendingOperation);
@@ -458,7 +458,7 @@ private:
             asyncSize = remain;
             auto r = file.WriteAsync(
                 asyncBuf + transferred, remain,
-                {*this, util::fnTag<&CachedFile::DirectWriteCallback>}
+                {*this, util::fn_tag<&CachedFile::DirectWriteCallback>}
             );
             bytesRead = r.transferred;
             st = r.ecode;
