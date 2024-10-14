@@ -93,11 +93,11 @@ void App::Draw(void* buffer, dse::math::ivec2 size)
     };
     auto blendFunc = [&manip](std::uint32_t dstColorR, vec4 srcColor) -> std::uint32_t
     {
-        auto a = srcColor.w();
-        srcColor *= vec4{a, a, a, 1.f};
         if (((dstColorR >> 24) & 0xFF) == 0) {
             return manip.ToRawColor(srcColor);
         }
+        auto a = srcColor.w();
+        srcColor *= vec4{a, a, a, 1.f};
         auto dstColor = manip.FromRawColor(dstColorR);
         return manip.ToRawColor(dstColor + srcColor * (1 - dstColor.w()));
     };
