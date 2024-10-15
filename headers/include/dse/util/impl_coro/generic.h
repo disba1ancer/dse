@@ -4,6 +4,8 @@
 #include <concepts>
 #include <variant>
 #include <coroutine>
+#include <exception>
+#include <functional>
 
 namespace dse::util::coroutine_impl {
 
