@@ -51,6 +51,7 @@ App::App(int argc, char *argv[]) :
     framebuffer(window)
 {
     framebuffer.SetDrawCallback({*this, fn_tag<&App::Draw>});
+    window.SetTitle(u8"Sample");
     window.Resize(wSize);
 }
 

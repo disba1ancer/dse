@@ -40,7 +40,7 @@ class Window_win32 {
 	LRESULT onMouseMove(WindowEventData_win32& d);
         static auto MakeWindow(SystemLoop& loop, Window_win32* window) -> swal::Window;
 public:
-        Window_win32(SystemLoop& loop);
+	Window_win32(SystemLoop& loop);
 	~Window_win32();
 	Window_win32(const Window_win32 &other) = delete;
 	Window_win32(Window_win32 &&other) = delete;
@@ -51,6 +51,7 @@ public:
 	const WindowData& getSysData();
 	math::ivec2 size();
 	void resize(const math::ivec2& size);
+	void SetTitle(const char8_t* title);
 	notifier::connection<Window::CloseHandler> subscribeCloseEvent(std::function<Window::CloseHandler>&& c);
 	notifier::connection<Window::ResizeHandler> subscribeResizeEvent(std::function<Window::ResizeHandler>&& c);
 	notifier::connection<Window::KeyHandler> subscribeKeyEvent(std::function<Window::KeyHandler>&& c);

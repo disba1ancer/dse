@@ -49,6 +49,7 @@ public:
 	const WindowData& GetSysData();
 	math::ivec2 Size();
 	void Resize(const math::ivec2& size);
+	void SetTitle(const char8_t* title);
 	typedef void(SimpleHandler)(WndEvtDt);
 	typedef SimpleHandler CloseHandler;
 	auto SubscribeCloseEvent(std::function<CloseHandler>&& c) -> notifier::connection<CloseHandler>;

@@ -43,6 +43,11 @@ void Window::Resize(const math::ivec2& size)
 	impl->resize(size);
 }
 
+void Window::SetTitle(const char8_t* title)
+{
+	impl->SetTitle(title);
+}
+
 notifier::connection<Window::CloseHandler> Window::SubscribeCloseEvent(
 		std::function<CloseHandler>&& c)
 {

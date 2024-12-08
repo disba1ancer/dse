@@ -49,8 +49,7 @@ LRESULT Window_win32::wndProc(
 					wnd.Show(swal::ShowCmd::Minimize);
 				}
 			}
-			break;
-		}
+		} break;
 		/*case WM_SETCURSOR:
 			if (LOWORD(lParam) == HTCLIENT) {
 				SetCursor(NULL);
@@ -118,7 +117,7 @@ void Window_win32::show(WindowShowCommand command) {
 	auto style = wnd.GetLongPtr(GWL_STYLE);
 	if (command == WindowShowCommand::ShowFullScreen && (style & WS_OVERLAPPEDWINDOW)) {
 //		style |= WS_POPUP;
-		style &= ~WS_OVERLAPPEDWINDOW;
+		style ^= style & WS_OVERLAPPEDWINDOW;
 		wnd.SetLongPtr(GWL_STYLE, style);
 		wnd.SetPos(HWND_TOPMOST, 0, 0, 0, 0, SP::NoMove | SP::NoSize | SP::FrameChanged);
 	} else if(!(style & WS_OVERLAPPEDWINDOW)) {
@@ -234,6 +233,12 @@ void Window_win32::resize(const math::ivec2& size) {
 	DWORD styleex = wnd.GetLongPtr(GWL_EXSTYLE);
 	AdjustWindowRectEx(&rc, style, FALSE, styleex);
 	wnd.SetPos(NULL, 0, 0, rc.right - rc.left, rc.bottom - rc.top, SP::NoActivate | SP::NoMove | SP::NoOwnerZOrder | SP::NoZOrder);
+}
+
+void Window_win32::SetTitle(const char8_t* title)
+{
+	auto wtitle = swal::u8_to_wide_char(title);
+	swal::winapi_call(::SetWindowText(wnd, wtitle.c_str()));
 }
 
 } /* namespace dse::core */
