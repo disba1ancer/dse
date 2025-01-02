@@ -1,4 +1,5 @@
 #include "SystemLoop_win32.h"
+#include <swal/hinstance.h>
 
 namespace dse::core {
 
@@ -60,32 +61,20 @@ int SystemLoop_win32::Send(util::function_ptr<int ()> cb)
     return SendMessage(msgWnd, SendMsg, wParam, lParam);
 }
 
+HWND SystemLoop_win32::OwnerWindow()
+{
+    return msgWnd;
+}
+
 auto SystemLoop_win32::GetImpl(SystemLoop &pub) -> SystemLoop_win32*
 {
     return pub.impl;
 }
 
-ATOM SystemLoop_win32::WindowClass()
+auto SystemLoop_win32::WindowClass() -> LPCTSTR
 {
-    static ATOM clsID = []{
-        HINSTANCE hInst = GetModuleHandle(nullptr);
-		WNDCLASSEX wcex;
-		wcex.cbSize = sizeof(WNDCLASSEX);
-		wcex.style = 0;
-                wcex.lpfnWndProc = swal::ClsWndProc<SystemLoop_win32, &SystemLoop_win32::WndProc, GwlpThis>;
-		wcex.cbClsExtra = 0;
-		wcex.cbWndExtra = sizeof(LONG_PTR);
-		wcex.hInstance = hInst;
-		wcex.hIcon = NULL;
-		wcex.hCursor = NULL;
-		wcex.hbrBackground = NULL;
-		wcex.lpszMenuName = 0;
-		wcex.lpszClassName = TEXT("dse.core.UILoop");
-		wcex.hIconSm = NULL;
-
-		return swal::winapi_call(RegisterClassEx(&wcex));
-	}();
-    return clsID;
+	static swal::auto_window_class<SystemLoop_win32, &SystemLoop_win32::WndProc> cls;
+	return cls;
 }
 
 LRESULT SystemLoop_win32::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) noexcept

@@ -13,7 +13,6 @@
 // #include "detail/impexp.h"
 // #include "status.h"
 // #include <coroutine>
-#include <dse/util/enum_bitwise.h>
 // #include <dse/util/execution.h>
 // #include <dse/util/functional.h>
 // #include <string_view>
@@ -169,12 +168,5 @@ auto operator co_await(FileSender<TagOp>& sndr) -> file_awaiter<TagOp>
 } // namespace
 
 } // namespace dse::core
-
-namespace dse::util {
-
-template <>
-struct enable_enum_bitwise<enum core::OpenMode> : public std::true_type {};
-
-} // namespace dse::util
 
 #endif /* DSE_CORE_FILE_H_ */

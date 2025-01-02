@@ -4,12 +4,9 @@
 #include <dse/core/Image.h>
 #include <dse/core/Window.h>
 #include <dse/util/functional.h>
+#include <swal/gdi.h>
 
 namespace dse::core {
-
-struct FrameBuffer_win32_Deleter {
-    void operator()(unsigned char*ptr) const;
-};
 
 class FrameBuffer_win32
 {
@@ -25,14 +22,13 @@ public:
 private:
     void OnPaint(core::WndEvtDt);
     void OnResize(core::WndEvtDt, int w, int h, WindowShowCommand);
+    void DrawDC(const swal::DC& dc, const RECT& rc);
 
     core::Window& window;
     std::atomic_flag sync;
     util::function_ptr<void (void*, math::ivec2)> renderCallback = nullptr;
     util::function_ptr<void ()> exitCallback = nullptr;
-    Image frameBuffer;
-//    math::ivec2 size = { 0, 0 };
-//    std::unique_ptr<unsigned char, FrameBuffer_win32_Deleter> frameBuffer;
+    Image frameBuffer{window.Size()};
     notifier::connection<core::Window::PaintHandler> paintCon;
     notifier::connection<core::Window::ResizeHandler> resizeCon;
 };

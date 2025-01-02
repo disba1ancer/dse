@@ -20,27 +20,47 @@ Window::~Window() = default;
 
 bool Window::IsVisible() const
 {
-	return impl->isVisible();
+	return impl->IsVisible();
 }
 
 void Window::Show(WindowShowCommand command)
 {
-	return impl->show(command);
+	return impl->Show(command);
 }
 
 const WindowData& Window::GetSysData()
 {
-	return impl->getSysData();
+	return impl->GetSysData();
 }
 
 math::ivec2 Window::Size()
 {
-	return impl->size();
+	return impl->Size();
 }
 
 void Window::Resize(const math::ivec2& size)
 {
-	impl->resize(size);
+	impl->Resize(size);
+}
+
+void Window::ChangeFrameStyle(WindowFrameStyle style)
+{
+	impl->ChangeFrameStyle(style);
+}
+
+bool Window::HasMinimizeCtl()
+{
+	return impl->HasMinimizeCtl();
+}
+
+void Window::ShowMinimizeCtl(bool state)
+{
+	impl->ShowMinimizeCtl(state);
+}
+
+auto Window::GetLoop() const -> SystemLoop&
+{
+	return impl->GetLoop();
 }
 
 void Window::SetTitle(const char8_t* title)
@@ -51,31 +71,31 @@ void Window::SetTitle(const char8_t* title)
 notifier::connection<Window::CloseHandler> Window::SubscribeCloseEvent(
 		std::function<CloseHandler>&& c)
 {
-	return impl->subscribeCloseEvent(std::move(c));
+	return impl->SubscribeCloseEvent(std::move(c));
 }
 
 notifier::connection<Window::ResizeHandler> Window::SubscribeResizeEvent(
 		std::function<ResizeHandler>&& c)
 {
-	return impl->subscribeResizeEvent(std::move(c));
+	return impl->SubscribeResizeEvent(std::move(c));
 }
 
 notifier::connection<Window::KeyHandler> Window::SubscribeKeyEvent(
 		std::function<KeyHandler> &&c)
 {
-	return impl->subscribeKeyEvent(std::move(c));
+	return impl->SubscribeKeyEvent(std::move(c));
 }
 
 notifier::connection<Window::PaintHandler> Window::SubscribePaintEvent(
 		std::function<PaintHandler> &&c)
 {
-	return impl->subscribePaintEvent(std::move(c));
+	return impl->SubscribePaintEvent(std::move(c));
 }
 
 notifier::connection<Window::MouseMoveHandler> Window::SubscribeMouseMoveEvent(
 		std::function<MouseMoveHandler> &&c)
 {
-	return impl->subscribeMouseMoveEvent(std::move(c));
+	return impl->SubscribeMouseMoveEvent(std::move(c));
 }
 
 } /* namespace dse::core */

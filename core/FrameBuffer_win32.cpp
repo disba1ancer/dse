@@ -7,11 +7,6 @@
 
 namespace dse::core {
 
-void FrameBuffer_win32_Deleter::operator()(unsigned char*ptr) const
-{
-    ::operator delete(ptr);
-}
-
 FrameBuffer_win32::FrameBuffer_win32(core::Window& wnd) :
     window(wnd),
     paintCon(window.SubscribePaintEvent(util::function_ptr{*this, util::fn_tag<&FrameBuffer_win32::OnPaint>})),
@@ -23,11 +18,21 @@ FrameBuffer_win32::~FrameBuffer_win32()
 
 void FrameBuffer_win32::Render(util::function_ptr<void ()> callback)
 {
-    while (sync.test_and_set(std::memory_order_relaxed));
-    std::atomic_thread_fence(std::memory_order_acquire);
-    exitCallback = (callback ? callback : util::fn_tag<+[]{}>);
-    sync.clear(std::memory_order_release);
-    swal::Wnd(window.GetSysData().hWnd).InvalidateRect(true);
+    // while (sync.test_and_set(std::memory_order_relaxed));
+    // std::atomic_thread_fence(std::memory_order_acquire);
+    // exitCallback = (callback ? callback : util::fn_tag<+[]{}>);
+    // sync.clear(std::memory_order_release);
+    auto size = frameBuffer.Size();
+    // if (renderCallback) {
+    //     renderCallback(frameBuffer.Data(), size);
+    // }
+    auto wnd = swal::Wnd(window.GetSysData().hWnd);
+    swal::winapi_call(::RedrawWindow(wnd, nullptr, NULL, RDW_INVALIDATE /*| RDW_UPDATENOW*/));
+    // auto dc = swal::Wnd(window.GetSysData().hWnd).GetDC();
+    // if (size.x() == 0 || size.y() == 0) {
+    //     return;
+    // }
+    // DrawDC(dc, {0, 0, size.x(), size.y()});
 }
 
 void FrameBuffer_win32::SetDrawCallback(util::function_ptr<void (void *, math::ivec2)> callback)
@@ -38,28 +43,49 @@ void FrameBuffer_win32::SetDrawCallback(util::function_ptr<void (void *, math::i
 void FrameBuffer_win32::OnPaint(WndEvtDt data)
 {
     swal::Wnd wnd(data.hWnd);
-    auto acqrd = !sync.test_and_set(std::memory_order_relaxed);
-    util::scope_exit final([&wnd, &acqrd, this]{
-        if (acqrd) {
-            auto callback = std::exchange(exitCallback, nullptr);
-            sync.clear(std::memory_order_release);
-            if (callback) {
-                callback();
-            }
-        }
-    });
-    swal::PaintDC dc(wnd);
-    if (!acqrd) {
+    // auto acqrd = !sync.test_and_set(std::memory_order_relaxed);
+    // util::scope_exit final([&wnd, &acqrd, this]{
+    //     if (acqrd) {
+    //         auto callback = std::exchange(exitCallback, nullptr);
+    //         sync.clear(std::memory_order_release);
+    //         if (callback) {
+    //             callback();
+    //         }
+    //     }
+    // });
+    RECT rc;
+    if (!::GetUpdateRect(wnd, &rc, FALSE)) {
         return;
     }
-    std::atomic_thread_fence(std::memory_order_acquire);
+    swal::WindowDC dc(wnd);
+    // RECT const& rc = dc->rcPaint;
+    // if (!acqrd) {
+    //     return;
+    // }
+    // std::atomic_thread_fence(std::memory_order_acquire);
     auto size = frameBuffer.Size();
     if (size.x() == 0 || size.y() == 0) {
         return;
     }
-    if (exitCallback && renderCallback) {
+    if (renderCallback) {
         renderCallback(frameBuffer.Data(), size);
     }
+    DrawDC(dc, rc);
+    wnd.ValidateRect(rc);
+}
+
+void FrameBuffer_win32::OnResize(WndEvtDt, int w, int h, WindowShowCommand)
+{
+    math::ivec2 size = {w, h};
+    frameBuffer = {size};
+    // if (renderCallback) {
+    //     renderCallback(frameBuffer.Data(), size);
+    // }
+}
+
+void FrameBuffer_win32::DrawDC(const swal::DC& dc, const RECT& rc)
+{
+    auto size = frameBuffer.Size();
     ::BITMAPINFO bmi;
     auto &bmih = bmi.bmiHeader;
     bmih.biSize = sizeof(bmih);
@@ -74,19 +100,16 @@ void FrameBuffer_win32::OnPaint(WndEvtDt data)
     bmih.biClrUsed = 0;
     bmih.biClrImportant = 0;
 
-    auto xBeg = std::clamp(int(dc->rcPaint.left), 0, size.x());
-    auto yBeg = std::clamp(int(dc->rcPaint.top), 0, size.y());
-    auto xSiz = std::clamp(int(dc->rcPaint.right), 0, size.x()) - xBeg;
-    auto ySiz = std::clamp(int(dc->rcPaint.bottom), 0, size.y()) - yBeg;
-    swal::winapi_call(::SetDIBitsToDevice(dc, xBeg, yBeg, xSiz, ySiz, xBeg, size.y() - (yBeg + ySiz), 0, size.y(), frameBuffer.Data(), &bmi, 0));
-}
-
-void FrameBuffer_win32::OnResize(WndEvtDt, int w, int h, WindowShowCommand)
-{
-    math::ivec2 size = {w, h};
-    frameBuffer = {size};
-    ImageManipulator manip(frameBuffer);
-    manip.Fill({0, 0}, size, 0x00000000);
+    auto xBeg = std::clamp(int(rc.left), 0, size.x());
+    auto yBeg = std::clamp(int(rc.top), 0, size.y());
+    auto xSiz = std::clamp(int(rc.right), 0, size.x()) - xBeg;
+    auto ySiz = std::clamp(int(rc.bottom), 0, size.y()) - yBeg;
+    swal::winapi_call(::SetDIBitsToDevice(
+        dc,
+        xBeg, yBeg, xSiz, ySiz,
+        xBeg, size.y() - (yBeg + ySiz),
+        0, size.y(),
+        frameBuffer.Data(), &bmi, DIB_RGB_COLORS));
 }
 
 } // namespace dse::core

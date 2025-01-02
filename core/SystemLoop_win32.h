@@ -11,17 +11,18 @@ class SystemLoop_win32
 {
 public:
     SystemLoop_win32();
-    int Run();
+    int  Run();
     bool RunOne();
     bool Poll();
     bool PollOne();
-    int Result();
+    int  Result();
     void Stop(int result = 0);
     void Post(util::function_ptr<void()> cb);
-    int Send(util::function_ptr<int()> cb);
+    int  Send(util::function_ptr<int()> cb);
+    HWND OwnerWindow();
     static auto GetImpl(SystemLoop& pub) -> SystemLoop_win32*;
 private:
-    static ATOM WindowClass();
+    static auto WindowClass() -> LPCTSTR;
     LRESULT WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) noexcept;
     enum Constants {
         GwlpThis = 0,

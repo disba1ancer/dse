@@ -50,16 +50,20 @@ public:
 	math::ivec2 Size();
 	void Resize(const math::ivec2& size);
 	void SetTitle(const char8_t* title);
-	typedef void(SimpleHandler)(WndEvtDt);
-	typedef SimpleHandler CloseHandler;
+	void ChangeFrameStyle(WindowFrameStyle style);
+	bool HasMinimizeCtl();
+	void ShowMinimizeCtl(bool state);
+	auto GetLoop() const -> SystemLoop&;
+	using SimpleHandler = void(WndEvtDt);
+	using CloseHandler = SimpleHandler;
 	auto SubscribeCloseEvent(std::function<CloseHandler>&& c) -> notifier::connection<CloseHandler>;
-	typedef void(ResizeHandler)(WndEvtDt, int, int, WindowShowCommand);
+	using ResizeHandler = void(WndEvtDt, int, int, WindowShowCommand);
 	auto SubscribeResizeEvent(std::function<ResizeHandler>&& c) -> notifier::connection<ResizeHandler>;
-	typedef void(KeyHandler)(WndEvtDt, KeyboardKeyState, int);
+	using KeyHandler = void(WndEvtDt, KeyboardKeyState, int);
 	auto SubscribeKeyEvent(std::function<KeyHandler>&& c) -> notifier::connection<KeyHandler>;
-	typedef void(PaintHandler)(WndEvtDt);
+	using PaintHandler = void(WndEvtDt);
 	auto SubscribePaintEvent(std::function<PaintHandler>&& c) -> notifier::connection<PaintHandler>;
-	typedef void(MouseMoveHandler)(WndEvtDt, int x, int y);
+	using MouseMoveHandler = void(WndEvtDt, int x, int y);
 	auto SubscribeMouseMoveEvent(std::function<MouseMoveHandler>&& c) -> notifier::connection<MouseMoveHandler>;
 private:
     util::impl_ptr<Window_impl> impl;

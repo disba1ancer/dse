@@ -79,36 +79,33 @@ public:
     {}
     ImageManipulatorPixel& operator=(std::uint32_t clr)
     {
-        for (std::size_t i = 0; i < ImageManipulator::PixelSize; ++i, clr >>= 8) {
-            pixel[i] = clr & 0xFF;
-        }
+        std::memcpy(pixel, &clr, ImageManipulator::PixelSize);
         return *this;
     }
     ImageManipulatorPixel& operator=(math::ivec4 color)
     {
-        pixel[0] = color[2];
-        pixel[1] = color[1];
-        pixel[2] = color[0];
-        pixel[3] = color[3];
-        return *this;
+        std::uint32_t clr = color[2] & 0xFF;
+        clr |= (color[1] & 0xFF) << 8;
+        clr |= (color[0] & 0xFF) << 16;
+        clr |= (color[3] & 0xFF) << 24;
+        return (*this) = clr;
     }
     ImageManipulatorPixel& operator=(math::vec4 color)
     {
         return (*this) = ImageManipulator::ToRawColor(color, linear);
     }
     operator std::uint32_t() const {
-        std::uint32_t color = 0;
-        for (std::size_t i = 0; i < ImageManipulator::PixelSize; ++i) {
-            color |= std::uint32_t(pixel[i]) << (i * 8);
-        }
+        std::uint32_t color;
+        std::memcpy(&color, pixel, ImageManipulator::PixelSize);
         return color;
     }
     operator math::ivec4() const {
+        std::uint32_t icolor = *this;
         math::ivec4 color;
-        color[0] = pixel[2];
-        color[1] = pixel[1];
-        color[2] = pixel[0];
-        color[3] = pixel[3];
+        color[2] = icolor & 0xFF;
+        color[1] = (icolor >> 8) & 0xFF;
+        color[0] = (icolor >> 16) & 0xFF;
+        color[3] = (icolor >> 24) & 0xFF;
         return color;
     }
     operator math::vec4() const {

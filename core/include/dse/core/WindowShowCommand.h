@@ -8,6 +8,8 @@
 #ifndef DSE_CORE_WINDOWSHOWCOMMAND_H_
 #define DSE_CORE_WINDOWSHOWCOMMAND_H_
 
+#include <dse/util/enum_bitwise.h>
+
 namespace dse::core {
 
 enum class WindowShowCommand {
@@ -17,6 +19,12 @@ enum class WindowShowCommand {
 	ShowRestored,
 	ShowMaximized,
 	ShowFullScreen
+};
+
+enum class WindowFrameStyle {
+	None,
+	Fixed,
+	Sizable
 };
 
 } /* namespace dse::core */

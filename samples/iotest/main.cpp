@@ -31,6 +31,7 @@ auto MainTask(eager_task_t, int argc, char* argv[]) -> std::future<int>
 {
     CachedFile file(ctx, u8"testsrc.txt", OpenMode::Read);
     CachedFile out(ctx, u8"testout.txt", OpenMode::Write | OpenMode::Clear);
+    (OpenMode::Write | OpenMode::Clear);
     ThrowIfError(out.OpenStatus());
     char buf[4096] = {};
     while (true) {

@@ -67,7 +67,7 @@ target_sources(core PRIVATE
 
 if (${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
 FetchContent_MakeAvailable(swal)
-target_link_libraries(core PRIVATE swal::swal)
+target_link_libraries(core PRIVATE swal::swal dwmapi uxtheme)
 target_sources(core PUBLIC
     include/dse/core/PaintEventData_win32.h
     include/dse/core/WindowData_win32.h

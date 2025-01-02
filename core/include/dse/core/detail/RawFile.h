@@ -4,6 +4,7 @@
 #include "../status.h"
 #include <dse/util/TagInvoke.h>
 #include <dse/util/execution.h>
+#include <dse/util/enum_bitwise.h>
 #include <coroutine>
 #include <cstddef>
 
@@ -16,6 +17,7 @@ enum class OpenMode : unsigned {
     Clear = 0x8U, // clear file contents when opened
     Existing = 0x10U, // open only existing
 };
+void enable(util::enum_bit_ops<OpenMode>);
 
 enum class StPoint {
     Start,
