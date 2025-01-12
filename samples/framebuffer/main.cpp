@@ -32,13 +32,14 @@ static char8_t text[] = u8"Vivamus ut tincidunt dui.\nAenean facilisis nibh mi, 
 class App {
 public:
     App(int argc, char* argv[]);
+    ~App();
     int Run();
 private:
     void Draw(void* buffer, dse::math::ivec2 size);
     void AfterRender();
-    void OnClose(dse::core::WndEvtDt);
-    void OnResize(dse::core::WndEvtDt, int w, int h, WindowShowCommand);
-    void OnMouseMove(dse::core::WndEvtDt, int x, int y);
+    void OnClose();
+    void OnResize();
+    void OnMouseMove(int x, int y);
     auto CoRun(eager_task_t) -> std::future<void>;
 
     dse::core::SystemLoop loop;
@@ -59,13 +60,22 @@ App::App(int argc, char *argv[]) :
 {
     framebuffer.SetDrawCallback({*this, fn_tag<&App::Draw>});
     window.Resize({640, 480});
+    using enum dse::core::WindowEvent;
+    window.Register<Close>({*this, fn_tag<&App::OnClose>});
+    window.Register<Resize>({*this, fn_tag<&App::OnResize>});
+    window.Register<MouseMove>({*this, fn_tag<&App::OnMouseMove>});
+}
+
+App::~App()
+{
+    using enum dse::core::WindowEvent;
+    window.Register<MouseMove>({*this, fn_tag<&App::OnMouseMove>});
+    window.Register<Resize>({*this, fn_tag<&App::OnResize>});
+    window.Register<Close>({*this, fn_tag<&App::OnClose>});
 }
 
 int App::Run()
 {
-    auto closeCon = window.SubscribeCloseEvent(function_ptr{*this, fn_tag<&App::OnClose>});
-    auto resizeCon = window.SubscribeResizeEvent(function_ptr{*this, fn_tag<&App::OnResize>});
-    auto mMoveCon = window.SubscribeMouseMoveEvent(function_ptr{*this, fn_tag<&App::OnMouseMove>});
     auto task = CoRun({});
     ctx.Run();
     loop.Run();
@@ -118,17 +128,17 @@ void App::Draw(void* buffer, dse::math::ivec2 size)
 void App::AfterRender()
 {}
 
-void App::OnClose(dse::core::WndEvtDt)
+void App::OnClose()
 {
     loop.Stop(0);
 }
 
-void App::OnResize(dse::core::WndEvtDt, int w, int h, WindowShowCommand)
+void App::OnResize()
 {
     framebuffer.Render(nullptr);
 }
 
-void App::OnMouseMove(dse::core::WndEvtDt, int x, int y)
+void App::OnMouseMove(int x, int y)
 {}
 
 auto App::CoRun(eager_task_t) -> std::future<void>

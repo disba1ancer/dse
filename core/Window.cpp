@@ -16,11 +16,17 @@ namespace dse::core {
 Window::Window(SystemLoop& loop) : impl(loop)
 {}
 
-Window::~Window() = default;
+Window::~Window()
+{}
 
 bool Window::IsVisible() const
 {
 	return impl->IsVisible();
+}
+
+bool Window::IsFullscreen() const
+{
+	return impl->IsFullscreen();
 }
 
 void Window::Show(WindowShowCommand command)
@@ -33,7 +39,17 @@ const WindowData& Window::GetSysData()
 	return impl->GetSysData();
 }
 
-math::ivec2 Window::Size()
+auto Window::Position() const -> math::ivec2
+{
+	return impl->Position();
+}
+
+void Window::Move(const math::ivec2& pos)
+{
+	impl->Move(pos);
+}
+
+auto Window::Size() const -> math::ivec2
 {
 	return impl->Size();
 }
@@ -43,24 +59,14 @@ void Window::Resize(const math::ivec2& size)
 	impl->Resize(size);
 }
 
-void Window::ChangeFrameStyle(WindowFrameStyle style)
+auto Window::SurfaceSize() const -> math::ivec2
 {
-	impl->ChangeFrameStyle(style);
+	return impl->SurfaceSize();
 }
 
-bool Window::HasMinimizeCtl()
+void Window::ResizeSurface(const math::ivec2& size)
 {
-	return impl->HasMinimizeCtl();
-}
-
-void Window::ShowMinimizeCtl(bool state)
-{
-	impl->ShowMinimizeCtl(state);
-}
-
-auto Window::GetLoop() const -> SystemLoop&
-{
-	return impl->GetLoop();
+	impl->ResizeSurface(size);
 }
 
 void Window::SetTitle(const char8_t* title)
@@ -68,34 +74,40 @@ void Window::SetTitle(const char8_t* title)
 	impl->SetTitle(title);
 }
 
-notifier::connection<Window::CloseHandler> Window::SubscribeCloseEvent(
-		std::function<CloseHandler>&& c)
+void Window::ChangeFrameStyle(WindowFrameStyle style)
 {
-	return impl->SubscribeCloseEvent(std::move(c));
+	impl->ChangeFrameStyle(style);
 }
 
-notifier::connection<Window::ResizeHandler> Window::SubscribeResizeEvent(
-		std::function<ResizeHandler>&& c)
+bool Window::Minimizable() const
 {
-	return impl->SubscribeResizeEvent(std::move(c));
+	return impl->Minimizable();
 }
 
-notifier::connection<Window::KeyHandler> Window::SubscribeKeyEvent(
-		std::function<KeyHandler> &&c)
+void Window::MakeMinimizable(bool state)
 {
-	return impl->SubscribeKeyEvent(std::move(c));
+	impl->MakeMinimizable(state);
 }
 
-notifier::connection<Window::PaintHandler> Window::SubscribePaintEvent(
-		std::function<PaintHandler> &&c)
+auto Window::GetLoop() const -> SystemLoop&
+{
+	return impl->GetLoop();
+}
+
+auto Window::SubscribePaintEvent(std::function<PaintHandler> &&c)
+-> notifier::connection<Window::PaintHandler>
 {
 	return impl->SubscribePaintEvent(std::move(c));
 }
 
-notifier::connection<Window::MouseMoveHandler> Window::SubscribeMouseMoveEvent(
-		std::function<MouseMoveHandler> &&c)
+bool Window::Register(WindowEvent evt, void* object, void (*cb)())
 {
-	return impl->SubscribeMouseMoveEvent(std::move(c));
+	return impl->Register(evt, object, cb);
+}
+
+void Window::Unregister(WindowEvent evt, void* object, void (*cb)()) noexcept
+{
+	return impl->Unregister(evt, object, cb);
 }
 
 } /* namespace dse::core */

@@ -23,7 +23,6 @@ target_sources(core PUBLIC
     include/dse/core/ITextureDataProvider.h
     include/dse/core/Image.h
     include/dse/core/ImageManipulator.h
-    include/dse/core/KeyboardKeyState.h
     include/dse/core/Material.h
     include/dse/core/Object.h
     include/dse/core/Scene.h
@@ -31,8 +30,8 @@ target_sources(core PUBLIC
     include/dse/core/SystemLoop.h
     include/dse/core/ThreadPool.h
     include/dse/core/Window.h
-    include/dse/core/WindowShowCommand.h
     include/dse/core/detail/RawFile.h
+    include/dse/core/detail/Window.h
     include/dse/core/detail/impexp.h
     include/dse/core/detail/staticmod.h
     include/dse/core/errors.h

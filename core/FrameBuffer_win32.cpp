@@ -9,12 +9,15 @@ namespace dse::core {
 
 FrameBuffer_win32::FrameBuffer_win32(core::Window& wnd) :
     window(wnd),
-    paintCon(window.SubscribePaintEvent(util::function_ptr{*this, util::fn_tag<&FrameBuffer_win32::OnPaint>})),
-    resizeCon(window.SubscribeResizeEvent(util::function_ptr{*this, util::fn_tag<&FrameBuffer_win32::OnResize>}))
-{}
+    paintCon(window.SubscribePaintEvent(util::function_ptr{*this, util::fn_tag<&FrameBuffer_win32::OnPaint>}))
+{
+    window.Register<WindowEvent::Resize>({*this, util::fn_tag<&FrameBuffer_win32::OnResize>});
+}
 
 FrameBuffer_win32::~FrameBuffer_win32()
-{}
+{
+    window.Unregister<WindowEvent::Resize>({*this, util::fn_tag<&FrameBuffer_win32::OnResize>});
+}
 
 void FrameBuffer_win32::Render(util::function_ptr<void ()> callback)
 {
@@ -74,9 +77,9 @@ void FrameBuffer_win32::OnPaint(WndEvtDt data)
     wnd.ValidateRect(rc);
 }
 
-void FrameBuffer_win32::OnResize(WndEvtDt, int w, int h, WindowShowCommand)
+void FrameBuffer_win32::OnResize()
 {
-    math::ivec2 size = {w, h};
+    math::ivec2 size = window.SurfaceSize();
     frameBuffer = {size};
     // if (renderCallback) {
     //     renderCallback(frameBuffer.Data(), size);

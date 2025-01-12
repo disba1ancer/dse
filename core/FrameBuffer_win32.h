@@ -21,7 +21,7 @@ public:
     void SetDrawCallback(util::function_ptr<void(void*, math::ivec2)> callback);
 private:
     void OnPaint(core::WndEvtDt);
-    void OnResize(core::WndEvtDt, int w, int h, WindowShowCommand);
+    void OnResize();
     void DrawDC(const swal::DC& dc, const RECT& rc);
 
     core::Window& window;
@@ -30,7 +30,6 @@ private:
     util::function_ptr<void ()> exitCallback = nullptr;
     Image frameBuffer{window.Size()};
     notifier::connection<core::Window::PaintHandler> paintCon;
-    notifier::connection<core::Window::ResizeHandler> resizeCon;
 };
 
 } // namespace dse::core

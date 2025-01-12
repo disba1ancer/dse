@@ -8,10 +8,8 @@
 #ifndef DSE_CORE_WINDOW_H_
 #define DSE_CORE_WINDOW_H_
 
-#include <memory>
-#include "WindowShowCommand.h"
+#include "detail/Window.h"
 #include <dse/notifier/notifier.h>
-#include "KeyboardKeyState.h"
 #include <dse/math/vec.h>
 #include "detail/impexp.h"
 #include <dse/core/SystemLoop.h>
@@ -40,34 +38,49 @@ class API_DSE_CORE Window {
 public:
     Window(SystemLoop& loop);
 	~Window();
-	Window(const Window &other) = delete;
 	Window(Window &&other) = delete;
-	Window& operator=(const Window &other) = delete;
+	Window(const Window &other) = delete;
 	Window& operator=(Window &&other) = delete;
+	Window& operator=(const Window &other) = delete;
 	bool IsVisible() const;
+	bool IsFullscreen() const;
 	void Show(WindowShowCommand command = WindowShowCommand::Show);
-	const WindowData& GetSysData();
-	math::ivec2 Size();
+	auto GetSysData() -> const WindowData&;
+	auto Position() const -> math::ivec2;
+	void Move(const math::ivec2& pos);
+	auto Size() const -> math::ivec2;
 	void Resize(const math::ivec2& size);
+	auto SurfaceSize() const -> math::ivec2;
+	void ResizeSurface(const math::ivec2& size);
 	void SetTitle(const char8_t* title);
 	void ChangeFrameStyle(WindowFrameStyle style);
-	bool HasMinimizeCtl();
-	void ShowMinimizeCtl(bool state);
+	bool Minimizable() const;
+	void MakeMinimizable(bool state);
 	auto GetLoop() const -> SystemLoop&;
-	using SimpleHandler = void(WndEvtDt);
-	using CloseHandler = SimpleHandler;
-	auto SubscribeCloseEvent(std::function<CloseHandler>&& c) -> notifier::connection<CloseHandler>;
-	using ResizeHandler = void(WndEvtDt, int, int, WindowShowCommand);
-	auto SubscribeResizeEvent(std::function<ResizeHandler>&& c) -> notifier::connection<ResizeHandler>;
-	using KeyHandler = void(WndEvtDt, KeyboardKeyState, int);
-	auto SubscribeKeyEvent(std::function<KeyHandler>&& c) -> notifier::connection<KeyHandler>;
 	using PaintHandler = void(WndEvtDt);
-	auto SubscribePaintEvent(std::function<PaintHandler>&& c) -> notifier::connection<PaintHandler>;
-	using MouseMoveHandler = void(WndEvtDt, int x, int y);
-	auto SubscribeMouseMoveEvent(std::function<MouseMoveHandler>&& c) -> notifier::connection<MouseMoveHandler>;
+	auto SubscribePaintEvent(std::function<PaintHandler>&& c)
+	-> notifier::connection<PaintHandler>;
+	bool Register(WindowEvent evt, void* object, void(*cb)());
+	void Unregister(WindowEvent evt, void* object, void(*cb)()) noexcept;
+	template <WindowEvent evt>
+	bool Register(const util::function_ptr<typename util::event_traits<evt>::handler>& cb);
+	template <WindowEvent evt>
+	void Unregister(const util::function_ptr<typename util::event_traits<evt>::handler>& cb) noexcept;
 private:
     util::impl_ptr<Window_impl> impl;
 };
+
+template <WindowEvent evt>
+bool Window::Register(const util::function_ptr<typename util::event_traits<evt>::handler>& cb)
+{
+    return Register(evt, cb.get_object_ptr(), reinterpret_cast<void(*)()>(cb.get_function()));
+}
+
+template <WindowEvent evt>
+void Window::Unregister(const util::function_ptr<typename util::event_traits<evt>::handler>& cb) noexcept
+{
+    Unregister(evt, cb.get_object_ptr(), reinterpret_cast<void(*)()>(cb.get_function()));
+}
 
 } /* namespace dse::core */
 

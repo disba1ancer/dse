@@ -25,6 +25,7 @@ FILES
     include/dse/util/coroutine.h
     include/dse/util/emptylock.h
     include/dse/util/enum_bitwise.h
+    include/dse/util/evtmgr.h
     include/dse/util/execution.h
     include/dse/util/functional.h
     include/dse/util/impl_coro/auto_task.h

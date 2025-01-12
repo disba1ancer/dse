@@ -25,37 +25,30 @@ public:
 	Window_win32& operator=(const Window_win32 &other) = delete;
 	Window_win32& operator=(Window_win32 &&other) = delete;
 	bool IsVisible() const;
+	bool IsFullscreen() const;
 	void Show(WindowShowCommand command = WindowShowCommand::Show);
 	auto GetSysData() -> const WindowData&;
+	auto Position() const -> math::ivec2;
+	void Move(const math::ivec2& pos);
 	auto Size() const -> math::ivec2;
 	void Resize(const math::ivec2& size);
+	auto SurfaceSize() const -> math::ivec2;
+	void ResizeSurface(const math::ivec2& size);
 	void SetTitle(const char8_t* title);
 	void ChangeFrameStyle(WindowFrameStyle style);
-	bool HasMinimizeCtl();
-	void ShowMinimizeCtl(bool state);
-	bool HasMaximizeCtl();
+	bool Minimizable() const;
+	void MakeMinimizable(bool state);
+	bool HasMaximizeCtl() const;
 	void ShowMaximizeCtl(bool state);
 	auto GetLoop() const -> SystemLoop&;
-	auto SubscribeCloseEvent(std::function<Window::CloseHandler>&& c)
-	-> notifier::connection<Window::CloseHandler>;
-	auto SubscribeResizeEvent(std::function<Window::ResizeHandler>&& c)
-	-> notifier::connection<Window::ResizeHandler>;
-	auto SubscribeKeyEvent(std::function<Window::KeyHandler>&& c)
-	-> notifier::connection<Window::KeyHandler>;
 	auto SubscribePaintEvent(std::function<Window::PaintHandler>&& c)
 	-> notifier::connection<Window::PaintHandler>;
-	auto SubscribeMouseMoveEvent(std::function<Window::MouseMoveHandler>&& c)
-	-> notifier::connection<Window::MouseMoveHandler>;
+	bool Register(WindowEvent evt, void* object, void(*cb)());
+	void Unregister(WindowEvent evt, void* object, void(*cb)()) noexcept;
 private:
     enum Constants {
         GwlpThis = 0
     };
-
-    enum class WindowFlags {
-        Minimizable = 1,
-        Maximizable = 2
-    };
-    friend void enable(util::enum_bit_ops<WindowFlags>);
 
 	auto WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) noexcept -> LRESULT;
 	static auto WindowClass() -> LPCTSTR;
@@ -74,7 +67,6 @@ private:
 
 	auto OnPaint(WindowEventData_win32& d) -> LRESULT;
 	auto OnClose(WindowEventData_win32& d) -> LRESULT;
-	auto OnSize(WindowEventData_win32& d) -> LRESULT;
 	auto OnKeyDown(WindowEventData_win32& d) -> LRESULT;
 	auto OnKeyUp(WindowEventData_win32& d) -> LRESULT;
 	auto OnMouseMove(WindowEventData_win32& d) -> LRESULT;
@@ -84,17 +76,25 @@ private:
 	auto OnGetMinMaxInfo(WindowEventData_win32& d) -> LRESULT;
 	auto CallDefWindowProc(WindowEventData_win32& d) -> LRESULT;
 
-	notifier::notifier<Window::CloseHandler> closeSubscribers;
-	notifier::notifier<Window::ResizeHandler> resizeSubscribers;
-	notifier::notifier<Window::KeyHandler> keySubscribers;
+	util::event_manager<WindowEvent> eventmgr;
+	// notifier::notifier<Window::CloseHandler> closeSubscribers;
+	// notifier::notifier<Window::ResizeHandler> resizeSubscribers;
+	// notifier::notifier<Window::KeyHandler> keySubscribers;
 	notifier::notifier<Window::PaintHandler> paintSubscribers;
-	notifier::notifier<Window::MouseMoveHandler> mouseMoveSubscribers;
+	// notifier::notifier<Window::MouseMoveHandler> mouseMoveSubscribers;
 	math::ivec2 pos;
 	math::ivec2 size;
+	math::ivec2 clientSize;
 	math::ivec2 minSize = {-1, 0};
 	math::ivec2 maxSize = {-1, 0};
 	WindowFrameStyle frameStyle = WindowFrameStyle::Sizable;
-	WindowFlags flags = WindowFlags::Minimizable | WindowFlags::Maximizable;
+	WindowShowCommand state;
+	bool visible:1 = false;
+	bool maximize:1 = false;
+	bool minimizable:1 = true;
+	bool maximizable:1 = true;
+	bool fullscreen:1 = false;
+	WINDOWPLACEMENT normPlace;
 	SystemLoop* loop;
 	swal::Window wnd;
 };

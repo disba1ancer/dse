@@ -32,14 +32,15 @@ constexpr ivec2 wSize = {640, 480};
 class App {
 public:
     App(int argc, char* argv[]);
+    ~App();
     int Run();
 private:
     void Draw(void* buffer, dse::math::ivec2 size);
     void AfterRender();
-    void OnClose(WndEvtDt);
-    void OnResize(WndEvtDt, int w, int h, WindowShowCommand);
-    void OnMouseMove(WndEvtDt, int x, int y);
-    void OnKey(WndEvtDt, KeyboardKeyState, int);
+    void OnClose();
+    void OnResize();
+    void OnMouseMove(int x, int y);
+    void OnKey(KeyboardKeyState, int);
     auto Load() -> task<void>;
     void Step();
 
@@ -60,16 +61,26 @@ App::App(int argc, char *argv[])
 {
     using enum dse::core::WindowFrameStyle;
     window.SetTitle(u8"Sample");
-    window.ChangeFrameStyle(None);
-    //window.Resize(wSize);
+    window.ChangeFrameStyle(Sizable);
+    window.ResizeSurface(wSize);
+    using enum dse::core::WindowEvent;
+    window.Register<Close>({*this, fn_tag<&App::OnClose>});
+    window.Register<Resize>({*this, fn_tag<&App::OnResize>});
+    window.Register<MouseMove>({*this, fn_tag<&App::OnMouseMove>});
+    window.Register<Key>({*this, fn_tag<&App::OnKey>});
+}
+
+App::~App()
+{
+    using enum dse::core::WindowEvent;
+    window.Register<Key>({*this, fn_tag<&App::OnKey>});
+    window.Register<MouseMove>({*this, fn_tag<&App::OnMouseMove>});
+    window.Register<Resize>({*this, fn_tag<&App::OnResize>});
+    window.Register<Close>({*this, fn_tag<&App::OnClose>});
 }
 
 int App::Run()
 {
-    auto closeCon = window.SubscribeCloseEvent(function_ptr{*this, fn_tag<&App::OnClose>});
-    auto resizeCon = window.SubscribeResizeEvent(function_ptr{*this, fn_tag<&App::OnResize>});
-    auto mMoveCon = window.SubscribeMouseMoveEvent(function_ptr{*this, fn_tag<&App::OnMouseMove>});
-    auto keyCon = window.SubscribeKeyEvent(function_ptr{*this, fn_tag<&App::OnKey>});
     {
         auto task = Load();
         auto awaitable = task.operator co_await();
@@ -80,7 +91,7 @@ int App::Run()
     }
     framebuffer.SetDrawCallback({*this, fn_tag<&App::Draw>});
     using enum dse::core::WindowShowCommand;
-    window.Show(ShowMaximized);
+    window.Show(ShowNormal);
     auto next = std::chrono::high_resolution_clock::now();
     auto last = next;
     while (uiLoop.Poll()) {
@@ -105,7 +116,7 @@ int App::Run()
 void App::Draw(void* buffer, dse::math::ivec2 size)
 {
     ImageManipulator manip(buffer, size, false);
-    manip.Fill({0, 0}, size, 0x00000000);
+    manip.Fill({0, 0}, wSize, 0x00000000);
 //    manip.DrawRectFilled({0, 0}, size, {.0f, .0, 1.0, 1.f});
 //    manip.BlendImage({256, 256}, wall.Size(), wall, {0, 0});
     // manip.DrawText({0, 0}, wSize, u8"Hello, world!", font, {8, 12});
@@ -116,37 +127,41 @@ void App::Draw(void* buffer, dse::math::ivec2 size)
         if (i == currentCounter) {
             color = 0xFF008000;
         }
-        manip.Fill({i, size.y() - us / 200}, {1, us / 200}, color);
+        manip.Fill({i, wSize.y() - us / 200}, {1, us / 200}, color);
     }
 }
 
 void App::AfterRender()
 {}
 
-void App::OnClose(dse::core::WndEvtDt)
+void App::OnClose()
 {
     uiLoop.Stop(0);
 }
 
-void App::OnResize(dse::core::WndEvtDt, int w, int h, WindowShowCommand)
+void App::OnResize()
 {
     framebuffer.Render(nullptr);
 }
 
-void App::OnMouseMove(dse::core::WndEvtDt, int x, int y)
+void App::OnMouseMove(int x, int y)
 {}
 
-void App::OnKey(dse::core::WndEvtDt, KeyboardKeyState state, int key)
+void App::OnKey(KeyboardKeyState state, int key)
 {
     if (key == ' ' && state == KeyboardKeyState::DOWN) {
         ballPos = {320, 240};
         // ballVelocity = {6, 2};
     }
-    if (key == 'Q' && state == KeyboardKeyState::DOWN) {
-        window.Show(WindowShowCommand::ShowFullScreen);
+    if (key == 0x7A && state == KeyboardKeyState::DOWN) {
+        if (window.IsFullscreen()) {
+            window.Show(WindowShowCommand::ShowRestored);
+        } else {
+            window.Show(WindowShowCommand::ShowFullScreen);
+        }
     }
     if (key == 'W' && state == KeyboardKeyState::DOWN) {
-        window.Show(WindowShowCommand::ShowRestored);
+        window.Show(WindowShowCommand::ShowNormal);
     }
 }
 
