@@ -214,7 +214,7 @@ auto Window_win32::WndProc(
 	LPARAM lParam
 ) noexcept -> LRESULT
 {
-	WindowEventData_win32 d{hWnd, message, wParam, lParam};
+	WindowEventData_win32 d{lParam, wParam, message, hWnd};
 	switch(message) {
 	case WM_NCCREATE: return OnNCCreate(d);
 	case WM_ERASEBKGND: return TRUE;

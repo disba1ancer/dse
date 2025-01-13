@@ -49,8 +49,8 @@ elseif(${DSE_COMPILER} STREQUAL "MSVC")
 endif()
 
 set(DSE_SUBSYSTEM_WINDOWS_LINK_OPTIONS
-    $<$<CXX_COMPILER_ID:GNU>:-mwindows>
-    $<$<CXX_COMPILER_ID:MSVC>:/entry:mainCRTStartup;/subsystem:windows>
+    $<$<STREQUAL:${DSE_COMPILER},GNU>:-mwindows>
+    $<$<STREQUAL:${DSE_COMPILER},MSVC>:/entry:mainCRTStartup;/subsystem:windows>
 )
 
 set(DSE_MULTISAMPLE "" CACHE STRING "Enable multisampling with specified level")

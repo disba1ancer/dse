@@ -77,11 +77,7 @@ private:
 	auto CallDefWindowProc(WindowEventData_win32& d) -> LRESULT;
 
 	util::event_manager<WindowEvent> eventmgr;
-	// notifier::notifier<Window::CloseHandler> closeSubscribers;
-	// notifier::notifier<Window::ResizeHandler> resizeSubscribers;
-	// notifier::notifier<Window::KeyHandler> keySubscribers;
 	notifier::notifier<Window::PaintHandler> paintSubscribers;
-	// notifier::notifier<Window::MouseMoveHandler> mouseMoveSubscribers;
 	math::ivec2 pos;
 	math::ivec2 size;
 	math::ivec2 clientSize;

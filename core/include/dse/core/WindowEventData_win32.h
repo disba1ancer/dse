@@ -12,11 +12,12 @@
 
 namespace dse::core {
 
-struct WindowEventData_win32 {
-	HWND hWnd;
-	UINT message;
-	WPARAM wParam;
+struct WindowEventData_win32
+{
 	LPARAM lParam;
+	WPARAM wParam;
+	UINT message;
+	HWND hWnd;
 };
 
 } /* namespace dse::core */
