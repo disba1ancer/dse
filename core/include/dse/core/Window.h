@@ -58,8 +58,6 @@ public:
 	void MakeMinimizable(bool state);
 	auto GetLoop() const -> SystemLoop&;
 	using PaintHandler = void(WndEvtDt);
-	auto SubscribePaintEvent(std::function<PaintHandler>&& c)
-	-> notifier::connection<PaintHandler>;
 	bool Register(WindowEvent evt, void* object, void(*cb)());
 	void Unregister(WindowEvent evt, void* object, void(*cb)()) noexcept;
 	template <WindowEvent evt>

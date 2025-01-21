@@ -1,22 +1,26 @@
 #include "FrameBuffer_win32.h"
 #include <dse/core/ImageManipulator.h>
-#include <dse/core/WindowData_win32.h>
-#include <dse/core/WindowEventData_win32.h>
+#include <dse/core/Window_win32.h>
 #include <dse/util/scope_exit.h>
 #include <dse/core/ThreadPool.h>
 
 namespace dse::core {
 
 FrameBuffer_win32::FrameBuffer_win32(core::Window& wnd) :
-    window(wnd),
-    paintCon(window.SubscribePaintEvent(util::function_ptr{*this, util::fn_tag<&FrameBuffer_win32::OnPaint>}))
+    window(wnd)
 {
-    window.Register<WindowEvent::Resize>({*this, util::fn_tag<&FrameBuffer_win32::OnResize>});
+    using enum WindowEvent;
+    window.Register<System + WM_ERASEBKGND>({*this, util::fn_tag<&FrameBuffer_win32::OnErase>});
+    window.Register<System + WM_PAINT>({*this, util::fn_tag<&FrameBuffer_win32::OnPaint>});
+    window.Register<Resize>({*this, util::fn_tag<&FrameBuffer_win32::OnResize>});
 }
 
 FrameBuffer_win32::~FrameBuffer_win32()
 {
-    window.Unregister<WindowEvent::Resize>({*this, util::fn_tag<&FrameBuffer_win32::OnResize>});
+    using enum WindowEvent;
+    window.Unregister<Resize>({*this, util::fn_tag<&FrameBuffer_win32::OnResize>});
+    window.Unregister<System + WM_PAINT>({*this, util::fn_tag<&FrameBuffer_win32::OnPaint>});
+    window.Unregister<System + WM_ERASEBKGND>({*this, util::fn_tag<&FrameBuffer_win32::OnErase>});
 }
 
 void FrameBuffer_win32::Render(util::function_ptr<void ()> callback)
@@ -30,7 +34,7 @@ void FrameBuffer_win32::Render(util::function_ptr<void ()> callback)
     //     renderCallback(frameBuffer.Data(), size);
     // }
     auto wnd = swal::Wnd(window.GetSysData().hWnd);
-    swal::winapi_call(::RedrawWindow(wnd, nullptr, NULL, RDW_INVALIDATE /*| RDW_UPDATENOW*/));
+    swal::winapi_call(::RedrawWindow(wnd, nullptr, NULL, RDW_INVALIDATE | RDW_UPDATENOW));
     // auto dc = swal::Wnd(window.GetSysData().hWnd).GetDC();
     // if (size.x() == 0 || size.y() == 0) {
     //     return;
@@ -43,9 +47,9 @@ void FrameBuffer_win32::SetDrawCallback(util::function_ptr<void (void *, math::i
     renderCallback = callback;
 }
 
-void FrameBuffer_win32::OnPaint(WndEvtDt data)
+void FrameBuffer_win32::OnPaint(HWND hWnd, WPARAM, LPARAM)
 {
-    swal::Wnd wnd(data.hWnd);
+    swal::Wnd wnd(hWnd);
     // auto acqrd = !sync.test_and_set(std::memory_order_relaxed);
     // util::scope_exit final([&wnd, &acqrd, this]{
     //     if (acqrd) {
@@ -75,6 +79,11 @@ void FrameBuffer_win32::OnPaint(WndEvtDt data)
     }
     DrawDC(dc, rc);
     wnd.ValidateRect(rc);
+}
+
+void FrameBuffer_win32::OnErase(HWND hWnd, HDC hdc, LRESULT& result)
+{
+    result = TRUE;
 }
 
 void FrameBuffer_win32::OnResize()

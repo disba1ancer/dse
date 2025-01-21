@@ -3,9 +3,15 @@
 
 namespace dse::core {
 
-SystemLoop_win32::SystemLoop_win32() :
-    msgWnd(WindowClass(), NULL, this)
-{}
+SystemLoop_win32::SystemLoop_win32()
+{
+    msgWnd.Create(
+        0, WindowClass(), TEXT("UI Thread window"), WS_POPUP,
+        0, 0, 0, 0,
+        HWND_MESSAGE, NULL,
+        swal::GetLocalInstance(), this
+    );
+}
 
 int SystemLoop_win32::Run()
 {
@@ -73,7 +79,11 @@ auto SystemLoop_win32::GetImpl(SystemLoop &pub) -> SystemLoop_win32*
 
 auto SystemLoop_win32::WindowClass() -> LPCTSTR
 {
-	static swal::auto_window_class<SystemLoop_win32, &SystemLoop_win32::WndProc> cls;
+	static swal::auto_window_class<
+		SystemLoop_win32,
+		&SystemLoop_win32::msgWnd,
+		&SystemLoop_win32::WndProc
+	> cls;
 	return cls;
 }
 

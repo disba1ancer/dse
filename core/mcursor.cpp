@@ -6,17 +6,17 @@
  */
 
 #include <dse/core/mcursor.h>
-#include <dse/core/WindowData_win32.h>
-#include <dse/core/win32.h>
+#include "win32.h"
+#include <dse/core/Window_win32.h>
 #include <dse/math/vmath.h>
 
 void dse::core::setMouseCursorPos(const math::ivec2 &pos) {
-	SetCursorPos(pos[0], pos[1]);
+	swal::winapi_call(::SetCursorPos(pos[0], pos[1]));
 }
 
 void dse::core::SetMouseCursorPosWndRel(const math::ivec2 &pos, Window &wnd) {
-	auto wndData = wnd.GetSysData();
+	auto& wndData = wnd.GetSysData();
 	POINT pt = { 0, 0 };
-	ClientToScreen(wndData.hWnd, &pt);
+	swal::winapi_call(::ClientToScreen(wndData.hWnd, &pt));
 	setMouseCursorPos(math::ivec2{pt.x, pt.y} + pos);
 }

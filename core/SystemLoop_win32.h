@@ -34,8 +34,8 @@ private:
     };
     auto PollOneInt() -> Constants;
 
-    swal::Window msgWnd;
     MSG msg;
+    swal::Window msgWnd;
 };
 
 } // namespace dse::core

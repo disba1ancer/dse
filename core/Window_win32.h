@@ -9,8 +9,7 @@
 #define WINDOW_WIN32_H_
 
 #include "dse/core/SystemLoop.h"
-#include <dse/core/win32.h>
-#include <swal/window.h>
+#include "win32.h"
 #include <dse/core/Window.h>
 #include <dse/notifier/notifier.h>
 
@@ -41,10 +40,9 @@ public:
 	bool HasMaximizeCtl() const;
 	void ShowMaximizeCtl(bool state);
 	auto GetLoop() const -> SystemLoop&;
-	auto SubscribePaintEvent(std::function<Window::PaintHandler>&& c)
-	-> notifier::connection<Window::PaintHandler>;
 	bool Register(WindowEvent evt, void* object, void(*cb)());
 	void Unregister(WindowEvent evt, void* object, void(*cb)()) noexcept;
+	void fill_class_info(WNDCLASSEX& wcex);
 private:
     enum Constants {
         GwlpThis = 0
@@ -65,7 +63,6 @@ private:
 	auto CalcStyles() -> WinStyles;
 	void ApplyStyles();
 
-	auto OnPaint(WindowEventData_win32& d) -> LRESULT;
 	auto OnClose(WindowEventData_win32& d) -> LRESULT;
 	auto OnKeyDown(WindowEventData_win32& d) -> LRESULT;
 	auto OnKeyUp(WindowEventData_win32& d) -> LRESULT;
@@ -73,11 +70,13 @@ private:
 	auto OnPosChanging(WindowEventData_win32& d) -> LRESULT;
 	auto OnPosChanged(WindowEventData_win32& d) -> LRESULT;
 	auto OnNCCreate(WindowEventData_win32& d) -> LRESULT;
+	auto OnNCCalcSize(WindowEventData_win32& d) -> LRESULT;
 	auto OnGetMinMaxInfo(WindowEventData_win32& d) -> LRESULT;
+	auto OnErase(WindowEventData_win32& d) -> LRESULT;
 	auto CallDefWindowProc(WindowEventData_win32& d) -> LRESULT;
+	auto FwdMessage(WindowEventData_win32& d) -> LRESULT;
 
 	util::event_manager<WindowEvent> eventmgr;
-	notifier::notifier<Window::PaintHandler> paintSubscribers;
 	math::ivec2 pos;
 	math::ivec2 size;
 	math::ivec2 clientSize;

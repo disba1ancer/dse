@@ -9,6 +9,8 @@
 #define DSE_CORE_WIN32_H_
 
 #include <swal/win_headers.h>
+#include <swal/error.h>
 #include <swal/window.h>
+#include <swal/gdi.h>
 
 #endif /* DSE_CORE_WIN32_H_ */

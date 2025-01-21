@@ -69,16 +69,25 @@ public:
     {
         unregister(event, f.get_object_ptr(), reinterpret_cast<void(*)()>(f.get_function()));
     }
-    template <EventId event, typename ... Args>
-    void send(Args&& ... args)
+    template <typename H, typename ... Args>
+    bool send(EventId event, Args&& ... args)
     {
         auto [begin, end] = handlers.equal_range(event);
+        if (begin == end) {
+            return false;
+        }
         for (auto& hndlr : std::ranges::subrange{begin, end}) {
-            using handler_t = function_ptr<handler<event>>;
+            using handler_t = function_ptr<H>;
             auto callback = reinterpret_cast<typename handler_t::sfn*>(hndlr.callback);
             handler_t f{hndlr.observer, callback};
             f(std::forward<Args>(args)...);
         }
+        return true;
+    }
+    template <EventId event, typename ... Args>
+    bool send(Args&& ... args)
+    {
+        return send<handler<event>>(event, std::forward<Args>(args)...);
     }
 private:
     std::set<Key, KeyCompare> handlers;

@@ -68,10 +68,7 @@ if (${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
 FetchContent_MakeAvailable(swal)
 target_link_libraries(core PRIVATE swal::swal dwmapi uxtheme)
 target_sources(core PUBLIC
-    include/dse/core/PaintEventData_win32.h
-    include/dse/core/WindowData_win32.h
-    include/dse/core/WindowEventData_win32.h
-    include/dse/core/win32.h
+    include/dse/core/Window_win32.h
 )
 
 target_sources(core PRIVATE
@@ -81,16 +78,17 @@ target_sources(core PRIVATE
     FrameBuffer_win32.h
     IOContext_win32.cpp
     IOContext_win32.h
-    ThreadPool_win32.cpp
-    ThreadPool_win32.h
     SystemLoop_win32.cpp
     SystemLoop_win32.h
+    ThreadPool_win32.cpp
+    ThreadPool_win32.h
     Window_win32.cpp
     Window_win32.h
     errors_win32.cpp
     errors_win32.h
     status_win32.cpp
     status_win32.h
+    win32.h
 )
 endif()
 

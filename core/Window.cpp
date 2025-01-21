@@ -94,12 +94,6 @@ auto Window::GetLoop() const -> SystemLoop&
 	return impl->GetLoop();
 }
 
-auto Window::SubscribePaintEvent(std::function<PaintHandler> &&c)
--> notifier::connection<Window::PaintHandler>
-{
-	return impl->SubscribePaintEvent(std::move(c));
-}
-
 bool Window::Register(WindowEvent evt, void* object, void (*cb)())
 {
 	return impl->Register(evt, object, cb);

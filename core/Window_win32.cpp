@@ -7,16 +7,11 @@
 
 #include "Window_win32.h"
 #include <exception>
-#include <dse/core/WindowEventData_win32.h>
-#include <dse/core/PaintEventData_win32.h>
+#include <dse/core/Window_win32.h>
 #include "errors_win32.h"
 #include "SystemLoop_win32.h"
 #include <swal/hinstance.h>
 #include <dse/math/vmath.h>
-#include <format>
-#include <iostream>
-#include <dwmapi.h>
-#include <Uxtheme.h>
 
 namespace dse::core {
 
@@ -25,14 +20,11 @@ Window_win32::Window_win32(SystemLoop& loop) try :
 {
     swal::Wnd owner = SystemLoop_win32::GetImpl(loop)->OwnerWindow();
     wnd.Create(
-        WS_EX_APPWINDOW, WindowClass(), WS_OVERLAPPEDWINDOW,
+        0, WindowClass(), WS_OVERLAPPEDWINDOW,
         CW_USEDEFAULT, 0, CW_USEDEFAULT, 0,
-        owner, NULL,
+        NULL, NULL,
         swal::GetLocalInstance(), this
     );
-    // MARGINS m = { -1, -1, -1, -1 };
-    // ::DwmExtendFrameIntoClientArea(wnd, &m);
-    // owner.Show(swal::ShowCmd::Show);
 } catch (std::system_error& e) {
     if (e.code().category() == swal::win32_category::instance()) {
         throw std::system_error(core::win32_errc(e.code().value()));
@@ -65,8 +57,8 @@ void Window_win32::Show(WindowShowCommand command)
 		}
 		fullscreen = false;
 		auto [exStyle, style] = CalcStyles();
+		wnd.SetLongPtr(GWL_STYLE, style ^ WS_VISIBLE & style);
 		wnd.SetLongPtr(GWL_EXSTYLE, exStyle);
-		wnd.SetLongPtr(GWL_STYLE, style);
 		swal::winapi_call(::SetWindowPlacement(wnd, &normPlace));
 		if (command == ShowRestored) {
 			return;
@@ -105,9 +97,10 @@ void Window_win32::Show(WindowShowCommand command)
 		swal::winapi_call(::GetWindowPlacement(wnd, &normPlace));
 		fullscreen = true;
 		auto [exStyle, style] = CalcStyles();
+		wnd.SetLongPtr(GWL_STYLE, style ^ WS_VISIBLE & style);
 		wnd.SetLongPtr(GWL_EXSTYLE, exStyle);
-		wnd.SetLongPtr(GWL_STYLE, style);
-		wnd.SetPos(NULL, pos.x(), pos.y(), size.x(), size.y(), NoOwnerZOrder | NoZOrder | FrameChanged | ShowWindow);
+		wnd.SetPos(HWND_TOP, pos.x(), pos.y(), size.x(), size.y(), FrameChanged | ShowWindow | NoRedraw);
+		swal::winapi_call(::RedrawWindow(wnd, nullptr, NULL, RDW_INVALIDATE | RDW_FRAME | RDW_ERASE | RDW_ERASENOW));
 		return;
 	}
 	}
@@ -153,7 +146,7 @@ void Window_win32::ResizeSurface(const math::ivec2& size)
 	RECT rc = { 0, 0, size[0], size[1] };
 	DWORD style = wnd.GetLongPtr(GWL_STYLE);
 	DWORD exStyle = wnd.GetLongPtr(GWL_EXSTYLE);
-	AdjustWindowRectEx(&rc, style, FALSE, exStyle);
+	::AdjustWindowRectEx(&rc, style, FALSE, exStyle);
 	wnd.SetPos(NULL, 0, 0, rc.right - rc.left, rc.bottom - rc.top, SP::NoActivate | SP::NoMove | SP::NoOwnerZOrder | SP::NoZOrder);
 }
 
@@ -190,13 +183,6 @@ auto Window_win32::GetLoop() const -> SystemLoop&
 	return *loop;
 }
 
-auto Window_win32::SubscribePaintEvent(
-		std::function<Window::PaintHandler> &&c)
--> notifier::connection<Window::PaintHandler>
-{
-	return paintSubscribers.subscribe(std::move(c));
-}
-
 bool Window_win32::Register(WindowEvent evt, void* object, void (*cb)())
 {
 	return eventmgr.register_e(evt, object, cb);
@@ -207,6 +193,13 @@ void Window_win32::Unregister(WindowEvent evt, void* object, void (*cb)()) noexc
 	eventmgr.unregister(evt, object, cb);
 }
 
+void Window_win32::fill_class_info(WNDCLASSEX& wcex)
+{
+	wcex.style |= CS_OWNDC;
+	wcex.hIcon = NULL;
+	wcex.hIconSm = NULL;
+}
+
 auto Window_win32::WndProc(
 	HWND hWnd,
 	UINT message,
@@ -214,12 +207,12 @@ auto Window_win32::WndProc(
 	LPARAM lParam
 ) noexcept -> LRESULT
 {
-	WindowEventData_win32 d{lParam, wParam, message, hWnd};
+	WindowEventData_win32 d{hWnd, message, wParam, lParam};
 	switch(message) {
 	case WM_NCCREATE: return OnNCCreate(d);
-	case WM_ERASEBKGND: return TRUE;
-	case WM_PAINT: return OnPaint(d);
+	case WM_NCCALCSIZE: return OnNCCalcSize(d);
 	case WM_CLOSE: return OnClose(d);
+	case WM_ERASEBKGND: return OnErase(d);
 	// case WM_SYSKEYDOWN:
 	case WM_KEYDOWN: return OnKeyDown(d);
 	// case WM_SYSKEYUP:
@@ -235,13 +228,17 @@ auto Window_win32::WndProc(
 			return TRUE;
 		}
 		[[fallthrough]];*/
-	default: return CallDefWindowProc(d);
+	default: return FwdMessage(d);
 	}
 	return 0;
 }
 
 auto Window_win32::WindowClass() -> LPCTSTR {
-	static swal::auto_window_class<Window_win32, &Window_win32::WndProc> cls;
+	static swal::auto_window_class<
+		Window_win32,
+		&Window_win32::wnd,
+		&Window_win32::WndProc
+	> cls;
 	return cls;
 }
 
@@ -288,7 +285,7 @@ auto Window_win32::CalcStyles() -> WinStyles
 	using enum WindowShowCommand;
 	WinStyles r;
 	r.style = WS_SYSMENU;
-	r.exStyle = WS_EX_APPWINDOW;
+	r.exStyle = 0;
 	r.style |= WS_VISIBLE * visible;
 	if (minimizable) {
 		r.style |= WS_MINIMIZEBOX;
@@ -319,12 +316,6 @@ void Window_win32::ApplyStyles()
 	wnd.SetLongPtr(GWL_STYLE, style);
 	using enum swal::SetPosFlags;
 	wnd.SetPos(NULL, 0, 0, 0, 0, NoActivate | NoZOrder | NoMove | NoSize | FrameChanged);
-}
-
-auto Window_win32::OnPaint(WindowEventData_win32& d) -> LRESULT
-{
-	paintSubscribers.notify(d);
-	return 0;
 }
 
 auto Window_win32::OnClose(WindowEventData_win32& d) -> LRESULT
@@ -393,13 +384,8 @@ auto Window_win32::OnPosChanged(WindowEventData_win32& d) -> LRESULT
     if (IsMoving(wPos)) {
         pos = {wPos->x, wPos->y};
     }
-    if (IsFrameChanging(wPos) || IsSizing(wPos)) {
-        auto rc = wnd.GetClientRect();
-        clientSize = {rc.right, rc.bottom};
+    if (IsSizing(wPos) || IsFrameChanging(wPos)) {
         eventmgr.send<WindowEvent::Resize>();
-    }
-    if (IsSizing(wPos)) {
-        size = {wPos->cx, wPos->cy};
     }
     if (IsShowing(wPos)) {
         visible = true;
@@ -424,7 +410,6 @@ auto Window_win32::OnPosChanged(WindowEventData_win32& d) -> LRESULT
 
 auto Window_win32::OnNCCreate(WindowEventData_win32& d) -> LRESULT
 {
-	wnd = d.hWnd;
 	auto cr = reinterpret_cast<CREATESTRUCT*>(d.lParam);
 	if (cr->x == CW_USEDEFAULT || cr->cx == CW_USEDEFAULT) {
 		auto&& rc = wnd.GetRect();
@@ -434,16 +419,22 @@ auto Window_win32::OnNCCreate(WindowEventData_win32& d) -> LRESULT
 		pos = {cr->x, cr->y};
 		size = {cr->cx, cr->cy};
 	}
-	// swal::com_call(::SetWindowTheme(wnd, L" ", L" "));
-	wnd.SetClassLongPtr(GCLP_HICON, NULL);
-	wnd.SetClassLongPtr(GCLP_HICONSM, NULL);
-	// auto v = DWMNCRP_DISABLED;
-	// ::DwmSetWindowAttribute(wnd, DWMWA_NCRENDERING_POLICY, &v, sizeof(v));
-	// wnd.SetLongPtr(GWL_STYLE, WS_CHILD);
-	// wnd.SetLongPtr(GWL_EXSTYLE, WS_EX_APPWINDOW | WS_EX_STATICEDGE);
-	// using enum swal::SetPosFlags;
-	// wnd.SetPos(0, 0, 0, 0, 0, NoZOrder | NoMove| NoSize | FrameChanged);
-	return TRUE;
+	return DefWindowProc(d.hWnd, d.message, d.wParam, d.lParam);
+}
+
+LRESULT Window_win32::OnNCCalcSize(WindowEventData_win32& d)
+{
+	auto& rc = [&d] -> auto&
+	{
+		if (d.wParam == FALSE) {
+			return *reinterpret_cast<RECT*>(d.lParam);
+		}
+		return reinterpret_cast<NCCALCSIZE_PARAMS*>(d.lParam)->rgrc[0];
+	}();
+	size = { rc.right - rc.left, rc.bottom - rc.top };
+	auto result = CallDefWindowProc(d);
+	clientSize = { rc.right - rc.left, rc.bottom - rc.top };
+	return result;
 }
 
 auto Window_win32::OnGetMinMaxInfo(WindowEventData_win32& d) -> LRESULT
@@ -458,9 +449,30 @@ auto Window_win32::OnGetMinMaxInfo(WindowEventData_win32& d) -> LRESULT
 	return 0;
 }
 
+LRESULT Window_win32::OnErase(WindowEventData_win32& d)
+{
+	using enum WindowEvent;
+	LRESULT result = FALSE;
+	auto hdc = reinterpret_cast<HDC>(d.wParam);
+	if (!eventmgr.send<System + WM_ERASEBKGND>(d.hWnd, hdc, result)) {
+		result = CallDefWindowProc(d);
+	}
+	return result;
+}
+
 auto Window_win32::CallDefWindowProc(WindowEventData_win32& d) -> LRESULT
 {
 	return DefWindowProc(d.hWnd, d.message, d.wParam, d.lParam);
+}
+
+LRESULT Window_win32::FwdMessage(WindowEventData_win32& d)
+{
+	using handler_t = typename util::event_traits<WindowEvent::System>::handler;
+	auto event = WindowEvent::System + d.message;
+	if (eventmgr.send<handler_t>(event, d.hWnd, d.wParam, d.lParam)) {
+		return 0;
+	}
+	return CallDefWindowProc(d);
 }
 
 void Window_win32::SetTitle(const char8_t* title)

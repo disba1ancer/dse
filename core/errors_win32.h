@@ -1,7 +1,7 @@
 #ifndef ERRORS_WIN32_H
 #define ERRORS_WIN32_H
 
-#include <swal/error.h>
+#include "win32.h"
 #include <dse/core/errors.h>
 
 namespace dse::core {

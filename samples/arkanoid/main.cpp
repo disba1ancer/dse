@@ -13,7 +13,6 @@
 using dse::core::Window;
 using dse::core::FrameBuffer;
 using dse::util::fn_tag;
-using dse::util::function_ptr;
 using dse::core::ImageManipulator;
 using dse::core::WindowShowCommand;
 using dse::core::Image;
@@ -61,7 +60,7 @@ App::App(int argc, char *argv[])
 {
     using enum dse::core::WindowFrameStyle;
     window.SetTitle(u8"Sample");
-    window.ChangeFrameStyle(Sizable);
+    window.ChangeFrameStyle(Fixed);
     window.ResizeSurface(wSize);
     using enum dse::core::WindowEvent;
     window.Register<Close>({*this, fn_tag<&App::OnClose>});

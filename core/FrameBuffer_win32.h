@@ -4,7 +4,7 @@
 #include <dse/core/Image.h>
 #include <dse/core/Window.h>
 #include <dse/util/functional.h>
-#include <swal/gdi.h>
+#include "win32.h"
 
 namespace dse::core {
 
@@ -20,7 +20,8 @@ public:
     void Render(util::function_ptr<void()> callback);
     void SetDrawCallback(util::function_ptr<void(void*, math::ivec2)> callback);
 private:
-    void OnPaint(core::WndEvtDt);
+    void OnPaint(HWND hWnd, WPARAM, LPARAM);
+    void OnErase(HWND hWnd, HDC hdc, LRESULT& result);
     void OnResize();
     void DrawDC(const swal::DC& dc, const RECT& rc);
 
