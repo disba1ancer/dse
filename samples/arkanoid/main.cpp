@@ -31,6 +31,10 @@ constexpr ivec2 wSize = {640, 480};
 class App {
 public:
     App(int argc, char* argv[]);
+    App(App&&) = delete;
+    App(const App&) = delete;
+    App& operator=(App&&) = delete;
+    App& operator=(const App&) = delete;
     ~App();
     int Run();
 private:
@@ -72,10 +76,10 @@ App::App(int argc, char *argv[])
 App::~App()
 {
     using enum dse::core::WindowEvent;
-    window.Register<Key>({*this, fn_tag<&App::OnKey>});
-    window.Register<MouseMove>({*this, fn_tag<&App::OnMouseMove>});
-    window.Register<Resize>({*this, fn_tag<&App::OnResize>});
-    window.Register<Close>({*this, fn_tag<&App::OnClose>});
+    window.Unregister<Key>({*this, fn_tag<&App::OnKey>});
+    window.Unregister<MouseMove>({*this, fn_tag<&App::OnMouseMove>});
+    window.Unregister<Resize>({*this, fn_tag<&App::OnResize>});
+    window.Unregister<Close>({*this, fn_tag<&App::OnClose>});
 }
 
 int App::Run()

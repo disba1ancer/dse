@@ -69,9 +69,9 @@ App::App(int argc, char *argv[]) :
 App::~App()
 {
     using enum dse::core::WindowEvent;
-    window.Register<MouseMove>({*this, fn_tag<&App::OnMouseMove>});
-    window.Register<Resize>({*this, fn_tag<&App::OnResize>});
-    window.Register<Close>({*this, fn_tag<&App::OnClose>});
+    window.Unregister<MouseMove>({*this, fn_tag<&App::OnMouseMove>});
+    window.Unregister<Resize>({*this, fn_tag<&App::OnResize>});
+    window.Unregister<Close>({*this, fn_tag<&App::OnClose>});
 }
 
 int App::Run()

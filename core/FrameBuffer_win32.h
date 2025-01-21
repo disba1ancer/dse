@@ -21,7 +21,7 @@ public:
     void SetDrawCallback(util::function_ptr<void(void*, math::ivec2)> callback);
 private:
     void OnPaint(HWND hWnd, WPARAM, LPARAM);
-    void OnErase(HWND hWnd, HDC hdc, LRESULT& result);
+    void OnErase(HWND hWnd, HDC hdc, bool& result);
     void OnResize();
     void DrawDC(const swal::DC& dc, const RECT& rc);
 

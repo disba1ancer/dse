@@ -150,6 +150,12 @@ void Window_win32::ResizeSurface(const math::ivec2& size)
 	wnd.SetPos(NULL, 0, 0, rc.right - rc.left, rc.bottom - rc.top, SP::NoActivate | SP::NoMove | SP::NoOwnerZOrder | SP::NoZOrder);
 }
 
+void Window_win32::SetTitle(const char8_t* title)
+{
+	auto wtitle = swal::u8_to_wide_char(title);
+	swal::winapi_call(::SetWindowText(wnd, wtitle.c_str()));
+}
+
 void Window_win32::ChangeFrameStyle(WindowFrameStyle style)
 {
 	frameStyle = style;
@@ -207,30 +213,19 @@ auto Window_win32::WndProc(
 	LPARAM lParam
 ) noexcept -> LRESULT
 {
-	WindowEventData_win32 d{hWnd, message, wParam, lParam};
 	switch(message) {
-	case WM_NCCREATE: return OnNCCreate(d);
-	case WM_NCCALCSIZE: return OnNCCalcSize(d);
-	case WM_CLOSE: return OnClose(d);
-	case WM_ERASEBKGND: return OnErase(d);
-	// case WM_SYSKEYDOWN:
-	case WM_KEYDOWN: return OnKeyDown(d);
-	// case WM_SYSKEYUP:
-	case WM_KEYUP: return OnKeyUp(d);
-	case WM_SYSCHAR: break;
-	case WM_MOUSEMOVE: return OnMouseMove(d);
-	case WM_WINDOWPOSCHANGING: return OnPosChanging(d);
-	case WM_WINDOWPOSCHANGED: return OnPosChanged(d);
-	case WM_GETMINMAXINFO: return OnGetMinMaxInfo(d);
-	/*case WM_SETCURSOR:
-		if (LOWORD(lParam) == HTCLIENT) {
-			SetCursor(NULL);
-			return TRUE;
-		}
-		[[fallthrough]];*/
-	default: return FwdMessage(d);
+	HANDLE_MSG(hWnd, WM_NCCREATE, OnNCCreate);
+	HANDLE_MSG(hWnd, WM_NCCALCSIZE, OnNCCalcSize);
+	HANDLE_MSG(hWnd, WM_CLOSE, OnClose);
+	HANDLE_MSG(hWnd, WM_ERASEBKGND, OnEraseBkgnd);
+	HANDLE_MSG(hWnd, WM_KEYDOWN, OnKey);
+	HANDLE_MSG(hWnd, WM_KEYUP, OnKey);
+	HANDLE_MSG(hWnd, WM_MOUSEMOVE, OnMouseMove);
+	HANDLE_MSG(hWnd, WM_WINDOWPOSCHANGING, OnWindowPosChanging);
+	HANDLE_MSG(hWnd, WM_WINDOWPOSCHANGED, OnWindowPosChanged);
+	HANDLE_MSG(hWnd, WM_GETMINMAXINFO, OnGetMinMaxInfo);
 	}
-	return 0;
+	return ForwardMsg(hWnd, message, wParam, lParam);
 }
 
 auto Window_win32::WindowClass() -> LPCTSTR {
@@ -318,30 +313,47 @@ void Window_win32::ApplyStyles()
 	wnd.SetPos(NULL, 0, 0, 0, 0, NoActivate | NoZOrder | NoMove | NoSize | FrameChanged);
 }
 
-auto Window_win32::OnClose(WindowEventData_win32& d) -> LRESULT
+BOOL Window_win32::OnNCCreate(HWND hwnd, CREATESTRUCT* lpCreateStruct)
+{
+	return FORWARD_WM_NCCREATE(hwnd, lpCreateStruct, DefWindowProc);
+}
+
+auto Window_win32::OnNCCalcSize(HWND hwnd, BOOL fCalcValidRects, NCCALCSIZE_PARAMS* lpcsp) -> UINT
+{
+	auto& rc = fCalcValidRects ? lpcsp->rgrc[0] : *reinterpret_cast<RECT*>(lpcsp);
+	size = { rc.right - rc.left, rc.bottom - rc.top };
+	auto result = FORWARD_WM_NCCALCSIZE(hwnd, fCalcValidRects, lpcsp, DefWindowProc);
+	clientSize = { rc.right - rc.left, rc.bottom - rc.top };
+	return result;
+}
+
+void Window_win32::OnClose(HWND hwnd)
 {
 	eventmgr.send<WindowEvent::Close>();
-	return 0;
 }
 
-auto Window_win32::OnKeyDown(WindowEventData_win32& d) -> LRESULT
+BOOL Window_win32::OnEraseBkgnd(HWND hwnd, HDC hdc)
 {
-	KeyboardKeyState state = (d.lParam & (1 << 30)
-			? KeyboardKeyState::PRESSED : KeyboardKeyState::DOWN);
-	eventmgr.send<WindowEvent::Key>(state, d.wParam);
-	return 0;
+	using enum WindowEvent;
+	bool result = false;
+	if (!eventmgr.send<System + WM_ERASEBKGND>(hwnd, hdc, result)) {
+		return FORWARD_WM_ERASEBKGND(hwnd, hdc, DefWindowProc);
+	}
+	return result;
 }
 
-auto Window_win32::OnKeyUp(WindowEventData_win32& d) -> LRESULT
+void Window_win32::OnKey(HWND hwnd, UINT vk, BOOL fDown, int cRepeat, UINT flags)
 {
-	eventmgr.send<WindowEvent::Key>(KeyboardKeyState::UP, d.wParam);
-	return 0;
+	KeyboardKeyState state = (fDown ? (flags & KF_REPEAT ?
+		KeyboardKeyState::PRESSED :
+		KeyboardKeyState::DOWN) :
+		KeyboardKeyState::UP);
+	eventmgr.send<WindowEvent::Key>(state, vk);
 }
 
-auto Window_win32::OnMouseMove(WindowEventData_win32 &d) -> LRESULT
+void Window_win32::OnMouseMove(HWND hwnd, int x, int y, UINT keyFlags)
 {
-	eventmgr.send<WindowEvent::MouseMove>(GET_X_LPARAM(d.lParam), GET_Y_LPARAM(d.lParam));
-    return 0;
+	eventmgr.send<WindowEvent::MouseMove>(x, y);
 }
 
 namespace {
@@ -373,27 +385,26 @@ auto IsHiding(const WINDOWPOS* wPos) -> bool
 
 }
 
-auto Window_win32::OnPosChanging(WindowEventData_win32& d) -> LRESULT
+BOOL Window_win32::OnWindowPosChanging(HWND hwnd, LPWINDOWPOS lpwpos)
 {
-    return CallDefWindowProc(d);
+    return FORWARD_WM_WINDOWPOSCHANGING(hwnd, lpwpos, DefWindowProc);
 }
 
-auto Window_win32::OnPosChanged(WindowEventData_win32& d) -> LRESULT
+void Window_win32::OnWindowPosChanged(HWND hwnd, const WINDOWPOS* lpwpos)
 {
-    auto wPos = reinterpret_cast<const WINDOWPOS*>(d.lParam);
-    if (IsMoving(wPos)) {
-        pos = {wPos->x, wPos->y};
+    if (IsMoving(lpwpos)) {
+        pos = {lpwpos->x, lpwpos->y};
     }
-    if (IsSizing(wPos) || IsFrameChanging(wPos)) {
+    if (IsSizing(lpwpos) || IsFrameChanging(lpwpos)) {
         eventmgr.send<WindowEvent::Resize>();
     }
-    if (IsShowing(wPos)) {
+    if (IsShowing(lpwpos)) {
         visible = true;
     }
-    if (IsHiding(wPos)) {
+    if (IsHiding(lpwpos)) {
         visible = false;
     }
-    if (IsFrameChanging(wPos)) {
+    if (IsFrameChanging(lpwpos)) {
         auto style = wnd.GetLongPtr(GWL_STYLE);
         maximize = style & WS_MAXIMIZE;
         using enum WindowShowCommand;
@@ -405,80 +416,26 @@ auto Window_win32::OnPosChanged(WindowEventData_win32& d) -> LRESULT
             state = ShowNormal;
         }
     }
-    return 0;
 }
 
-auto Window_win32::OnNCCreate(WindowEventData_win32& d) -> LRESULT
+void Window_win32::OnGetMinMaxInfo(HWND hwnd, LPMINMAXINFO lpMinMaxInfo)
 {
-	auto cr = reinterpret_cast<CREATESTRUCT*>(d.lParam);
-	if (cr->x == CW_USEDEFAULT || cr->cx == CW_USEDEFAULT) {
-		auto&& rc = wnd.GetRect();
-		pos = {rc.left, rc.top};
-		size = math::ivec2{rc.right, rc.bottom} - pos;
-	} else {
-		pos = {cr->x, cr->y};
-		size = {cr->cx, cr->cy};
-	}
-	return DefWindowProc(d.hWnd, d.message, d.wParam, d.lParam);
-}
-
-LRESULT Window_win32::OnNCCalcSize(WindowEventData_win32& d)
-{
-	auto& rc = [&d] -> auto&
-	{
-		if (d.wParam == FALSE) {
-			return *reinterpret_cast<RECT*>(d.lParam);
-		}
-		return reinterpret_cast<NCCALCSIZE_PARAMS*>(d.lParam)->rgrc[0];
-	}();
-	size = { rc.right - rc.left, rc.bottom - rc.top };
-	auto result = CallDefWindowProc(d);
-	clientSize = { rc.right - rc.left, rc.bottom - rc.top };
-	return result;
-}
-
-auto Window_win32::OnGetMinMaxInfo(WindowEventData_win32& d) -> LRESULT
-{
-	auto mmi = reinterpret_cast<MINMAXINFO*>(d.lParam);
 	if (minSize.x() >= 0) {
-		mmi->ptMinTrackSize = {minSize.x(), minSize.y()};
+		lpMinMaxInfo->ptMinTrackSize = {minSize.x(), minSize.y()};
 	}
 	if (maxSize.x() >= 0) {
-		mmi->ptMaxTrackSize = {maxSize.x(), maxSize.y()};
+		lpMinMaxInfo->ptMaxTrackSize = {maxSize.x(), maxSize.y()};
 	}
-	return 0;
 }
 
-LRESULT Window_win32::OnErase(WindowEventData_win32& d)
-{
-	using enum WindowEvent;
-	LRESULT result = FALSE;
-	auto hdc = reinterpret_cast<HDC>(d.wParam);
-	if (!eventmgr.send<System + WM_ERASEBKGND>(d.hWnd, hdc, result)) {
-		result = CallDefWindowProc(d);
-	}
-	return result;
-}
-
-auto Window_win32::CallDefWindowProc(WindowEventData_win32& d) -> LRESULT
-{
-	return DefWindowProc(d.hWnd, d.message, d.wParam, d.lParam);
-}
-
-LRESULT Window_win32::FwdMessage(WindowEventData_win32& d)
+LRESULT Window_win32::ForwardMsg(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	using handler_t = typename util::event_traits<WindowEvent::System>::handler;
-	auto event = WindowEvent::System + d.message;
-	if (eventmgr.send<handler_t>(event, d.hWnd, d.wParam, d.lParam)) {
+	auto event = WindowEvent::System + message;
+	if (eventmgr.send<handler_t>(event, hWnd, wParam, lParam)) {
 		return 0;
 	}
-	return CallDefWindowProc(d);
-}
-
-void Window_win32::SetTitle(const char8_t* title)
-{
-	auto wtitle = swal::u8_to_wide_char(title);
-	swal::winapi_call(::SetWindowText(wnd, wtitle.c_str()));
+	return DefWindowProc(hWnd, message, wParam, lParam);
 }
 
 } /* namespace dse::core */

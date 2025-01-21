@@ -81,9 +81,9 @@ void FrameBuffer_win32::OnPaint(HWND hWnd, WPARAM, LPARAM)
     wnd.ValidateRect(rc);
 }
 
-void FrameBuffer_win32::OnErase(HWND hWnd, HDC hdc, LRESULT& result)
+void FrameBuffer_win32::OnErase(HWND hWnd, HDC hdc, bool& result)
 {
-    result = TRUE;
+    result = true;
 }
 
 void FrameBuffer_win32::OnResize()

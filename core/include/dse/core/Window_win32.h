@@ -19,7 +19,7 @@ struct event_traits<evt> {
 
 template <>
 struct event_traits<core::WindowEvent::System + WM_ERASEBKGND> {
-    using handler = void(HWND, HDC, LRESULT&);
+    using handler = void(HWND, HDC, bool&);
 };
 
 }

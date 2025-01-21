@@ -42,7 +42,7 @@ public:
 	auto GetLoop() const -> SystemLoop&;
 	bool Register(WindowEvent evt, void* object, void(*cb)());
 	void Unregister(WindowEvent evt, void* object, void(*cb)()) noexcept;
-	void fill_class_info(WNDCLASSEX& wcex);
+	static void fill_class_info(WNDCLASSEX& wcex);
 private:
     enum Constants {
         GwlpThis = 0
@@ -63,18 +63,17 @@ private:
 	auto CalcStyles() -> WinStyles;
 	void ApplyStyles();
 
-	auto OnClose(WindowEventData_win32& d) -> LRESULT;
-	auto OnKeyDown(WindowEventData_win32& d) -> LRESULT;
-	auto OnKeyUp(WindowEventData_win32& d) -> LRESULT;
-	auto OnMouseMove(WindowEventData_win32& d) -> LRESULT;
-	auto OnPosChanging(WindowEventData_win32& d) -> LRESULT;
-	auto OnPosChanged(WindowEventData_win32& d) -> LRESULT;
-	auto OnNCCreate(WindowEventData_win32& d) -> LRESULT;
-	auto OnNCCalcSize(WindowEventData_win32& d) -> LRESULT;
-	auto OnGetMinMaxInfo(WindowEventData_win32& d) -> LRESULT;
-	auto OnErase(WindowEventData_win32& d) -> LRESULT;
-	auto CallDefWindowProc(WindowEventData_win32& d) -> LRESULT;
-	auto FwdMessage(WindowEventData_win32& d) -> LRESULT;
+	BOOL OnNCCreate(HWND hwnd, CREATESTRUCT* lpCreateStruct);
+	UINT OnNCCalcSize(HWND hwnd, BOOL fCalcValidRects, NCCALCSIZE_PARAMS* lpcsp);
+	void OnClose(HWND hwnd);
+	BOOL OnEraseBkgnd(HWND hwnd, HDC hdc);
+	void OnKey(HWND hwnd, UINT vk, BOOL fDown, int cRepeat, UINT flags);
+	void OnMouseMove(HWND hwnd, int x, int y, UINT keyFlags);
+	BOOL OnWindowPosChanging(HWND hwnd, LPWINDOWPOS lpwpos);
+	void OnWindowPosChanged(HWND hwnd, const WINDOWPOS* lpwpos);
+	void OnGetMinMaxInfo(HWND hwnd, LPMINMAXINFO lpMinMaxInfo);
+
+	auto ForwardMsg(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) -> LRESULT;
 
 	util::event_manager<WindowEvent> eventmgr;
 	math::ivec2 pos;
