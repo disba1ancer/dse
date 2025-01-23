@@ -18,7 +18,6 @@ namespace dse::core {
 Window_win32::Window_win32(SystemLoop& loop) try :
     loop(&loop)
 {
-    swal::Wnd owner = SystemLoop_win32::GetImpl(loop)->OwnerWindow();
     wnd.Create(
         0, WindowClass(), WS_OVERLAPPEDWINDOW,
         CW_USEDEFAULT, 0, CW_USEDEFAULT, 0,

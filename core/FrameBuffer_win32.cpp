@@ -34,7 +34,7 @@ void FrameBuffer_win32::Render(util::function_ptr<void ()> callback)
     //     renderCallback(frameBuffer.Data(), size);
     // }
     auto wnd = swal::Wnd(window.GetSysData().hWnd);
-    swal::winapi_call(::RedrawWindow(wnd, nullptr, NULL, RDW_INVALIDATE | RDW_UPDATENOW));
+    swal::winapi_call(::RedrawWindow(wnd, nullptr, NULL, RDW_INVALIDATE /*| RDW_UPDATENOW*/));
     // auto dc = swal::Wnd(window.GetSysData().hWnd).GetDC();
     // if (size.x() == 0 || size.y() == 0) {
     //     return;
@@ -65,6 +65,9 @@ void FrameBuffer_win32::OnPaint(HWND hWnd, WPARAM, LPARAM)
         return;
     }
     swal::WindowDC dc(wnd);
+    util::scope_exit e{[&wnd]{
+        wnd.ValidateRect();
+    }};
     // RECT const& rc = dc->rcPaint;
     // if (!acqrd) {
     //     return;
@@ -78,7 +81,6 @@ void FrameBuffer_win32::OnPaint(HWND hWnd, WPARAM, LPARAM)
         renderCallback(frameBuffer.Data(), size);
     }
     DrawDC(dc, rc);
-    wnd.ValidateRect(rc);
 }
 
 void FrameBuffer_win32::OnErase(HWND hWnd, HDC hdc, bool& result)
