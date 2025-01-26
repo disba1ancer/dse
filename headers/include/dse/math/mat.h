@@ -91,7 +91,7 @@ requires(\
 )\
 {\
 	for (std::size_t i = 0; i < size; ++i) {\
-		left[i] op##= right[i];\
+		left[i] op##= right;\
 	}\
 	return left;\
 }
@@ -124,6 +124,38 @@ auto operator*(const mat<left_t, shared, rows>& left, const mat<right_t, cols, s
 template <typename left_t, typename right_t, std::size_t cols, std::size_t rows>
 mat<left_t, cols, rows>& operator*=(mat<left_t, cols, rows>& left, const mat<right_t, cols, cols>& right) {
     left = left * right;
+    return left;
+}
+
+template <typename left_t, typename right_t, std::size_t rows, std::size_t cols>
+auto operator*(const mat<left_t, cols, rows>& left, const right_t& right) {
+    using ret_t = decltype(std::remove_cvref_t<left_t>{} * std::remove_cvref_t<right_t>{});
+    mat<ret_t, cols, rows> result{};
+    for (std::size_t i = 0; i < cols; ++i) {
+        result[i] = left[i] * right;
+    }
+    return result;
+}
+
+template <typename left_t, typename right_t, std::size_t cols, std::size_t rows>
+mat<left_t, cols, rows>& operator*=(mat<left_t, cols, rows>& left, const right_t& right) {
+    left = left * right;
+    return left;
+}
+
+template <typename left_t, typename right_t, std::size_t rows, std::size_t cols>
+auto operator/(const mat<left_t, cols, rows>& left, const right_t& right) {
+    using ret_t = decltype(std::remove_cvref_t<left_t>{} * std::remove_cvref_t<right_t>{});
+    mat<ret_t, cols, rows> result{};
+    for (std::size_t i = 0; i < cols; ++i) {
+        result[i] = left[i] / right;
+    }
+    return result;
+}
+
+template <typename left_t, typename right_t, std::size_t cols, std::size_t rows>
+mat<left_t, cols, rows>& operator/=(mat<left_t, cols, rows>& left, const right_t& right) {
+    left = left / right;
     return left;
 }
 

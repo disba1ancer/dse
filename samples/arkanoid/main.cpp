@@ -7,6 +7,7 @@
 #include <dse/core/Window.h>
 #include <dse/core/FrameBuffer.h>
 #include <dse/math/vmath.h>
+#include <dse/math/mat.h>
 #include <chrono>
 #include <iostream>
 
@@ -46,6 +47,8 @@ private:
     void OnKey(KeyboardKeyState, int);
     auto Load() -> task<void>;
     void Step();
+    using Rect = dse::math::vec<ivec2, 2>;
+    Rect GetCollideRegion(ivec2 vel);
 
     dse::core::IOContext ctx;
     dse::core::SystemLoop uiLoop;
@@ -54,16 +57,18 @@ private:
     Image font;
     Image bg;
     static constexpr auto counterCount = 256;
+    static constexpr ivec2 ballSize = {16, 16};
     std::chrono::high_resolution_clock::duration times[counterCount] = {};
     int currentCounter = 0;
-    ivec2 ballPos = {320, 240};
-    ivec2 ballVelocity = {6, 2};
+    Rect ball = Rect{{{0, 0}, ballSize}} + wSize / 2;
+    ivec2 ballPos = (wSize - ballSize) / 2;
+    ivec2 ballVelocity = {-6, 2};
 };
 
 App::App(int argc, char *argv[])
 {
     using enum dse::core::WindowFrameStyle;
-    window.SetTitle(u8"Sample");
+    window.SetTitle(u8"Arkanoid");
     window.ChangeFrameStyle(Fixed);
     window.ResizeSurface(wSize);
     using enum dse::core::WindowEvent;
@@ -119,11 +124,11 @@ int App::Run()
 void App::Draw(void* buffer, dse::math::ivec2 size)
 {
     ImageManipulator manip(buffer, size, false);
-    manip.Fill({0, 0}, wSize, 0x00000000);
+    manip.Fill({0, 0}, wSize, 0xFF000000);
 //    manip.DrawRectFilled({0, 0}, size, {.0f, .0, 1.0, 1.f});
 //    manip.BlendImage({256, 256}, wall.Size(), wall, {0, 0});
     // manip.DrawText({0, 0}, wSize, u8"Hello, world!", font, {8, 12});
-    manip.Fill(ballPos - 8, {16, 16}, 0xFFFFFFFF);
+    manip.Fill(ballPos, ballSize, 0xFFFFFFFF);
     for (int i = 0; i < counterCount; ++i) {
         int us = std::chrono::duration_cast<std::chrono::microseconds>(times[i]).count();
         std::uint32_t color = 0xFF00FF00;
@@ -153,8 +158,8 @@ void App::OnMouseMove(int x, int y)
 void App::OnKey(KeyboardKeyState state, int key)
 {
     if (key == ' ' && state == KeyboardKeyState::DOWN) {
-        ballPos = {320, 240};
-        // ballVelocity = {6, 2};
+        ballPos = {320, 180};
+        ballVelocity = {-6, 2};
     }
     if (key == 0x7A && state == KeyboardKeyState::DOWN) {
         if (window.IsFullscreen()) {
@@ -218,16 +223,72 @@ task<void> App::Load()
     };
 }
 
+template <typename T>
+static bool between(const T& val, const T& bound1, const T& bound2)
+{
+    using std::min;
+    using std::max;
+    auto bmin = min(bound1, bound2);
+    auto bmax = max(bound1, bound2);
+    return (bmin < val && val < bmax) || val == bound1;
+}
+
 void App::Step()
 {
-    ballPos += ballVelocity;
-    auto t = ballPos - 8;
-    if (t.x() < 0 || t.x() > 624) {
-        ballVelocity.x() = -ballVelocity.x();
+    using std::min;
+    using std::max;
+    using std::abs;
+    Rect boardBounds{{{0, 0}, wSize}};
+    auto curVel = ballVelocity;
+    do {
+        auto coMul = abs(curVel["yx"]);
+        auto dist = coMul.x() * coMul.y();
+        auto cr = GetCollideRegion(curVel);
+        ivec2 mul2 = {1, 1};
+        Rect ballRect = {ballPos, ballPos + ballSize};
+        for (int j = 0; j < 2; j++) {
+            auto expr = cr[0][j] <=> boardBounds[0][j];
+            if (expr >= 0) {
+                continue;
+            }
+            auto d = abs(ballRect[0][j] - boardBounds[0][j]) * coMul[j];
+            if (d >= dist) {
+                continue;
+            }
+            dist = d;
+            mul2 = {-1 + j * 2, 1 - j * 2};
+        }
+        for (int j = 0; j < 2; j++) {
+            auto expr = cr[1][j] <=> boardBounds[1][j];
+            if (expr <= 0) {
+                continue;
+            }
+            auto d = abs(ballRect[1][j] - boardBounds[1][j]) * coMul[j];
+            if (d >= dist) {
+                continue;
+            }
+            dist = d;
+            mul2 = {-1 + j * 2, 1 - j * 2};
+        }
+        ballPos += (sign(curVel) * dist) / coMul;
+        curVel -= (sign(curVel) * dist) / coMul;
+        curVel *= mul2;
+    ballVelocity *= mul2;
+    } while (curVel != ivec2{});
+}
+
+auto App::GetCollideRegion(ivec2 vel) -> Rect
+{
+    using std::swap;
+    Rect result = {ballPos, ballPos + vel};
+    if (result[0].x() > result[1].x()) {
+        swap(result[0].x(), result[1].x());
     }
-    if (t.y() < 0 || t.y() > 464) {
-        ballVelocity.y() = -ballVelocity.y();
+    if (result[0].y() > result[1].y()) {
+        swap(result[0].y(), result[1].y());
     }
+    result[1] += ballSize;
+    return result;
 }
 
 int main(int argc, char* argv[])

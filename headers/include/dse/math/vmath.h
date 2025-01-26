@@ -264,6 +264,15 @@ constexpr auto clamp(const vec<A, size>& a, const B& b, const C& c) {
 	return min(max(a, b), c);
 }
 
+template <typename T, std::size_t size>
+constexpr auto sign(const vec<T, size>& a) -> vec<T, size> {
+	vec<T, size> result{};
+	for (std::size_t i = 0; i < size; ++i) {
+		result[i] = -(a[i] < 0) + (a[i] > 0);
+	}
+	return result;
+}
+
 } // namespace dse::math
 
 #endif /* MATH_VMATH_H_ */
