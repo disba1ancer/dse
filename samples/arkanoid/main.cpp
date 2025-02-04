@@ -49,6 +49,7 @@ private:
     void Step();
     using Rect = dse::math::vec<ivec2, 2>;
     Rect GetCollideRegion(ivec2 vel);
+    int GetBrick(ivec2 pos);
 
     dse::core::IOContext ctx;
     dse::core::SystemLoop uiLoop;
@@ -58,6 +59,8 @@ private:
     Image bg;
     static constexpr auto counterCount = 256;
     static constexpr ivec2 ballSize = {16, 16};
+    static constexpr ivec2 brickSize = {32, 16};
+    static constexpr ivec2 boardSize = {20, 30};
     std::chrono::high_resolution_clock::duration times[counterCount] = {};
     int currentCounter = 0;
     Rect ball = Rect{{{0, 0}, ballSize}} + wSize / 2;
@@ -273,7 +276,7 @@ void App::Step()
         ballPos += (sign(curVel) * dist) / coMul;
         curVel -= (sign(curVel) * dist) / coMul;
         curVel *= mul2;
-    ballVelocity *= mul2;
+        ballVelocity *= mul2;
     } while (curVel != ivec2{});
 }
 
@@ -289,6 +292,13 @@ auto App::GetCollideRegion(ivec2 vel) -> Rect
     }
     result[1] += ballSize;
     return result;
+}
+
+int App::GetBrick(ivec2 pos)
+{
+    auto x = 0 <= pos.x() and pos.x() < boardSize.x();
+    auto y = 0 <= pos.y() and pos.y() < boardSize.y();
+    return -1 * !(x and y);
 }
 
 int main(int argc, char* argv[])
