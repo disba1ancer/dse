@@ -2,3 +2,4 @@
 add_subdirectory(framebuffer)
 add_subdirectory(arkanoid)
 add_subdirectory(iotest)
+add_subdirectory(smdxtest)
