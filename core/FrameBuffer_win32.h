@@ -5,6 +5,7 @@
 #include <dse/core/Window.h>
 #include <dse/util/functional.h>
 #include "win32.h"
+#include <dse/core/Window_win32.h>
 
 namespace dse::core {
 
@@ -31,6 +32,10 @@ private:
     util::function_ptr<void ()> exitCallback = nullptr;
     Image frameBuffer{window.Size()};
     notifier::connection<core::Window::PaintHandler> paintCon;
+    using howner = util::handler_owner<Window>;
+    howner idErase = window.Register<WindowEvent::System + WM_ERASEBKGND>({*this, util::fn_tag<&FrameBuffer_win32::OnErase>});
+    howner idPaint = window.Register<WindowEvent::System + WM_PAINT>({*this, util::fn_tag<&FrameBuffer_win32::OnPaint>});
+    howner idResize = window.Register<WindowEvent::Resize>({*this, util::fn_tag<&FrameBuffer_win32::OnResize>});
 };
 
 } // namespace dse::core

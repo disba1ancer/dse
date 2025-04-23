@@ -40,8 +40,8 @@ public:
 	bool HasMaximizeCtl() const;
 	void ShowMaximizeCtl(bool state);
 	auto GetLoop() const -> SystemLoop&;
-	bool Register(WindowEvent evt, void* object, void(*cb)());
-	void Unregister(WindowEvent evt, void* object, void(*cb)()) noexcept;
+    auto Register(WindowEvent evt, void* object, void(*cb)()) -> std::size_t;
+    void Unregister(std::size_t id) noexcept;
 	static void fill_class_info(WNDCLASSEX& wcex);
 private:
     enum Constants {

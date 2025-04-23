@@ -42,6 +42,7 @@ private:
     void Draw(void* buffer, dse::math::ivec2 size);
     void AfterRender();
     void OnClose();
+    // static void OnClose(App&&);
     void OnResize();
     void OnMouseMove(int x, int y);
     void OnKey(KeyboardKeyState, int);
@@ -75,20 +76,14 @@ App::App(int argc, char *argv[])
     window.ChangeFrameStyle(Fixed);
     window.ResizeSurface(wSize);
     using enum dse::core::WindowEvent;
-    window.Register<Close>({*this, fn_tag<&App::OnClose>});
-    window.Register<Resize>({*this, fn_tag<&App::OnResize>});
-    window.Register<MouseMove>({*this, fn_tag<&App::OnMouseMove>});
-    window.Register<Key>({*this, fn_tag<&App::OnKey>});
+    window.Register<Close>({*this, fn_tag<&App::OnClose>}).detach();
+    window.Register<Resize>({*this, fn_tag<&App::OnResize>}).detach();
+    window.Register<MouseMove>({*this, fn_tag<&App::OnMouseMove>}).detach();
+    window.Register<Key>({*this, fn_tag<&App::OnKey>}).detach();
 }
 
 App::~App()
-{
-    using enum dse::core::WindowEvent;
-    window.Unregister<Key>({*this, fn_tag<&App::OnKey>});
-    window.Unregister<MouseMove>({*this, fn_tag<&App::OnMouseMove>});
-    window.Unregister<Resize>({*this, fn_tag<&App::OnResize>});
-    window.Unregister<Close>({*this, fn_tag<&App::OnClose>});
-}
+{}
 
 int App::Run()
 {
@@ -111,9 +106,9 @@ int App::Run()
             continue;
             std::this_thread::sleep_until(next);
         }
-        next += 16667us;
+        next += 10000us;//16667us;
         if (next < now) {
-            next += (now - next) % 16667us;
+            next += (now - next) % 10000us;//16667us;
         }
         times[currentCounter] = now - last;
         currentCounter = (currentCounter + 1) & (counterCount - 1);
@@ -149,6 +144,11 @@ void App::OnClose()
 {
     uiLoop.Stop(0);
 }
+
+// void App::OnClose(App&& app)
+// {
+//     app.uiLoop.Stop(0);
+// }
 
 void App::OnResize()
 {

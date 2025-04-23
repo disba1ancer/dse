@@ -2,11 +2,16 @@
 #define DSE_UTIL_EVTMGR_H
 
 #include <type_traits>
-#include <compare>
 #include "functional.h"
 #include <set>
 
 namespace dse::util {
+
+namespace evtmgr_impl {
+
+using handler_id = std::size_t;
+
+}
 
 template <auto en>
 requires std::is_scoped_enum_v<decltype(en)>
@@ -14,83 +19,165 @@ struct event_traits;
 
 template <class EventEnum>
 requires std::is_scoped_enum_v<EventEnum>
-class event_manager {
-    using EventId = EventEnum;
+struct event_manager {
+    using event_id = EventEnum;
+    using handler_id = evtmgr_impl::handler_id;
+private:
     struct Key {
-        std::underlying_type_t<EventId> id;
-        void* observer;
+        handler_id prev;
+        handler_id next;
+        union {
+            void* observer;
+            event_id event;
+        };
         void(*callback)();
     };
-    struct KeyCompare {
-        using is_transparent = void;
-        bool operator()(const Key& a, const Key& b) const
-        {
-            auto ord = a.id <=> b.id;
-            if (ord != 0) {
-                return ord < 0;
-            }
-            auto pA = reinterpret_cast<std::uintptr_t>(a.observer);
-            auto pB = reinterpret_cast<std::uintptr_t>(b.observer);
-            if ((ord = pA <=> pB) != 0) {
-                return ord < 0;
-            }
-            pA = reinterpret_cast<std::uintptr_t>(reinterpret_cast<void*>(a.callback));
-            pB = reinterpret_cast<std::uintptr_t>(reinterpret_cast<void*>(b.callback));
-            return pA <=> pB < 0;
-        }
-        constexpr bool operator()(const EventId& a, const Key& b) const
-        {
-            return std::to_underlying(a) < b.id;
-        }
-        constexpr bool operator()(const Key& a, const EventId& b) const
-        {
-            return a.id < std::to_underlying(b);
-        }
-    };
-    template <EventId event>
+    template <event_id event>
     using handler = typename event_traits<event>::handler;
+    Key& get_handler(handler_id id)
+    {
+        return handlers[id - 1];
+    }
+    auto allocate_handler() -> handler_id
+    {
+        if (freeHandlersHead == 0) {
+            handler_id newid = handlers.size() + 1;
+            handlers.resize(newid);
+            return newid;
+        }
+        handler_id newid = freeHandlersHead;
+        freeHandlersHead = get_handler(newid).next;
+        return newid;
+    }
+    void free_handler(handler_id id)
+    {
+        auto& handler = get_handler(id);
+        handler.callback = nullptr;
+        handler.next = freeHandlersHead;
+        freeHandlersHead = id;
+    }
+    void insert_handler(handler_id id, handler_id before)
+    {
+        auto& next = get_handler(before);
+        auto& prev = get_handler(next.prev);
+        auto& handler = get_handler(id);
+        handler.prev = next.prev;
+        handler.next = before;
+        prev.next = id;
+        next.prev = id;
+    }
+    void erase_handler(handler_id id)
+    {
+        auto& handler = get_handler(id);
+        auto& next = get_handler(handler.next);
+        auto& prev = get_handler(handler.prev);
+        prev.next = handler.next;
+        next.prev = handler.prev;
+    }
+    void insert_handler_into_chain(event_id chain, handler_id id)
+    {
+        auto& chainHead = handlerChains[chain];
+        if (chainHead == 0) {
+            chainHead = allocate_handler();
+            auto &head = get_handler(chainHead);
+            head.callback = nullptr;
+            head.event = chain;
+            head.prev = chainHead;
+            head.next = chainHead;
+        }
+        insert_handler(id, chainHead);
+    }
+    void erase_handler_with_chain(handler_id id)
+    {
+        auto& handler = get_handler(id);
+        erase_handler(id);
+        if (handler.prev != handler.next) {
+            return;
+        }
+        auto &head = get_handler(handler.next);
+        handlerChains.erase(head.event);
+        free_handler(handler.next);
+    }
 public:
-    bool register_e(EventId event, void* object, void(*callback)())
+    auto register_e(event_id event, void* object, void(*callback)()) -> handler_id
     {
-        auto [it, r] = handlers.emplace(std::to_underlying(event), object, callback);
-        return r;
+        if (callback == nullptr) {
+            return 0;
+        }
+        auto newid = allocate_handler();
+        auto& handler = get_handler(newid);
+        handler.observer = object;
+        handler.callback = callback;
+        insert_handler_into_chain(event, newid);
+        return newid;
     }
-    void unregister(EventId event, void* object, void(*callback)())
+    void unregister(handler_id id)
     {
-        handlers.erase(Key{std::to_underlying(event), object, callback});
+        if (id == 0 || id > handlers.size()) {
+            return;
+        }
+        auto& handler = get_handler(id);
+        if (handler.callback == nullptr) {
+            return;
+        }
+        erase_handler_with_chain(id);
+        free_handler(id);
     }
-    template <EventId event>
+    template <event_id event>
     bool register_e(const function_ptr<handler<event>>& f)
     {
         return register_e(event, f.get_object_ptr(), reinterpret_cast<void(*)()>(f.get_function()));
     }
-    template <EventId event>
-    void unregister(const function_ptr<handler<event>>& f)
+    template <class H, class ... Args>
+    bool send(event_id event, Args&& ... args)
     {
-        unregister(event, f.get_object_ptr(), reinterpret_cast<void(*)()>(f.get_function()));
-    }
-    template <typename H, typename ... Args>
-    bool send(EventId event, Args&& ... args)
-    {
-        auto [begin, end] = handlers.equal_range(event);
-        if (begin == end) {
+        auto it = handlerChains.find(event);
+        if (it == handlerChains.end()) {
             return false;
         }
-        for (auto& hndlr : std::ranges::subrange{begin, end}) {
+        auto startId = it->second;
+        auto id = get_handler(startId).next;
+        while(id != startId) {
+            auto& handler = get_handler(id);
             using handler_t = function_ptr<H>;
-            auto callback = reinterpret_cast<typename handler_t::sfn*>(hndlr.callback);
-            handler_t f{hndlr.observer, callback};
+            auto callback = reinterpret_cast<typename handler_t::sfn*>(handler.callback);
+            handler_t f{handler.observer, callback};
             f(std::forward<Args>(args)...);
+            id = handler.next;
         }
         return true;
     }
-    template <EventId event, typename ... Args>
+    template <event_id event, class ... Args>
     bool send(Args&& ... args)
     {
         return send<handler<event>>(event, std::forward<Args>(args)...);
     }
 private:
-    std::set<Key, KeyCompare> handlers;
+    std::vector<Key> handlers;
+    std::unordered_map<event_id, handler_id> handlerChains;
+    handler_id freeHandlersHead = 0;
+};
+
+template<class T>
+struct handler_owner
+{
+    using handler_id = evtmgr_impl::handler_id;
+    handler_owner(T& observable, handler_id id) : observable(observable), id(id) {}
+    handler_owner(handler_owner&&) = delete;
+    handler_owner(const handler_owner&) = delete;
+    handler_owner& operator=(handler_owner&&) = delete;
+    handler_owner& operator=(const handler_owner&) = delete;
+    ~handler_owner()
+    {
+        observable.unregister(id);
+    }
+    void detach()
+    {
+        id = 0;
+    }
+private:
+    T& observable;
+    handler_id id;
 };
 
 } // namespace dse::util

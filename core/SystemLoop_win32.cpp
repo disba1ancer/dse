@@ -67,6 +67,11 @@ int SystemLoop_win32::Send(util::function_ptr<int ()> cb)
     return SendMessage(msgWnd, SendMsg, wParam, lParam);
 }
 
+void SystemLoop_win32::Periodic(long long interval, util::function_ptr<void ()> cb)
+{
+    (void)TIMERPROC{};
+}
+
 HWND SystemLoop_win32::OwnerWindow()
 {
     return msgWnd;

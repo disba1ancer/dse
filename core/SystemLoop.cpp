@@ -46,4 +46,9 @@ void SystemLoop::Post(util::function_ptr<void ()> cb)
     impl->Post(cb);
 }
 
+void SystemLoop::Periodic(long long interval, util::function_ptr<void ()> cb)
+{
+    return (void)impl;
+}
+
 } // namespace dse::core

@@ -58,26 +58,21 @@ public:
 	void MakeMinimizable(bool state);
 	auto GetLoop() const -> SystemLoop&;
 	using PaintHandler = void(WndEvtDt);
-	bool Register(WindowEvent evt, void* object, void(*cb)());
-	void Unregister(WindowEvent evt, void* object, void(*cb)()) noexcept;
-	template <WindowEvent evt>
-	bool Register(const util::function_ptr<typename util::event_traits<evt>::handler>& cb);
-	template <WindowEvent evt>
-	void Unregister(const util::function_ptr<typename util::event_traits<evt>::handler>& cb) noexcept;
+    auto Register(WindowEvent evt, void* object, void(*cb)()) -> std::size_t;
+    void Unregister(std::size_t id) noexcept;
+    void unregister(std::size_t id) noexcept {
+        Unregister(id);
+    }
+    template <WindowEvent evt>
+    auto Register(const util::function_ptr<typename util::event_traits<evt>::handler>& cb) -> util::handler_owner<Window>;
 private:
     util::impl_ptr<Window_impl> impl;
 };
 
 template <WindowEvent evt>
-bool Window::Register(const util::function_ptr<typename util::event_traits<evt>::handler>& cb)
+auto Window::Register(const util::function_ptr<typename util::event_traits<evt>::handler>& cb) -> util::handler_owner<Window>
 {
-    return Register(evt, cb.get_object_ptr(), reinterpret_cast<void(*)()>(cb.get_function()));
-}
-
-template <WindowEvent evt>
-void Window::Unregister(const util::function_ptr<typename util::event_traits<evt>::handler>& cb) noexcept
-{
-    Unregister(evt, cb.get_object_ptr(), reinterpret_cast<void(*)()>(cb.get_function()));
+    return {*this, Register(evt, cb.get_object_ptr(), reinterpret_cast<void(*)()>(cb.get_function()))};
 }
 
 } /* namespace dse::core */

@@ -1,6 +1,5 @@
 #include "FrameBuffer_win32.h"
 #include <dse/core/ImageManipulator.h>
-#include <dse/core/Window_win32.h>
 #include <dse/util/scope_exit.h>
 #include <dse/core/ThreadPool.h>
 
@@ -8,20 +7,10 @@ namespace dse::core {
 
 FrameBuffer_win32::FrameBuffer_win32(core::Window& wnd) :
     window(wnd)
-{
-    using enum WindowEvent;
-    window.Register<System + WM_ERASEBKGND>({*this, util::fn_tag<&FrameBuffer_win32::OnErase>});
-    window.Register<System + WM_PAINT>({*this, util::fn_tag<&FrameBuffer_win32::OnPaint>});
-    window.Register<Resize>({*this, util::fn_tag<&FrameBuffer_win32::OnResize>});
-}
+{}
 
 FrameBuffer_win32::~FrameBuffer_win32()
-{
-    using enum WindowEvent;
-    window.Unregister<Resize>({*this, util::fn_tag<&FrameBuffer_win32::OnResize>});
-    window.Unregister<System + WM_PAINT>({*this, util::fn_tag<&FrameBuffer_win32::OnPaint>});
-    window.Unregister<System + WM_ERASEBKGND>({*this, util::fn_tag<&FrameBuffer_win32::OnErase>});
-}
+{}
 
 void FrameBuffer_win32::Render(util::function_ptr<void ()> callback)
 {

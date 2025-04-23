@@ -61,18 +61,13 @@ App::App(int argc, char *argv[]) :
     framebuffer.SetDrawCallback({*this, fn_tag<&App::Draw>});
     window.Resize({640, 480});
     using enum dse::core::WindowEvent;
-    window.Register<Close>({*this, fn_tag<&App::OnClose>});
-    window.Register<Resize>({*this, fn_tag<&App::OnResize>});
-    window.Register<MouseMove>({*this, fn_tag<&App::OnMouseMove>});
+    window.Register<Close>({*this, fn_tag<&App::OnClose>}).detach();
+    window.Register<Resize>({*this, fn_tag<&App::OnResize>}).detach();
+    window.Register<MouseMove>({*this, fn_tag<&App::OnMouseMove>}).detach();
 }
 
 App::~App()
-{
-    using enum dse::core::WindowEvent;
-    window.Unregister<MouseMove>({*this, fn_tag<&App::OnMouseMove>});
-    window.Unregister<Resize>({*this, fn_tag<&App::OnResize>});
-    window.Unregister<Close>({*this, fn_tag<&App::OnClose>});
-}
+{}
 
 int App::Run()
 {

@@ -521,7 +521,7 @@ template <auto fn>
 struct fn_tag_t {};
 
 template <auto fn>
-fn_tag_t<fn> fn_tag = {};
+constexpr fn_tag_t<fn> fn_tag = {};
 
 template <function_ptr_impl::UnqualifiedFunction T>
 struct function_ptr {

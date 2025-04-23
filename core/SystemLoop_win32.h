@@ -19,6 +19,7 @@ public:
     void Stop(int result = 0);
     void Post(util::function_ptr<void()> cb);
     int  Send(util::function_ptr<int()> cb);
+    void Periodic(long long interval, util::function_ptr<void()> cb);
     HWND OwnerWindow();
     static auto GetImpl(SystemLoop& pub) -> SystemLoop_win32*;
 private:

@@ -2,6 +2,7 @@
 #define DSE_CORE_MODLOADER_H
 
 #include <cstdint>
+#include <string>
 #include <string_view>
 #include <concepts>
 #include <utility>

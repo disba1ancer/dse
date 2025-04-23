@@ -94,14 +94,14 @@ auto Window::GetLoop() const -> SystemLoop&
 	return impl->GetLoop();
 }
 
-bool Window::Register(WindowEvent evt, void* object, void (*cb)())
+auto Window::Register(WindowEvent evt, void* object, void (*cb)()) -> std::size_t
 {
 	return impl->Register(evt, object, cb);
 }
 
-void Window::Unregister(WindowEvent evt, void* object, void (*cb)()) noexcept
+void Window::Unregister(std::size_t id) noexcept
 {
-	return impl->Unregister(evt, object, cb);
+    return impl->Unregister(id);
 }
 
 } /* namespace dse::core */

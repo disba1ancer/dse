@@ -37,6 +37,7 @@ FILES
     include/dse/util/impl_exec/start_detached.h
     include/dse/util/impl_exec/then.h
     include/dse/util/impl_exec/wait.h
+    include/dse/util/loophole.h
     include/dse/util/pimpl.h
     include/dse/util/scope_exit.h
     include/dse/util/spinlock.h

@@ -26,6 +26,7 @@ public:
     int Result();
     void Stop(int result);
     void Post(util::function_ptr<void()> cb);
+    void Periodic(long long interval, util::function_ptr<void()> cb);
 private:
     dse::util::impl_ptr<SystemLoop_impl> impl;
 };
