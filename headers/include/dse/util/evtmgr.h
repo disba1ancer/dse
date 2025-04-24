@@ -87,18 +87,19 @@ private:
         head.next = newid;
         return newid;
     }
+    bool is_single_handler_chain(handler_id chainHead)
+    {
+        auto &head = get_handler(chainHead);
+        return head.next == 0;
+    }
     void insert_handler_into_chain(event_id chain, handler_id id)
     {
         auto& chainHead = handlerChains[chain];
         if (chainHead == 0) {
-            auto &head = get_handler(id);
-            head.event2 = chain;
-            head.next = 0;
             chainHead = id;
             return;
         }
-        auto &head = get_handler(chainHead);
-        if (head.next == 0) {
+        if (is_single_handler_chain(chainHead)) {
             auto singleHandler = chainHead;
             chainHead = make_multihandler_chain(chain);
             insert_handler(singleHandler, chainHead);
@@ -108,7 +109,7 @@ private:
     void erase_handler_with_chain(handler_id id)
     {
         auto& handler = get_handler(id);
-        if (handler.next == 0) {
+        if (is_single_handler_chain(id)) {
             handlerChains.erase(handler.event2);
             return;
         }
@@ -138,6 +139,8 @@ public:
         auto& handler = get_handler(newid);
         handler.observer = object;
         handler.callback = callback;
+        handler.event2 = event;
+        handler.next = 0;
         insert_handler_into_chain(event, newid);
         return newid;
     }
@@ -167,12 +170,11 @@ public:
         }
         auto startId = it->second;
         auto& startHandler = get_handler(startId);
-        auto id = startHandler.next;
-        if (id == 0) {
+        if (is_single_handler_chain(startId)) {
             call_handler<H>(startHandler, std::forward<Args>(args)...);
             return true;
         }
-        while(id != startId) {
+        for(auto id = startHandler.next; id != startId;) {
             auto& handler = get_handler(id);
             call_handler<H>(handler, std::forward<Args>(args)...);
             id = handler.next;
@@ -194,21 +196,26 @@ template<class T>
 struct handler_owner
 {
     using handler_id = evtmgr_impl::handler_id;
-    handler_owner(T& observable, handler_id id) : observable(observable), id(id) {}
+    handler_owner() : observable(nullptr), id() {}
+    handler_owner(T& observable, handler_id id) : observable(&observable), id(id) {}
     handler_owner(handler_owner&&) = delete;
     handler_owner(const handler_owner&) = delete;
-    handler_owner& operator=(handler_owner&&) = delete;
+    handler_owner& operator=(handler_owner&&) = default;
     handler_owner& operator=(const handler_owner&) = delete;
     ~handler_owner()
     {
-        observable.unregister(id);
+        if (id == 0)
+        {
+            return;
+        }
+        observable->unregister(id);
     }
-    void detach()
+    auto detach() -> handler_id
     {
-        id = 0;
+        return std::exchange(id, 0);
     }
 private:
-    T& observable;
+    T* observable;
     handler_id id;
 };
 
