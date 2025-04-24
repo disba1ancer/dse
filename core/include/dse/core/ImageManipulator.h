@@ -6,6 +6,7 @@
 #include <dse/math/color.h>
 #include <dse/util/functional.h>
 #include <cstdint>
+#include <cstring>
 
 namespace dse::core {
 

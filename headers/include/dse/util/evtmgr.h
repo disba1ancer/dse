@@ -24,7 +24,10 @@ struct event_manager {
     using handler_id = evtmgr_impl::handler_id;
 private:
     struct Key {
-        handler_id prev;
+        union {
+            handler_id prev;
+            event_id event2;
+        };
         handler_id next;
         union {
             void* observer;
@@ -74,22 +77,41 @@ private:
         prev.next = handler.next;
         next.prev = handler.prev;
     }
+    auto make_multihandler_chain(event_id chain) -> handler_id
+    {
+        auto newid = allocate_handler();
+        auto& head = get_handler(newid);
+        head.callback = nullptr;
+        head.event = chain;
+        head.prev = newid;
+        head.next = newid;
+        return newid;
+    }
     void insert_handler_into_chain(event_id chain, handler_id id)
     {
         auto& chainHead = handlerChains[chain];
         if (chainHead == 0) {
-            chainHead = allocate_handler();
-            auto &head = get_handler(chainHead);
-            head.callback = nullptr;
-            head.event = chain;
-            head.prev = chainHead;
-            head.next = chainHead;
+            auto &head = get_handler(id);
+            head.event2 = chain;
+            head.next = 0;
+            chainHead = id;
+            return;
+        }
+        auto &head = get_handler(chainHead);
+        if (head.next == 0) {
+            auto singleHandler = chainHead;
+            chainHead = make_multihandler_chain(chain);
+            insert_handler(singleHandler, chainHead);
         }
         insert_handler(id, chainHead);
     }
     void erase_handler_with_chain(handler_id id)
     {
         auto& handler = get_handler(id);
+        if (handler.next == 0) {
+            handlerChains.erase(handler.event2);
+            return;
+        }
         erase_handler(id);
         if (handler.prev != handler.next) {
             return;
@@ -97,6 +119,14 @@ private:
         auto &head = get_handler(handler.next);
         handlerChains.erase(head.event);
         free_handler(handler.next);
+    }
+    template <class H, class ... Args>
+    void call_handler(Key& handler, Args&& ... args)
+    {
+        using handler_t = function_ptr<H>;
+        auto callback = reinterpret_cast<typename handler_t::sfn*>(handler.callback);
+        handler_t f{handler.observer, callback};
+        f(std::forward<Args>(args)...);
     }
 public:
     auto register_e(event_id event, void* object, void(*callback)()) -> handler_id
@@ -136,13 +166,15 @@ public:
             return false;
         }
         auto startId = it->second;
-        auto id = get_handler(startId).next;
+        auto& startHandler = get_handler(startId);
+        auto id = startHandler.next;
+        if (id == 0) {
+            call_handler<H>(startHandler, std::forward<Args>(args)...);
+            return true;
+        }
         while(id != startId) {
             auto& handler = get_handler(id);
-            using handler_t = function_ptr<H>;
-            auto callback = reinterpret_cast<typename handler_t::sfn*>(handler.callback);
-            handler_t f{handler.observer, callback};
-            f(std::forward<Args>(args)...);
+            call_handler<H>(handler, std::forward<Args>(args)...);
             id = handler.next;
         }
         return true;

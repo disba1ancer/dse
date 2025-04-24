@@ -49,9 +49,11 @@ elseif(${DSE_COMPILER} STREQUAL "MSVC")
 endif()
 
 set(DSE_SUBSYSTEM_WINDOWS_LINK_OPTIONS
-    $<$<STREQUAL:${DSE_COMPILER},GNU>:-mwindows>
+    -Wl,--subsystem,$<IF:$<STREQUAL:${DSE_COMPILER},GNU>,windows,console>:6.0
     $<$<STREQUAL:${DSE_COMPILER},MSVC>:/entry:mainCRTStartup;/subsystem:windows>
 )
+
+message(INFO ${DSE_SUBSYSTEM_WINDOWS_LINK_OPTIONS})
 
 set(DSE_MULTISAMPLE "" CACHE STRING "Enable multisampling with specified level")
 set(DSE_THREADPOOL_TASKS_PER_IO "16" CACHE STRING "Task count per IO and UI handling")
