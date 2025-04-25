@@ -3,7 +3,8 @@
 
 #include <type_traits>
 #include "functional.h"
-#include <set>
+#include <vector>
+#include <unordered_map>
 
 namespace dse::util {
 
@@ -190,33 +191,6 @@ private:
     std::vector<Key> handlers;
     std::unordered_map<event_id, handler_id> handlerChains;
     handler_id freeHandlersHead = 0;
-};
-
-template<class T>
-struct handler_owner
-{
-    using handler_id = evtmgr_impl::handler_id;
-    handler_owner() : observable(nullptr), id() {}
-    handler_owner(T& observable, handler_id id) : observable(&observable), id(id) {}
-    handler_owner(handler_owner&&) = delete;
-    handler_owner(const handler_owner&) = delete;
-    handler_owner& operator=(handler_owner&&) = default;
-    handler_owner& operator=(const handler_owner&) = delete;
-    ~handler_owner()
-    {
-        if (id == 0)
-        {
-            return;
-        }
-        observable->unregister(id);
-    }
-    auto detach() -> handler_id
-    {
-        return std::exchange(id, 0);
-    }
-private:
-    T* observable;
-    handler_id id;
 };
 
 } // namespace dse::util

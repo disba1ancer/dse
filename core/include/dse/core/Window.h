@@ -14,6 +14,7 @@
 #include "detail/impexp.h"
 #include <dse/core/SystemLoop.h>
 #include <dse/util/pimpl.h>
+#include <dse/util/handle.h>
 
 namespace dse::core {
 
@@ -24,15 +25,24 @@ struct WindowData_win32;
 struct WindowEventData_win32;
 struct PaintEventData_win32;
 
-typedef Window_win32 Window_impl;
-typedef WindowData_win32 WindowData;
-typedef WindowEventData_win32 WindowEventData;
-typedef PaintEventData_win32 PaintEventData;
+using Window_impl = Window_win32;
+using WindowData = WindowData_win32;
 
 #endif
 
-typedef const WindowEventData& WndEvtDt;
-typedef const PaintEventData& PntEvtDt;
+enum class WindowEventHandle : std::size_t {};
+
+class API_DSE_CORE Window;
+
+} // namespace dse::core
+
+template <>
+struct dse::util::handle_traits<dse::core::WindowEventHandle> {
+    using sender = dse::core::Window;
+    static void kill_handle(sender&, dse::core::WindowEventHandle);
+};
+
+namespace dse::core {
 
 class API_DSE_CORE Window {
 public:
@@ -57,24 +67,26 @@ public:
 	bool Minimizable() const;
 	void MakeMinimizable(bool state);
 	auto GetLoop() const -> SystemLoop&;
-	using PaintHandler = void(WndEvtDt);
+    // using PaintHandler = void(WndEvtDt);
     auto Register(WindowEvent evt, void* object, void(*cb)()) -> std::size_t;
     void Unregister(std::size_t id) noexcept;
-    void unregister(std::size_t id) noexcept {
-        Unregister(id);
-    }
     template <WindowEvent evt>
-    auto Register(const util::function_ptr<typename util::event_traits<evt>::handler>& cb) -> util::handler_owner<Window>;
+    auto Register(const util::function_ptr<typename util::event_traits<evt>::handler>& cb) -> util::handle_owner<WindowEventHandle>;
 private:
     util::impl_ptr<Window_impl> impl;
 };
 
 template <WindowEvent evt>
-auto Window::Register(const util::function_ptr<typename util::event_traits<evt>::handler>& cb) -> util::handler_owner<Window>
+auto Window::Register(const util::function_ptr<typename util::event_traits<evt>::handler>& cb) -> util::handle_owner<WindowEventHandle>
 {
-    return {*this, Register(evt, cb.get_object_ptr(), reinterpret_cast<void(*)()>(cb.get_function()))};
+    return {*this, WindowEventHandle(Register(evt, cb.get_object_ptr(), reinterpret_cast<void(*)()>(cb.get_function())))};
 }
 
-} /* namespace dse::core */
+} // namespace dse::core
+
+inline void dse::util::handle_traits<dse::core::WindowEventHandle>::kill_handle(sender& s, dse::core::WindowEventHandle h)
+{
+    s.Unregister(std::to_underlying(h));
+}
 
 #endif /* DSE_CORE_WINDOW_H_ */

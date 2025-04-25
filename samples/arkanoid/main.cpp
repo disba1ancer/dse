@@ -21,7 +21,6 @@ using dse::util::task;
 using dse::core::BasicBitmapLoader;
 using dse::math::vec4;
 using dse::math::ivec2;
-using dse::core::WndEvtDt;
 using dse::core::KeyboardKeyState;
 using namespace std::literals::chrono_literals;
 

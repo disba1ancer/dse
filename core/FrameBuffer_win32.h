@@ -31,8 +31,7 @@ private:
     util::function_ptr<void (void*, math::ivec2)> renderCallback = nullptr;
     util::function_ptr<void ()> exitCallback = nullptr;
     Image frameBuffer{window.Size()};
-    notifier::connection<core::Window::PaintHandler> paintCon;
-    using howner = util::handler_owner<Window>;
+    using howner = util::handle_owner<WindowEventHandle>;
     howner idErase = window.Register<WindowEvent::System + WM_ERASEBKGND>({*this, util::fn_tag<&FrameBuffer_win32::OnErase>});
     howner idPaint = window.Register<WindowEvent::System + WM_PAINT>({*this, util::fn_tag<&FrameBuffer_win32::OnPaint>});
     howner idResize = window.Register<WindowEvent::Resize>({*this, util::fn_tag<&FrameBuffer_win32::OnResize>});
