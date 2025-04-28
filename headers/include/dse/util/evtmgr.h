@@ -24,17 +24,42 @@ struct event_manager {
     using event_id = EventEnum;
     using handler_id = evtmgr_impl::handler_id;
 private:
+    struct Key;
+    struct KeyIter {
+        KeyIter& operator++()
+        {
+            handler += handler->next;
+            return *this;
+        }
+        bool operator==(const KeyIter& oth) const
+        {
+            return handler == oth.handler;
+        }
+        Key& operator*()
+        {
+            return *handler;
+        }
+        Key* handler;
+    };
     struct Key {
         union {
-            handler_id prev;
+            std::ptrdiff_t prev;
             event_id event2;
         };
-        handler_id next;
+        std::ptrdiff_t next;
         union {
             void* observer;
             event_id event;
         };
         void(*callback)();
+        KeyIter begin()
+        {
+            return {this + next};
+        }
+        KeyIter end()
+        {
+            return {this + prev};
+        }
     };
     template <event_id event>
     using handler = typename event_traits<event>::handler;
@@ -42,120 +67,120 @@ private:
     {
         return handlers[id - 1];
     }
-    auto allocate_handler() -> handler_id
+    Key* to_ptr(std::ptrdiff_t index) {
+        return handlers.data() + index;
+    }
+    auto to_index(Key* handler) -> std::ptrdiff_t {
+        return handler - handlers.data();
+    }
+    Key* allocate_handler()
     {
-        if (freeHandlersHead == 0) {
-            handler_id newid = handlers.size() + 1;
-            handlers.resize(newid);
-            return newid;
+        if (freeHandlersHead == -1) {
+            auto size = handlers.size();
+            handlers.resize(size + 1);
+            return to_ptr(size);
         }
-        handler_id newid = freeHandlersHead;
-        freeHandlersHead = get_handler(newid).next;
-        return newid;
+        Key* newHandler = to_ptr(freeHandlersHead);
+        freeHandlersHead += newHandler->next;
+        return newHandler;
     }
-    void free_handler(handler_id id)
+    void free_handler(Key* handler)
     {
-        auto& handler = get_handler(id);
-        handler.callback = nullptr;
-        handler.next = freeHandlersHead;
-        freeHandlersHead = id;
+        handler->callback = nullptr;
+        handler->next = freeHandlersHead - to_index(handler);
+        freeHandlersHead = to_index(handler);
     }
-    void insert_handler(handler_id id, handler_id before)
+    void insert_handler(Key* handler, Key* before)
     {
-        auto& next = get_handler(before);
-        auto& prev = get_handler(next.prev);
-        auto& handler = get_handler(id);
-        handler.prev = next.prev;
-        handler.next = before;
-        prev.next = id;
-        next.prev = id;
+        auto after = before + before->prev;
+        handler->prev = after - handler;
+        handler->next = before - handler;
+        after->next = -handler->prev;
+        before->prev = -handler->next;
     }
-    void erase_handler(handler_id id)
+    void erase_handler(Key* handler)
     {
-        auto& handler = get_handler(id);
-        auto& next = get_handler(handler.next);
-        auto& prev = get_handler(handler.prev);
-        prev.next = handler.next;
-        next.prev = handler.prev;
+        auto next = handler + handler->next;
+        auto prev = handler + handler->prev;;
+        prev->next = next - prev;
+        next->prev = prev - next;
     }
-    auto make_multihandler_chain(event_id chain) -> handler_id
+    Key* make_multihandler_chain(event_id chain)
     {
-        auto newid = allocate_handler();
-        auto& head = get_handler(newid);
-        head.callback = nullptr;
-        head.event = chain;
-        head.prev = newid;
-        head.next = newid;
-        return newid;
+        auto head = allocate_handler();
+        head->callback = nullptr;
+        head->event = chain;
+        head->prev = 0;
+        head->next = 0;
+        return head;
     }
-    bool is_single_handler_chain(handler_id chainHead)
+    bool is_single_handler_chain(Key* chainHead)
     {
-        auto &head = get_handler(chainHead);
-        return head.next == 0;
+        return chainHead->next == 0;
     }
-    void insert_handler_into_chain(event_id chain, handler_id id)
+    void insert_handler_into_chain(event_id chain, Key* handler)
     {
-        auto& chainHead = handlerChains[chain];
-        if (chainHead == 0) {
-            chainHead = id;
+        auto it = handlerChains.find(chain);
+        if (it == handlerChains.end()) {
+            handlerChains[chain] = to_index(handler);
             return;
         }
+        auto chainHead = to_ptr(it->second);
         if (is_single_handler_chain(chainHead)) {
             auto singleHandler = chainHead;
             chainHead = make_multihandler_chain(chain);
+            it->second = to_index(chainHead);
             insert_handler(singleHandler, chainHead);
         }
-        insert_handler(id, chainHead);
+        insert_handler(handler, chainHead);
     }
-    void erase_handler_with_chain(handler_id id)
+    void erase_handler_with_chain(Key* handler)
     {
-        auto& handler = get_handler(id);
-        if (is_single_handler_chain(id)) {
-            handlerChains.erase(handler.event2);
+        if (is_single_handler_chain(handler)) {
+            handlerChains.erase(handler->event2);
             return;
         }
-        erase_handler(id);
-        if (handler.prev != handler.next) {
+        erase_handler(handler);
+        if (handler->prev != handler->next) {
             return;
         }
-        auto &head = get_handler(handler.next);
-        handlerChains.erase(head.event);
-        free_handler(handler.next);
+        auto head = handler + handler->next;
+        handlerChains.erase(head->event);
+        free_handler(head);
     }
     template <class H, class ... Args>
-    void call_handler(Key& handler, Args&& ... args)
+    void call_handler(Key* handler, Args&& ... args)
     {
         using handler_t = function_ptr<H>;
-        auto callback = reinterpret_cast<typename handler_t::sfn*>(handler.callback);
-        handler_t f{handler.observer, callback};
+        auto callback = reinterpret_cast<typename handler_t::sfn*>(handler->callback);
+        handler_t f{handler->observer, callback};
         f(std::forward<Args>(args)...);
     }
 public:
     auto register_e(event_id event, void* object, void(*callback)()) -> handler_id
     {
         if (callback == nullptr) {
-            return 0;
+            return {};
         }
-        auto newid = allocate_handler();
-        auto& handler = get_handler(newid);
-        handler.observer = object;
-        handler.callback = callback;
-        handler.event2 = event;
-        handler.next = 0;
-        insert_handler_into_chain(event, newid);
-        return newid;
+        auto handler = allocate_handler();
+        handler->observer = object;
+        handler->callback = callback;
+        handler->event2 = event;
+        handler->next = 0;
+        insert_handler_into_chain(event, handler);
+        return to_index(handler) + 1;
     }
     void unregister(handler_id id)
     {
-        if (id == 0 || id > handlers.size()) {
+        if ((id -= 1) >= handlers.size()) {
             return;
         }
-        auto& handler = get_handler(id);
-        if (handler.callback == nullptr) {
+        auto handler = to_ptr(id);
+        if (handler->callback == nullptr) {
             return;
         }
-        erase_handler_with_chain(id);
-        free_handler(id);
+        erase_handler_with_chain(handler);
+        free_handler(handler);
     }
     template <event_id event>
     bool register_e(const function_ptr<handler<event>>& f)
@@ -169,16 +194,14 @@ public:
         if (it == handlerChains.end()) {
             return false;
         }
-        auto startId = it->second;
-        auto& startHandler = get_handler(startId);
-        if (is_single_handler_chain(startId)) {
-            call_handler<H>(startHandler, std::forward<Args>(args)...);
+        auto chainIndex = it->second;
+        auto chainHead = to_ptr(chainIndex);
+        if (is_single_handler_chain(chainHead)) {
+            call_handler<H>(chainHead, std::forward<Args>(args)...);
             return true;
         }
-        for(auto id = startHandler.next; id != startId;) {
-            auto& handler = get_handler(id);
-            call_handler<H>(handler, std::forward<Args>(args)...);
-            id = handler.next;
+        for(auto& handler : *chainHead) {
+            call_handler<H>(&handler, std::forward<Args>(args)...);
         }
         return true;
     }
@@ -190,7 +213,7 @@ public:
 private:
     std::vector<Key> handlers;
     std::unordered_map<event_id, handler_id> handlerChains;
-    handler_id freeHandlersHead = 0;
+    std::ptrdiff_t freeHandlersHead = -1;
 };
 
 } // namespace dse::util
