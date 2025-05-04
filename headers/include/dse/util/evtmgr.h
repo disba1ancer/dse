@@ -77,7 +77,7 @@ private:
     {
         if (freeHandlersHead == -1) {
             auto size = handlers.size();
-            handlers.resize(size + 1);
+            handlers.push_back({});
             return to_ptr(size);
         }
         Key* newHandler = to_ptr(freeHandlersHead);

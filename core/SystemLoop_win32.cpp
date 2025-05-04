@@ -1,5 +1,6 @@
 #include "SystemLoop_win32.h"
 #include <swal/hinstance.h>
+#include <timeapi.h>
 
 namespace dse::core {
 
@@ -67,9 +68,42 @@ int SystemLoop_win32::Send(util::function_ptr<int ()> cb)
     return SendMessage(msgWnd, SendMsg, wParam, lParam);
 }
 
-void SystemLoop_win32::Periodic(long long interval, util::function_ptr<void ()> cb)
+namespace {
+
+auto to_handle(std::ptrdiff_t index)
 {
-    (void)TIMERPROC{};
+    return SystemLoopTimerHandle{index + 1};
+}
+
+auto to_index(SystemLoopTimerHandle handle)
+{
+    return std::to_underlying(handle) - 1;
+}
+
+}
+
+auto SystemLoop_win32::Periodic(long long interval, void* obj, void(*func)(void*)) -> SystemLoopTimerHandle
+{
+    auto timer = AllocTimer();
+    auto index = TimerIndex(timer);
+    timer->handler = func;
+    timer->object = obj;
+    swal::winapi_call(::SetTimer(msgWnd, index + 1, interval / 1000, nullptr));
+    return to_handle(index);
+}
+
+void SystemLoop_win32::StopPeriodic(SystemLoopTimerHandle handle) noexcept
+{
+    auto index = to_index(handle);
+    if (index < 0 || index >= timerStore.size()) {
+        return;
+    }
+    auto timer = TimerByIndex(index);
+    if (timer->handler == nullptr) {
+        return;
+    }
+    swal::winapi_call(::KillTimer(msgWnd, index + 1));
+    FreeTimer(timer);
 }
 
 HWND SystemLoop_win32::OwnerWindow()
@@ -106,6 +140,11 @@ LRESULT SystemLoop_win32::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM
         auto obj = reinterpret_cast<void*>(lParam);
         return func(obj);
     }
+    case WM_TIMER: {
+        auto& timer = timerStore[wParam - 1];
+        timer.handler(timer.object);
+        break;
+    }
     default:
         return ::DefWindowProc(hWnd, message, wParam, lParam);
     }
@@ -123,6 +162,35 @@ auto SystemLoop_win32::PollOneInt() -> Constants
         return PollNormal;
     }
     return PollEmpty;
+}
+
+auto SystemLoop_win32::TimerByIndex(ptrdiff_t index) -> timer_handler*
+{
+    return timerStore.data() + index;
+}
+
+auto SystemLoop_win32::AllocTimer() -> timer_handler*
+{
+    if (freeTimerHandlerHead < 0) {
+        timerStore.push_back({});
+        return TimerByIndex(timerStore.size() - 1);
+    }
+    auto timer = TimerByIndex(freeTimerHandlerHead);
+    freeTimerHandlerHead += timer->next;
+    return timer;
+}
+
+auto SystemLoop_win32::TimerIndex(timer_handler* timer) -> std::ptrdiff_t
+{
+    return timer - timerStore.data();
+}
+
+void SystemLoop_win32::FreeTimer(timer_handler *timer) noexcept
+{
+    auto index = TimerIndex(timer);
+    timer->handler = nullptr;
+    timer->next = freeTimerHandlerHead - index;
+    freeTimerHandlerHead = index;
 }
 
 } // namespace dse::core

@@ -46,9 +46,14 @@ void SystemLoop::Post(util::function_ptr<void ()> cb)
     impl->Post(cb);
 }
 
-void SystemLoop::Periodic(long long interval, util::function_ptr<void ()> cb)
+auto SystemLoop::Periodic(long long interval, void* obj, void(*func)(void*)) -> SystemLoopTimerHandle
 {
-    return (void)impl;
+    return impl->Periodic(interval, obj, func);
+}
+
+void SystemLoop::StopPeriodic(SystemLoopTimerHandle handle)
+{
+    return impl->StopPeriodic(handle);
 }
 
 } // namespace dse::core

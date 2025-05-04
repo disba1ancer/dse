@@ -99,23 +99,16 @@ int App::Run()
     window.Show(ShowNormal);
     auto next = std::chrono::high_resolution_clock::now();
     auto last = next;
-    while (uiLoop.Poll()) {
+    auto timer_func = [&]{
         auto now = std::chrono::high_resolution_clock::now();
-        if (now < next) {
-            continue;
-            std::this_thread::sleep_until(next);
-        }
-        next += 10000us;//16667us;
-        if (next < now) {
-            next += (now - next) % 10000us;//16667us;
-        }
         times[currentCounter] = now - last;
         currentCounter = (currentCounter + 1) & (counterCount - 1);
         last = now;
         Step();
         framebuffer.Render(nullptr);
-    }
-    return uiLoop.Result();
+    };
+    uiLoop.Periodic(10000, timer_func).detach();
+    return uiLoop.Run();
 }
 
 void App::Draw(void* buffer, dse::math::ivec2 size)
