@@ -66,7 +66,7 @@ target_sources(core PRIVATE
 
 if (${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
 FetchContent_MakeAvailable(swal)
-target_link_libraries(core PRIVATE swal::swal dwmapi uxtheme)
+target_link_libraries(core PRIVATE swal::swal dwmapi uxtheme winmm)
 target_sources(core PUBLIC
     include/dse/core/Window_win32.h
 )

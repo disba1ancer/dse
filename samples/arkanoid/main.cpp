@@ -97,10 +97,10 @@ int App::Run()
     framebuffer.SetDrawCallback({*this, fn_tag<&App::Draw>});
     using enum dse::core::WindowShowCommand;
     window.Show(ShowNormal);
-    auto next = std::chrono::high_resolution_clock::now();
+    auto next = std::chrono::steady_clock::now();
     auto last = next;
     auto timer_func = [&]{
-        auto now = std::chrono::high_resolution_clock::now();
+        auto now = std::chrono::steady_clock::now();
         times[currentCounter] = now - last;
         currentCounter = (currentCounter + 1) & (counterCount - 1);
         last = now;
@@ -125,8 +125,12 @@ void App::Draw(void* buffer, dse::math::ivec2 size)
         if (i == currentCounter) {
             color = 0xFF008000;
         }
-        manip.Fill({i, wSize.y() - us / 200}, {1, us / 200}, color);
+        manip.Fill({i, wSize.y() - us / 400}, {1, us / 400}, color);
     }
+    manip.Fill({0, wSize.y() - 10000 / 400}, {counterCount, 1}, 0xFF808080);
+    manip.Fill({0, wSize.y() - 16667 / 400}, {counterCount, 1}, 0xFF808080);
+    manip.Fill({0, wSize.y() - 20000 / 400}, {counterCount, 1}, 0xFF808080);
+    manip.Fill({0, wSize.y() - 30000 / 400}, {counterCount, 1}, 0xFF808080);
 }
 
 void App::AfterRender()

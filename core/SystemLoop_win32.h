@@ -2,8 +2,12 @@
 #define DSE_CORE_UILOOP_WIN32_H
 
 #include "dse/core/SystemLoop.h"
+#include "swal/handle.h"
+#include <map>
+#include <chrono>
 #include <swal/window.h>
 #include <dse/util/functional.h>
+#include <thread>
 
 namespace dse::core {
 
@@ -11,6 +15,7 @@ class SystemLoop_win32
 {
 public:
     SystemLoop_win32();
+    ~SystemLoop_win32();
     int  Run();
     bool RunOne();
     bool Poll();
@@ -32,24 +37,38 @@ private:
         PollEmpty,
         PollNormal,
         PostMsg = WM_USER + 16,
-        SendMsg
+        SendMsg,
+        TimerMsg,
+        TimerThreadStop = 0,
+        TimerThreadPaused = 1,
+        TimerThreadWaitNext = 2
     };
     auto PollOneInt() -> Constants;
-    struct timer_handler {
+    using clock = std::chrono::steady_clock;
+    using time_point = clock::time_point;
+    struct timer {
         void(*handler)(void*);
         union {
-            std::ptrdiff_t next;
+            std::ptrdiff_t nextFree;
             void* object;
         };
+        std::chrono::microseconds interval;
+        time_point nextTime;
     };
-    auto TimerByIndex(std::ptrdiff_t index) -> timer_handler*;
-    auto AllocTimer() -> timer_handler*;
-    auto TimerIndex(timer_handler* timer) -> std::ptrdiff_t;
-    void FreeTimer(timer_handler* timer) noexcept;
+    auto TimerByIndex(std::ptrdiff_t index) -> timer*;
+    auto AllocTimer() -> timer*;
+    auto TimerIndex(timer* timer) -> std::ptrdiff_t;
+    void FreeTimer(timer* timer) noexcept;
+    void TimerThreadFunc();
 
     MSG msg;
-    std::vector<timer_handler> timerStore;
-    std::ptrdiff_t freeTimerHandlerHead = -1;
+    std::vector<timer> timerStore;
+    std::ptrdiff_t freeTimerHead = -1;
+    std::map<time_point, std::ptrdiff_t> scheduledTimers;
+    bool timerThreadStop = false;
+    int timerThreadState = TimerThreadPaused;
+    swal::Event timerThreadEvent;
+    std::thread timerThread;
     swal::Window msgWnd;
 };
 

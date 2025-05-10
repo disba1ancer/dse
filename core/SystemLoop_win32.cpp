@@ -4,7 +4,9 @@
 
 namespace dse::core {
 
-SystemLoop_win32::SystemLoop_win32()
+SystemLoop_win32::SystemLoop_win32() :
+    timerThreadEvent(true, false),
+    timerThread(&SystemLoop_win32::TimerThreadFunc, this)
 {
     msgWnd.Create(
         0, WindowClass(), TEXT("UI Thread window"), WS_POPUP,
@@ -12,6 +14,14 @@ SystemLoop_win32::SystemLoop_win32()
         HWND_MESSAGE, NULL,
         swal::GetLocalInstance(), this
     );
+}
+
+SystemLoop_win32::~SystemLoop_win32()
+{
+    timerThreadStop = true;
+    timerThreadEvent.Set();
+    Poll();
+    timerThread.join();
 }
 
 int SystemLoop_win32::Run()
@@ -84,11 +94,18 @@ auto to_index(SystemLoopTimerHandle handle)
 
 auto SystemLoop_win32::Periodic(long long interval, void* obj, void(*func)(void*)) -> SystemLoopTimerHandle
 {
+    if (func == nullptr || interval == 0) {
+        return {};
+    }
     auto timer = AllocTimer();
     auto index = TimerIndex(timer);
     timer->handler = func;
     timer->object = obj;
-    swal::winapi_call(::SetTimer(msgWnd, index + 1, interval / 1000, nullptr));
+    timer->interval = decltype(timer->interval){interval};
+    timer->nextTime = clock::now() + timer->interval;
+    scheduledTimers.emplace(timer->nextTime, index);
+    timerThreadEvent.Set();
+    // swal::winapi_call(::SetTimer(msgWnd, index + 1, interval / 1000, nullptr));
     return to_handle(index);
 }
 
@@ -99,10 +116,11 @@ void SystemLoop_win32::StopPeriodic(SystemLoopTimerHandle handle) noexcept
         return;
     }
     auto timer = TimerByIndex(index);
+    scheduledTimers.erase(timer->nextTime);
     if (timer->handler == nullptr) {
         return;
     }
-    swal::winapi_call(::KillTimer(msgWnd, index + 1));
+    // swal::winapi_call(::KillTimer(msgWnd, index + 1));
     FreeTimer(timer);
 }
 
@@ -145,6 +163,34 @@ LRESULT SystemLoop_win32::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM
         timer.handler(timer.object);
         break;
     }
+    case TimerMsg: {
+        auto now = clock::now();
+        auto end = scheduledTimers.end();
+        auto cur = scheduledTimers.begin();
+        if (timerThreadStop) {
+            timerThreadState = TimerThreadStop;
+            return 0;
+        }
+        if (cur == end) {
+            timerThreadState = TimerThreadPaused;
+            return 0;
+        }
+        timerThreadState = TimerThreadWaitNext;
+        while (cur->first <= now) {
+            while (cur->first <= now) {
+                auto &timer = timerStore[cur->second];
+                timer.nextTime += ((now - timer.nextTime) / timer.interval + 1) * timer.interval;
+                auto id = cur->second;
+                scheduledTimers.erase(cur);
+                scheduledTimers.emplace(timer.nextTime, id);
+                timer.handler(timer.object);
+                cur = scheduledTimers.begin();
+            }
+            now = clock::now();
+            cur = scheduledTimers.begin();
+        }
+        return cur->first.time_since_epoch().count();
+    }
     default:
         return ::DefWindowProc(hWnd, message, wParam, lParam);
     }
@@ -164,33 +210,50 @@ auto SystemLoop_win32::PollOneInt() -> Constants
     return PollEmpty;
 }
 
-auto SystemLoop_win32::TimerByIndex(ptrdiff_t index) -> timer_handler*
+auto SystemLoop_win32::TimerByIndex(ptrdiff_t index) -> timer*
 {
     return timerStore.data() + index;
 }
 
-auto SystemLoop_win32::AllocTimer() -> timer_handler*
+auto SystemLoop_win32::AllocTimer() -> timer*
 {
-    if (freeTimerHandlerHead < 0) {
+    if (freeTimerHead < 0) {
         timerStore.push_back({});
         return TimerByIndex(timerStore.size() - 1);
     }
-    auto timer = TimerByIndex(freeTimerHandlerHead);
-    freeTimerHandlerHead += timer->next;
+    auto timer = TimerByIndex(freeTimerHead);
+    freeTimerHead += timer->nextFree;
     return timer;
 }
 
-auto SystemLoop_win32::TimerIndex(timer_handler* timer) -> std::ptrdiff_t
+auto SystemLoop_win32::TimerIndex(timer* timer) -> std::ptrdiff_t
 {
     return timer - timerStore.data();
 }
 
-void SystemLoop_win32::FreeTimer(timer_handler *timer) noexcept
+void SystemLoop_win32::FreeTimer(timer *timer) noexcept
 {
     auto index = TimerIndex(timer);
     timer->handler = nullptr;
-    timer->next = freeTimerHandlerHead - index;
-    freeTimerHandlerHead = index;
+    timer->nextFree = freeTimerHead - index;
+    freeTimerHead = index;
+}
+
+void SystemLoop_win32::TimerThreadFunc()
+{
+    ::timeBeginPeriod(1);
+    DWORD timeout = INFINITE;
+    while (timerThreadState) {
+        timerThreadEvent.WaitFor(timeout);
+        time_point nextTime{clock::duration{::SendMessage(msgWnd, TimerMsg, 0, 0)}};
+        if (timerThreadState == TimerThreadWaitNext) {
+            timeout = std::max(0ll, std::chrono::duration_cast<std::chrono::milliseconds>(nextTime - clock::now()).count());
+        } else {
+            timeout = INFINITE;
+        }
+        timerThreadEvent.Reset();
+    }
+    ::timeEndPeriod(1);
 }
 
 } // namespace dse::core
