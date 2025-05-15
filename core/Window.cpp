@@ -7,6 +7,7 @@
 
 #ifdef _WIN32
 #include "Window_win32.h"
+#include <dse/core/Window_win32.h>
 #endif
 
 #include <dse/core/Window.h>
@@ -34,7 +35,7 @@ void Window::Show(WindowShowCommand command)
 	return impl->Show(command);
 }
 
-const WindowData& Window::GetSysData()
+auto Window::GetSysData() -> WindowData
 {
 	return impl->GetSysData();
 }

@@ -80,7 +80,7 @@ void TextureInstance::BeginLoad()
     readyStatus.store(Pending, std::memory_order_release);
     textureProvider->LoadParameters(
         &textureParameters,
-        {*this, util::fnTag<&TextureInstance::LoadTexture>}
+        {*this, util::fn_tag<&TextureInstance::LoadTexture>}
     );
 }
 
@@ -95,7 +95,7 @@ void TextureInstance::LoadTexture(core::Status status)
     std::size_t size = std::size_t((std::abs(textureParameters.width) * format->pixelSize + 3) & (~3)) *
         std::abs(textureParameters.height) * std::abs(textureParameters.depth);
     textureData.resize(size);
-    textureProvider->LoadData(textureData.data(), 0, {*this, util::fnTag<&TextureInstance::TextureReady>});
+    textureProvider->LoadData(textureData.data(), 0, {*this, util::fn_tag<&TextureInstance::TextureReady>});
 }
 
 void TextureInstance::TextureReady(core::Status status)

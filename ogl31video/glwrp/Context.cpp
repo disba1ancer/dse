@@ -12,7 +12,7 @@
 #include "Context.h"
 
 #ifdef _WIN32
-#include <dse/core/WindowData_win32.h>
+#include <dse/core/Window_win32.h>
 #include <dwmapi.h>
 #endif
 
@@ -32,7 +32,7 @@ const int pixelFormatAtributes[] =
 	WGL_ALPHA_BITS_ARB, 8,
 	WGL_DEPTH_BITS_ARB, 24,
 	WGL_STENCIL_BITS_ARB, 8,
-	WGL_FRAMEBUFFER_SRGB_CAPABLE_ARB, FALSE,
+    WGL_FRAMEBUFFER_SRGB_CAPABLE_ARB, TRUE,
 	0, 0
 };
 #endif
@@ -89,8 +89,8 @@ Context::Context(core::Window& wnd, ContextVersion ver, ContextFlags flags) : dc
 		glrc = makeLegacyContext(dc);
 	} else {
 		if (!(wglChoosePixelFormatARB && wglCreateContextAttribsARB)) {
-			core::Window wnd;
-			Context context(wnd, ContextVersion::legacy, ContextFlags(0));
+            core::Window dummy{wnd.GetLoop()};
+            Context context(dummy, ContextVersion::legacy, ContextFlags(0));
 			try {
 				std::cout << wglGetExtensionsStringARB(dc) << std::endl;
 			} catch(...) {}
@@ -152,6 +152,9 @@ Context::ContextOwner Context::makeContext(swal::WindowDC &dc, ContextVersion ve
 	UINT formatCount;
 	int format;
 	swal::winapi_call(wglChoosePixelFormatARB(dc, pixelFormatAtributes, nullptr, 1, &format, &formatCount));
+    if (formatCount == 0) {
+        throw std::runtime_error("Pixel format not found");
+    }
 	swal::winapi_call(DescribePixelFormat(dc, format, sizeof(pfd), &pfd));
 	if (pfd.dwFlags & (PFD_GENERIC_FORMAT | PFD_GENERIC_ACCELERATED)) throw std::runtime_error("Pixel format not accelerated");
 	swal::winapi_call(SetPixelFormat(dc, format, nullptr));

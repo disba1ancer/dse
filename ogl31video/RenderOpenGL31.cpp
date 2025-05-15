@@ -15,8 +15,8 @@ RenderOpenGL31::RenderOpenGL31(core::Window& wnd) : impl(new RenderOpenGL31_impl
 
 RenderOpenGL31::~RenderOpenGL31() = default;
 
-void RenderOpenGL31::Render(const util::FunctionPtr<void()>& cb) {
-	return impl->Render(cb);
+void RenderOpenGL31::Render() {
+    return impl->Render();
 }
 
 void RenderOpenGL31::SetScene(core::Scene &scene) {

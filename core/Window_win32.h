@@ -26,7 +26,7 @@ public:
 	bool IsVisible() const;
 	bool IsFullscreen() const;
 	void Show(WindowShowCommand command = WindowShowCommand::Show);
-	auto GetSysData() -> const WindowData&;
+    auto GetSysData() -> WindowData;
 	auto Position() const -> math::ivec2;
 	void Move(const math::ivec2& pos);
 	auto Size() const -> math::ivec2;

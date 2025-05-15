@@ -9,7 +9,7 @@
 #define SUBSYS_GL_CONTEXT_H_
 
 #ifdef _WIN32
-#include <dse/core/win32.h>
+#include "../../core/win32.h"
 #endif
 #include <type_traits>
 #include "gl.h"
@@ -47,10 +47,14 @@ enum class ContextFlags {
 	ForwardCompatible = WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB,
 };
 
-} namespace dse::util {
-template <> struct enable_enum_bitwise<dse::ogl31rbe::glwrp::ContextFlags> :
+}
+
+namespace dse::util {
+template <> struct enum_bit_ops<dse::ogl31rbe::glwrp::ContextFlags> :
 	std::true_type {};
-} namespace dse::ogl31rbe::glwrp {
+}
+
+namespace dse::ogl31rbe::glwrp {
 
 class Context {
 #ifdef _WIN32

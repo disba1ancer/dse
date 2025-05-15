@@ -105,7 +105,7 @@ int App::Run()
         currentCounter = (currentCounter + 1) & (counterCount - 1);
         last = now;
         Step();
-        framebuffer.Render(nullptr);
+        framebuffer.Render();
     };
     uiLoop.Periodic(10000, timer_func).detach();
     return uiLoop.Run();
@@ -148,7 +148,7 @@ void App::OnClose()
 
 void App::OnResize()
 {
-    framebuffer.Render(nullptr);
+    framebuffer.Render();
 }
 
 void App::OnMouseMove(int x, int y)

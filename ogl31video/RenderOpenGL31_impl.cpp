@@ -11,8 +11,6 @@
 #include <glbinding/gl31/gl.h>
 #include <glbinding/gl31ext/gl.h>
 #include "RenderOpenGL31_impl.h"
-#include <dse/core/win32.h>
-#include <dse/core/WindowData_win32.h>
 #include "glwrp/gl.h"
 #include <dse_shaders/gl31.h>
 #include "gl31/binds.h"
@@ -289,7 +287,7 @@ auto RenderOpenGL31_impl::GetTextureInstance(
     return result;
 }
 
-void RenderOpenGL31_impl::OnPaint(core::WndEvtDt) {
+void RenderOpenGL31_impl::OnPaint(HWND hWnd, WPARAM, LPARAM) {
 #ifdef DSE_MULTISAMPLE
     glBindFramebuffer(GL_FRAMEBUFFER, renderFBOMSAA);
 #else
@@ -305,11 +303,6 @@ void RenderOpenGL31_impl::OnPaint(core::WndEvtDt) {
     CleanupMeshes();
 
     swal::Wnd(wnd->GetSysData().hWnd).ValidateRect();
-    if (requested.load(std::memory_order_acquire)) {
-        auto pool = core::ThreadPool::GetCurrentPool();
-        pool->Schedule(renderCallback);
-        requested.store(false, std::memory_order_release);
-    }
 }
 
 void RenderOpenGL31_impl::PrepareSamplers() {
@@ -323,11 +316,10 @@ void RenderOpenGL31_impl::PrepareSamplers() {
     glSamplerParameteri(drawNormal, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 }
 
-RenderOpenGL31_impl::RenderOpenGL31_impl(core::Window& wnd) : wnd(&wnd),
-        paintCon(wnd.SubscribePaintEvent(util::FunctionPtr{*this, util::fnTag<&RenderOpenGL31_impl::OnPaint>})),
-        sizeCon(wnd.SubscribeResizeEvent(util::FunctionPtr{*this, util::fnTag<&RenderOpenGL31_impl::OnResize>})),
-        context(wnd, glwrp::ContextVersion::gl31, glwrp::ContextFlags::Debug),
-        cleanupPointer(meshes.end())
+RenderOpenGL31_impl::RenderOpenGL31_impl(core::Window& wnd) :
+    wnd(&wnd),
+    context(wnd, glwrp::ContextVersion::gl31, glwrp::ContextFlags::Debug),
+    cleanupPointer(meshes.end())
 {
     std::cout << glGetString(GL_VERSION) << "\n";
     GLint numExts;
@@ -389,18 +381,16 @@ void RenderOpenGL31_impl::RebuildViewport(unsigned width, unsigned height)
     RebuildSrgbFrameBuffer();
 }
 
-void RenderOpenGL31_impl::OnResize(core::WndEvtDt, int width, int height,
-        core::WindowShowCommand) {
-    RebuildViewport(width, height);
+void RenderOpenGL31_impl::OnResize()
+{
+    auto size = wnd->Size();
+    RebuildViewport(size.x(), size.y());
 }
 
-void RenderOpenGL31_impl::Render(const util::FunctionPtr<void()>& cb) {
-    while (requested.load(std::memory_order_acquire));
-    renderCallback = cb;
-    requested.store(true, std::memory_order_release);
+void RenderOpenGL31_impl::Render() {
 #ifdef _WIN32
-    auto hWnd = wnd->GetSysData().hWnd;
-    InvalidateRect(hWnd, nullptr, FALSE);
+    swal::Wnd wnd = this->wnd->GetSysData().hWnd;
+    wnd.InvalidateRect(false);
 //    UpdateWindow(hWnd);
 #endif
 }

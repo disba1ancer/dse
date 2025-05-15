@@ -31,9 +31,8 @@
 
 #include <stdexcept>
 #ifdef _WIN32
-#include <dse/core/win32.h>
+#include "../../core/win32.h"
 #endif
-#include <algorithm>
 
 template <typename Callback> class GLImportedFunction;
 

@@ -12,7 +12,7 @@ FrameBuffer_win32::FrameBuffer_win32(core::Window& wnd) :
 FrameBuffer_win32::~FrameBuffer_win32()
 {}
 
-void FrameBuffer_win32::Render(util::function_ptr<void ()> callback)
+void FrameBuffer_win32::Render()
 {
     // while (sync.test_and_set(std::memory_order_relaxed));
     // std::atomic_thread_fence(std::memory_order_acquire);

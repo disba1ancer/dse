@@ -28,12 +28,14 @@
 #include <dse_config.h>
 #include <dse/core/ThreadPool.h>
 #include "gl31/TextureInstance.h"
+#include "../../core/win32.h"
+#include <dse/core/Window_win32.h>
 
 namespace dse::ogl31rbe {
 
 class RenderOpenGL31_impl {
-    void OnPaint(core::WndEvtDt);
-    void OnResize(core::WndEvtDt, int width, int height, core::WindowShowCommand);
+    void OnPaint(HWND hWnd, WPARAM, LPARAM);
+    void OnResize();
     void RebuildSrgbFrameBuffer();
     void PrepareShaders();
     void RebuildViewport(unsigned width, unsigned height);
@@ -52,7 +54,7 @@ public:
     RenderOpenGL31_impl(RenderOpenGL31_impl &&other) = delete;
     RenderOpenGL31_impl& operator=(const RenderOpenGL31_impl &other) = delete;
     RenderOpenGL31_impl& operator=(RenderOpenGL31_impl &&other) = delete;
-    void Render(const util::FunctionPtr<void()>& cb);
+    void Render();
     void SetScene(dse::core::Scene& scene);
     void SetCamera(dse::core::Camera& camera);
     auto GetObjectInstance(core::Object* object) -> gl31::ObjectInstance*;
@@ -61,8 +63,9 @@ public:
     auto GetTextureInstance(core::ITextureDataProvider* texture, bool withAcquire = false) -> gl31::TextureInstance*;
 private:
     core::Window* wnd;
-    notifier::connection<core::Window::PaintHandler> paintCon;
-    notifier::connection<core::Window::ResizeHandler> sizeCon;
+    using howner = util::handle_owner<core::WindowEventHandle>;
+    howner hPaint = wnd->Register<core::WindowEvent::System + WM_PAINT>({*this, util::fn_tag<&RenderOpenGL31_impl::OnPaint>});
+    howner hResize = wnd->Register<core::WindowEvent::Resize>({*this, util::fn_tag<&RenderOpenGL31_impl::OnResize>});
     notifier::connection<core::Scene::ChangeEvent> scnChangeCon;
     glwrp::Context context;
     glwrp::VAO vao;
@@ -94,8 +97,6 @@ private:
     glwrp::Sampler postProcDepth = 0;
     glwrp::Sampler drawDiffuse = 0;
     glwrp::Sampler drawNormal = 0;
-    util::FunctionPtr<void()> renderCallback;
-    std::atomic_bool requested = false;
     std::unordered_map<core::IMesh*, gl31::MeshInstance>::iterator cleanupPointer;
 };
 

@@ -107,9 +107,9 @@ void Window_win32::Show(WindowShowCommand command)
 }
 
 auto Window_win32::GetSysData()
--> const WindowData&
+-> WindowData
 {
-	return *reinterpret_cast<const WindowData*>(wnd.get_ptr());
+    return {wnd};
 }
 
 auto Window_win32::Position() const -> math::ivec2

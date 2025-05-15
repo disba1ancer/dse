@@ -18,7 +18,7 @@ public:
     FrameBuffer_win32& operator=(const FrameBuffer_win32&) = delete;
     FrameBuffer_win32& operator=(FrameBuffer_win32&&) = delete;
     ~FrameBuffer_win32();
-    void Render(util::function_ptr<void()> callback);
+    void Render();
     void SetDrawCallback(util::function_ptr<void(void*, math::ivec2)> callback);
 private:
     void OnPaint(HWND hWnd, WPARAM, LPARAM);

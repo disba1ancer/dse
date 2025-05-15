@@ -15,8 +15,8 @@ void dse::core::setMouseCursorPos(const math::ivec2 &pos) {
 }
 
 void dse::core::SetMouseCursorPosWndRel(const math::ivec2 &pos, Window &wnd) {
-	auto& wndData = wnd.GetSysData();
+    swal::Wnd hWnd = wnd.GetSysData().hWnd;
 	POINT pt = { 0, 0 };
-	swal::winapi_call(::ClientToScreen(wndData.hWnd, &pt));
+    swal::winapi_call(::ClientToScreen(hWnd, &pt));
 	setMouseCursorPos(math::ivec2{pt.x, pt.y} + pos);
 }

@@ -46,4 +46,4 @@ FILES
 )
 
 install(TARGETS headers EXPORT headers FILE_SET HEADERS)
-install(EXPORT headers NAMESPACE dse:: DESTINATION ./headers)
+install(EXPORT headers NAMESPACE dse:: DESTINATION headers)

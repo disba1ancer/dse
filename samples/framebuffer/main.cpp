@@ -130,7 +130,7 @@ void App::OnClose()
 
 void App::OnResize()
 {
-    framebuffer.Render(nullptr);
+    framebuffer.Render();
 }
 
 void App::OnMouseMove(int x, int y)
@@ -160,7 +160,7 @@ auto App::CoRun(eager_task_t) -> std::future<void>
     co_await ImageAwaitable{font, loader};
     co_await ImageAwaitable{wall, loader2};
     window.Show();
-    framebuffer.Render(nullptr);
+    framebuffer.Render();
     co_return;
 }
 
