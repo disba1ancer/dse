@@ -23,17 +23,17 @@ namespace {
 #ifdef _WIN32
 const int pixelFormatAtributes[] =
 {
-	WGL_DRAW_TO_WINDOW_ARB, TRUE,
-	WGL_SUPPORT_OPENGL_ARB, TRUE,
-	WGL_ACCELERATION_ARB, WGL_FULL_ACCELERATION_ARB,
-	WGL_DOUBLE_BUFFER_ARB, TRUE,
-	WGL_PIXEL_TYPE_ARB, WGL_TYPE_RGBA_ARB,
-	WGL_COLOR_BITS_ARB, 32,
-	WGL_ALPHA_BITS_ARB, 8,
-	WGL_DEPTH_BITS_ARB, 24,
-	WGL_STENCIL_BITS_ARB, 8,
+    WGL_DRAW_TO_WINDOW_ARB, TRUE,
+    WGL_SUPPORT_OPENGL_ARB, TRUE,
+    WGL_ACCELERATION_ARB, WGL_FULL_ACCELERATION_ARB,
+    WGL_DOUBLE_BUFFER_ARB, TRUE,
+    WGL_PIXEL_TYPE_ARB, WGL_TYPE_RGBA_ARB,
+    WGL_COLOR_BITS_ARB, 32,
+    WGL_ALPHA_BITS_ARB, 8,
+    WGL_DEPTH_BITS_ARB, 24,
+    WGL_STENCIL_BITS_ARB, 8,
     WGL_FRAMEBUFFER_SRGB_CAPABLE_ARB, TRUE,
-	0, 0
+    0, 0
 };
 #endif
 
@@ -116,8 +116,8 @@ void Context::SwapBuffers() {
 }
 
 void Context::enableVSync(int val) {
-	vsync = val;
-//	wglSwapIntervalEXT(val);
+    vsync = val;
+    // wglSwapIntervalEXT(val);
 }
 
 auto Context::getProcAddress(const char *name) -> void(*)() {

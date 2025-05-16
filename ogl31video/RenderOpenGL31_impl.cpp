@@ -345,7 +345,7 @@ RenderOpenGL31_impl::RenderOpenGL31_impl(core::Window& wnd) :
     glGetIntegerv(GL_MAX_TEXTURE_SIZE, &val);
     std::cout << "\nGL_MAX_TEXTURE_SIZE: " << val << std::endl;
 
-    context.enableVSync(1);
+    // context.enableVSync(1);
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
 #ifdef DSE_MULTISAMPLE
@@ -355,7 +355,7 @@ RenderOpenGL31_impl::RenderOpenGL31_impl(core::Window& wnd) :
     PrepareShaders();
     PrepareSamplers();
 
-    auto size = wnd.Size();
+    auto size = wnd.SurfaceSize();
     RebuildViewport(size.x(), size.y());
 
     glBindVertexArray(vao);
@@ -383,7 +383,7 @@ void RenderOpenGL31_impl::RebuildViewport(unsigned width, unsigned height)
 
 void RenderOpenGL31_impl::OnResize()
 {
-    auto size = wnd->Size();
+    auto size = wnd->SurfaceSize();
     RebuildViewport(size.x(), size.y());
 }
 

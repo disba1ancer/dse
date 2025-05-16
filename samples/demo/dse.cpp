@@ -53,15 +53,15 @@ using dse::core::OpenMode;
 using dse::core::BasicBitmapLoader;
 
 //ExecutionThread mainThread;
-ThreadPool thrPool;
+// ThreadPool thrPool;
 IOContext context;
 
-auto mainTask(Window& window, RenderOpenGL31& render) -> dse::util::task<void>;
+// auto mainTask(Window& window, RenderOpenGL31& render) -> dse::util::task<void>;
 
-void selfCycle(void*) {
-    std::printf("cycle\n");
-    thrPool.Schedule({nullptr, selfCycle});
-}
+// void selfCycle(void*) {
+//     std::printf("cycle\n");
+//     thrPool.Schedule({nullptr, selfCycle});
+// }
 
 int main(int argc, char* argv[])
 {
@@ -69,7 +69,7 @@ int main(int argc, char* argv[])
     Window window{loop};
     RenderOpenGL31 render(window);
     window.Show();
-    SetMouseCursorPosWndRel(window.Size() / 2, window);
+    SetMouseCursorPosWndRel(window.SurfaceSize() / 2, window);
     auto timerIO = [](){
         context.Poll();
     };
@@ -107,7 +107,7 @@ int main(int argc, char* argv[])
     auto closeCon = window.Register<Close>(onClose);
     float pitch = dse::math::PI * 0.5, yaw = 0.f;
     float spd = 0.f, sdspd = 0.f;
-    auto onKey = [&spd, &sdspd, &loop](KeyboardKeyState cmd, int key){
+    auto onKey = [&spd, &sdspd, &loop, &window](KeyboardKeyState cmd, int key){
         constexpr auto speed = 1.f / 8;
         switch (key) {
         case 'W':
@@ -131,6 +131,16 @@ int main(int argc, char* argv[])
                 loop.Stop(0);
             }
             break;
+        case 'F':
+            if (cmd == KeyboardKeyState::UP) {
+                break;
+            }
+            if (window.IsFullscreen()) {
+                window.Show(dse::core::WindowShowCommand::ShowRestored);
+            } else {
+                window.Show(dse::core::WindowShowCommand::ShowFullScreen);
+            }
+            break;
         default:
             std::printf("%i %i\n", static_cast<int>(cmd), key);
             std::fflush(stdout);
@@ -139,7 +149,7 @@ int main(int argc, char* argv[])
     auto keyCon = window.Register<Key>(onKey);
     ivec2 moffset = { 0, 0 };
     auto onMouseMove = [&window, &moffset](int x, int y) {
-        auto center = window.Size() / 2;
+        auto center = window.SurfaceSize() / 2;
         moffset += ivec2{x, y} - center;
         SetMouseCursorPosWndRel(center, window);
     };
@@ -200,15 +210,15 @@ int main(int argc, char* argv[])
 //    return thrPool.Run(PoolCaps::UI);
 }
 
-auto mainTask(Window& window, RenderOpenGL31& render) -> dse::util::task<void>
-{
-   /*File file(thrPool, u8"test.txt", OpenMode::Read);
-   std::byte buf[4096];
-   if (file.IsValid()) {
-       auto [transfered, error] = co_await file.ReadAsync(buf, std::size(buf));
-       std::printf("%.*s\n", int(transfered), reinterpret_cast<char*>(buf));
-   } else {
-       std::printf("%s%s\n", "ERROR: ", file.Status().message().data());
-   }
-   std::fflush(stdout);*/
-}
+// auto mainTask(Window& window, RenderOpenGL31& render) -> dse::util::task<void>
+// {
+//    File file(thrPool, u8"test.txt", OpenMode::Read);
+//    std::byte buf[4096];
+//    if (file.IsValid()) {
+//        auto [transfered, error] = co_await file.ReadAsync(buf, std::size(buf));
+//        std::printf("%.*s\n", int(transfered), reinterpret_cast<char*>(buf));
+//    } else {
+//        std::printf("%s%s\n", "ERROR: ", file.Status().message().data());
+//    }
+//    std::fflush(stdout);
+// }
