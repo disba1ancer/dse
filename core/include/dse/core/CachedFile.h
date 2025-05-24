@@ -496,7 +496,7 @@ private:
     }
 
     File file;
-    static constexpr auto CacheSize = 8192;
+    static constexpr auto CacheSize = 65536;
     std::unique_ptr<std::byte[]> buffer =
         std::make_unique<std::byte[]>(CacheSize);
     using IndexType = std::remove_cv_t<decltype(CacheSize)>;

@@ -55,7 +55,6 @@ class App {
 public:
     int Run();
 private:
-    void TimerIO();
     void OnClose();
     void OnKey(KeyboardKeyState cmd, int key);
     void OnMouseMove(int x, int y);
@@ -92,7 +91,6 @@ int App::Run()
 {
     window.Show();
     SetMouseCursorPosWndRel(window.SurfaceSize() / 2, window);
-    loop.Periodic(100000, {*this, fn_tag<&App::TimerIO>}).detach();
     mapMat.SetNormalMap(&mapNorm);
     cube.SetPos({-1.f, -1.f, -1.f});
     //cube1.setScale({.25f, .25f, .25f});
@@ -108,11 +106,6 @@ int App::Run()
     render.SetCamera(cam);
     loop.Periodic(10000, {*this, fn_tag<&App::DoStep>}).detach();
     return loop.Run();
-}
-
-void App::TimerIO()
-{
-    context.Poll();
 }
 
 void App::OnClose()
@@ -170,6 +163,7 @@ void App::OnMouseMove(int x, int y)
 
 void App::DoStep()
 {
+    context.Poll();
     using namespace dse::math;
     auto angle = 1.f;
     auto axe1 = norm(vec3{0.f, 0.f, 1.f}) * std::sin(PI * angle / 360.f);
@@ -189,9 +183,6 @@ void App::DoStep()
     auto camrot = qmul(vec4{ 0, 0, std::sin(yawHalf), std::cos(yawHalf) }, vec4{ std::sin(pitchHalf), 0, 0, std::cos(pitchHalf) });
     cam.setRot(camrot);
     moffset = vec2{0, 0};
-    //renderTask.reset(make_handler<&RenderOpenGL31::renderTask>(render));
-    //renderTask.then([&stepTask]{ thrPool.schedule(stepTask); });
-    //thrPool.schedule(renderTask);
 
     render.Render();
 
