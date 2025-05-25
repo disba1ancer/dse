@@ -138,7 +138,7 @@ void App::OnKey(KeyboardKeyState cmd, int key)
             loop.Stop(0);
         }
         break;
-    case 'F':
+    case 122:
         if (cmd == KeyboardKeyState::UP) {
             break;
         }

@@ -20,7 +20,9 @@ SystemLoop_win32::~SystemLoop_win32()
 {
     timerThreadStop = true;
     timerThreadEvent.Set();
-    Poll();
+    while (timerThreadStop) {
+        Poll();
+    }
     timerThread.join();
 }
 
@@ -168,6 +170,7 @@ LRESULT SystemLoop_win32::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM
         auto end = scheduledTimers.end();
         auto cur = scheduledTimers.begin();
         if (timerThreadStop) {
+            timerThreadStop = false;
             timerThreadState = TimerThreadStop;
             return 0;
         }
