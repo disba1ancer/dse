@@ -19,7 +19,7 @@ void RenderOpenGL31::Render() {
     return impl->Render();
 }
 
-void RenderOpenGL31::SetScene(core::Scene &scene) {
+void RenderOpenGL31::SetScene(core::IScene* scene) {
 	impl->SetScene(scene);
 }
 

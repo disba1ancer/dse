@@ -5,13 +5,12 @@ using namespace gl;
 
 namespace dse::ogl31rbe::gl31 {
 
-MaterialInstance::MaterialInstance(core::Material* material) :
+MaterialInstance::MaterialInstance(core::IMaterial *material) :
     material(material),
-    lastVersion(0),
     ubo(false)
 {}
 
-MaterialInstance::MaterialInstance(RenderOpenGL31_impl* render, core::Material* material) :
+MaterialInstance::MaterialInstance(RenderOpenGL31_impl* render, core::IMaterial *material) :
     MaterialInstance(material)
 {
     Reload(render);
@@ -31,25 +30,25 @@ void MaterialInstance::Reload(RenderOpenGL31_impl* render)
     }
     ubo.bind();
     glBufferSubData(ubo.target, 0, sizeof(data), &data);
-    auto texture = material->GetTexture();
-    if (texture) {
-        diffuseInstance.reset(render->GetTextureInstance(texture, true));
-    }
-    texture = material->GetNormalMap();
-    if (texture) {
-        normalMapInstance.reset(render->GetTextureInstance(texture, true));
-    }
-    lastVersion = material->GetVersion();
+    auto& texture = material->GetDiffuseTexture();
+    //if (texture) {
+        diffuseInstance.reset(render->GetTextureInstance(&texture, true));
+    //}
+    auto& normalMap = material->GetNormalMapTexture();
+    //if (texture) {
+        normalMapInstance.reset(render->GetTextureInstance(&normalMap, true));
+    //}
+    valid = true;
 }
 
 void MaterialInstance::CheckAndSync(RenderOpenGL31_impl* render)
 {
-    if (ubo == 0 || lastVersion != material->GetVersion()) {
+    if (ubo == 0 || !valid) {
         Reload(render);
     }
 }
 
-bool MaterialInstance::IsInstanceOf(core::Material* material) const
+bool MaterialInstance::IsInstanceOf(core::IMaterial *material) const
 {
     return material == this->material;
 }
@@ -67,6 +66,11 @@ auto MaterialInstance::GetDiffuseTextureInstance(RenderOpenGL31_impl* render) ->
 auto MaterialInstance::GetNormalmapInstance(RenderOpenGL31_impl *render) -> TextureInstance*
 {
     return normalMapInstance.get();
+}
+
+void MaterialInstance::Invalidate()
+{
+    valid = false;
 }
 
 void MaterialInstance::Deleter::operator()(MaterialInstance* inst) const

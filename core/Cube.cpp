@@ -6,14 +6,13 @@
  */
 
 #include <dse/core/Cube.h>
-#include <cstring>
 #include <iterator>
 #include <array>
 
 namespace dse::core {
 
 namespace {
-static const auto vertices = std::to_array<IMesh::vertex>({
+static const auto vertices = std::to_array<IMesh2::Vertex>({
         {{ 1, -1, -1}, { 1, 0, 0}, {0, 1, 0}, {0, 0}, 1},//+x
         {{ 1, -1,  1}, { 1, 0, 0}, {0, 1, 0}, {0, 1}, 1},//1
         {{ 1,  1, -1}, { 1, 0, 0}, {0, 1, 0}, {1, 0}, 1},//2
@@ -53,9 +52,9 @@ static const auto elements = std::to_array<std::uint32_t>({
         20, 21, 22, 23, 22, 21,//-z
 });
 
-using DT = IMesh::Draw;
+using DT = IMesh2::Draw;
 
-static const auto subranges = std::to_array<IMesh::submesh_range>({
+static const auto subranges = std::to_array<IMesh2::SubmeshRange>({
         {0, 36, DT::Triangles},//+x
 //        {6, 12},//-x
 //        {12, 18},//+y
@@ -65,33 +64,33 @@ static const auto subranges = std::to_array<IMesh::submesh_range>({
 });
 }
 
-void Cube::LoadMeshParameters(mesh_parameters* parameters, util::function_ptr<void ()> callback)
+auto Cube::LoadMeshParameters(MeshParameters* parameters, util::function_ptr<void(Status)> callback) -> Status
 {
     *parameters = { std::size(vertices), std::size(elements), std::size(subranges) };
-    callback();
+    return Make(status::Code::Success);
 }
 
-void Cube::LoadSubmeshRanges(submesh_range* ranges, util::function_ptr<void ()> callback)
+auto Cube::LoadSubmeshRanges(SubmeshRange* ranges, util::function_ptr<void(Status)> callback) -> Status
 {
     std::copy(std::begin(subranges), std::end(subranges), ranges);
-    callback();
+    return Make(status::Code::Success);
 }
 
-void Cube::LoadVertices(vertex* vertexBuffer, util::function_ptr<void ()> callback)
+auto Cube::LoadVertices(Vertex* vertexBuffer, util::function_ptr<void(Status)> callback) -> Status
 {
     std::copy(std::begin(vertices), std::end(vertices), vertexBuffer);
-    callback();
+    return Make(status::Code::Success);
 }
 
-void Cube::LoadElements(uint32_t* elementBuffer, util::function_ptr<void ()> callback)
+auto Cube::LoadElements(uint32_t* elementBuffer, util::function_ptr<void(Status)> callback) -> Status
 {
     std::copy(std::begin(elements), std::end(elements), elementBuffer);
-    callback();
+    return Make(status::Code::Success);
 }
 
-unsigned Cube::GetVersion()
+auto Cube::GetResourceManager() -> IResourceManager&
 {
-    return 1;
+    return StaticResourceManager::instance;
 }
 
 } /* namespace dse::core */

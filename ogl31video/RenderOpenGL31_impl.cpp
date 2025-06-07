@@ -107,16 +107,26 @@ void RenderOpenGL31_impl::DrawPostprocess() {
     glDepthFunc(GL_LESS);
 }
 
-void RenderOpenGL31_impl::OnSceneChanged(core::SceneChangeEventType act, core::Object* obj) {
-    switch (act) {
-        case decltype(act)::ObjectCreate: {
-            auto& inst = objects[obj];
-            inst = gl31::ObjectInstance(obj);
-        } break;
-        case decltype(act)::ObjectDestroy: {
-            objects.erase(obj);
-        } break;
-    }
+void RenderOpenGL31_impl::OnSceneObjectAdd(core::IScene&, core::ISceneObject &obj)
+{
+    auto& inst = objects[&obj];
+    inst = gl31::ObjectInstance(&obj);
+}
+
+void RenderOpenGL31_impl::OnSceneObjectMod(core::IScene&, core::ISceneObject &obj)
+{
+    objects[&obj].Invalidate();
+}
+
+void RenderOpenGL31_impl::OnSceneObjectDel(core::IScene&, core::ISceneObject &obj)
+{
+    objects.erase(&obj);
+}
+
+void RenderOpenGL31_impl::OnSceneObjectsClr(core::IScene&)
+{
+    objects.clear();
+    FillInstances();
 }
 
 void RenderOpenGL31_impl::CleanupMeshes()
@@ -151,10 +161,10 @@ void RenderOpenGL31_impl::DrawScene()
     if (!scene) {
         return;
     }
-    for (auto& obj : scene->objects()) {
-        auto inst = GetObjectInstance(&obj);
-        inst->CheckAndSync(this);
-        auto mesh = inst->GetMeshInstance();
+    for (auto& [obj, inst] : objects) {
+        //auto inst = GetObjectInstance(&obj);
+        inst.CheckAndSync(this);
+        auto mesh = inst.GetMeshInstance();
         if (!mesh) {
             continue;
         }
@@ -162,12 +172,12 @@ void RenderOpenGL31_impl::DrawScene()
             continue;
         }
         glBindVertexArray(mesh->GetVAO());
-        auto& ubo = inst->GetUBO();
+        auto& ubo = inst.GetUBO();
         glBindBufferBase(ubo.target, UniformIndices::ObjectInstanceBind, ubo);
         auto subCount = mesh->GetSubmeshCount();
         for (std::size_t i = 0; i < subCount; ++i) {
             auto [start, end, drawType] = mesh->GetSubmeshRange(i);
-            auto materialInst = inst->GetMaterialInstance(this, i);
+            auto materialInst = inst.GetMaterialInstance(this, i);
             if (materialInst) {
                 materialInst->CheckAndSync(this);
                 auto& matUbo = materialInst->GetUBO();
@@ -196,9 +206,9 @@ void RenderOpenGL31_impl::DrawScene()
     }
 }
 
-auto RenderOpenGL31_impl::DrawTypeToGL(core::IMesh::Draw drawType) -> gl::GLenum
+auto RenderOpenGL31_impl::DrawTypeToGL(core::IMesh2::Draw drawType) -> gl::GLenum
 {
-    using DT = core::IMesh::Draw;
+    using DT = core::IMesh2::Draw;
     switch (drawType) {
     case DT::Triangles:
         return GL_TRIANGLES;
@@ -210,14 +220,20 @@ auto RenderOpenGL31_impl::DrawTypeToGL(core::IMesh::Draw drawType) -> gl::GLenum
 
 void RenderOpenGL31_impl::FillInstances()
 {
-    for (auto& object : (scene->objects())) {
-        auto& objInst = objects[&object];
-        objInst = gl31::ObjectInstance(this, &object);
-    }
-//    scnChangeCon = scene->subscribeChangeEvent(util::StaticMemFn<&RenderOpenGL31_impl::OnSceneChanged>(*this));
+    struct Visitor : core::ISceneVisitor {
+        Visitor(RenderOpenGL31_impl* render) : render(render) {}
+        void Visit(core::ISceneObject& obj) override
+        {
+            render->OnSceneObjectAdd(*render->scene, obj);
+        }
+        void Visit(core::ISceneLight &obj) override {}
+        RenderOpenGL31_impl* render;
+    };
+    Visitor visitor(this);
+    scene->VisitObjects(visitor);
 }
 
-auto RenderOpenGL31_impl::GetMeshInstance(core::IMesh* mesh, bool withAcquire) -> gl31::MeshInstance*
+auto RenderOpenGL31_impl::GetMeshInstance(core::IMesh2 *mesh, bool withAcquire) -> gl31::MeshInstance*
 {
     gl31::MeshInstance* result;
     if (!mesh) return nullptr;
@@ -240,7 +256,7 @@ auto RenderOpenGL31_impl::GetMeshInstance(core::IMesh* mesh, bool withAcquire) -
     return result;
 }
 
-auto RenderOpenGL31_impl::GetMaterialInstance(core::Material* material, bool withAcquire) -> gl31::MaterialInstance*
+auto RenderOpenGL31_impl::GetMaterialInstance(core::IMaterial *material, bool withAcquire) -> gl31::MaterialInstance*
 {
     gl31::MaterialInstance* result;
     if (!material) return nullptr;
@@ -264,7 +280,7 @@ auto RenderOpenGL31_impl::GetMaterialInstance(core::Material* material, bool wit
 }
 
 auto RenderOpenGL31_impl::GetTextureInstance(
-    core::ITextureDataProvider* texture, bool withAcquire
+    core::ITexture* texture, bool withAcquire
 ) -> gl31::TextureInstance* {
     gl31::TextureInstance* result;
     if (!texture) return nullptr;
@@ -395,10 +411,20 @@ void RenderOpenGL31_impl::Render() {
 #endif
 }
 
-void RenderOpenGL31_impl::SetScene(dse::core::Scene &scene) {
-    scnChangeCon.unsubscribe();
-    this->scene = &scene;
-    objects.clear();
+void RenderOpenGL31_impl::SetScene(dse::core::IScene* scene) {
+    if (scene == nullptr) {
+        hSceneObjectAdd = {};
+        hSceneObjectMod = {};
+        hSceneObjectDel = {};
+        hSceneObjectsClr = {};
+        return;
+    }
+    this->scene = scene;
+    OnSceneObjectsClr(*scene);
+    hSceneObjectAdd = scene->SubscribeEvent<core::SceneEvent::ObjectCreated>({*this, util::fn_tag<&RenderOpenGL31_impl::OnSceneObjectAdd>});
+    hSceneObjectMod = scene->SubscribeEvent<core::SceneEvent::ObjectModified>({*this, util::fn_tag<&RenderOpenGL31_impl::OnSceneObjectMod>});
+    hSceneObjectDel = scene->SubscribeEvent<core::SceneEvent::ObjectRemoved>({*this, util::fn_tag<&RenderOpenGL31_impl::OnSceneObjectDel>});
+    hSceneObjectsClr = scene->SubscribeEvent<core::SceneEvent::InvalidateObjects>({*this, util::fn_tag<&RenderOpenGL31_impl::OnSceneObjectsClr>});
 }
 
 void RenderOpenGL31_impl::PrepareShaders() {
@@ -498,7 +524,7 @@ void RenderOpenGL31_impl::SetCamera(dse::core::Camera &camera) {
     this->camera = &camera;
 }
 
-auto RenderOpenGL31_impl::GetObjectInstance(core::Object* object) -> gl31::ObjectInstance*
+auto RenderOpenGL31_impl::GetObjectInstance(core::ISceneObject *object) -> gl31::ObjectInstance*
 {
     auto it = objects.find(object);
     if (it == objects.end()) {

@@ -93,15 +93,15 @@ auto BasicBitmapLoader::LoadData(void* recvBuffer, unsigned lod, util::function_
     return Make(status::Code::PendingOperation);
 }
 
-auto BasicBitmapLoader::GetVersion() -> unsigned
+auto BasicBitmapLoader::GetResourceManager() -> IResourceManager&
 {
-    return 1;
+    return StaticResourceManager::instance;
 }
 
 auto BasicBitmapLoader::LoadParametersInternal(TextureParameters* parameters)
 -> util::auto_task<Status>
 {
-    if (format == Unsupported) {
+    if (format == PixelFormat::Unsupported) {
         std::uint_least16_t sign;
         co_await bitmapFile.ReadAsync(reinterpret_cast<std::byte*>(&sign), sizeof(sign));
         if ((sign & 0xFFFF) != 0x4D42) {
@@ -116,10 +116,10 @@ auto BasicBitmapLoader::LoadParametersInternal(TextureParameters* parameters)
             co_return Make(status::Code::Unexpected); // Compression is not supported
         }
         if (bitmapMeta.info.bpp == 24) {
-            format = BGR8;
+            format = PixelFormat::BGR8;
         } else if (bitmapMeta.info.bpp == 32) {
             if (bitmapMeta.info.compression != BMCOMPR_BITFIELDS) {
-                format = BGRX8;
+                format = PixelFormat::BGRX8;
             } else {
                 ColorMasks clMasks;
                 co_await bitmapFile.ReadAsync(reinterpret_cast<std::byte*>(&clMasks), sizeof(clMasks));
@@ -129,28 +129,28 @@ auto BasicBitmapLoader::LoadParametersInternal(TextureParameters* parameters)
                     clMasks.blueMask == 0xFF &&
                     clMasks.alphaMask == 0xFF000000
                 ) {
-                    format = BGRA8;
+                    format = PixelFormat::BGRA8;
                 } else if (
                     clMasks.redMask == 0xFF0000 &&
                     clMasks.greenMask == 0xFF00 &&
                     clMasks.blueMask == 0xFF &&
                     clMasks.alphaMask == 0
                 ) {
-                    format = BGRX8;
+                    format = PixelFormat::BGRX8;
                 } else if (
                     clMasks.redMask == 0xFF &&
                     clMasks.greenMask == 0xFF00 &&
                     clMasks.blueMask == 0xFF0000 &&
                     clMasks.alphaMask == 0xFF000000
                 ) {
-                    format = RGBA8;
+                    format = PixelFormat::RGBA8;
                 } else if (
                     clMasks.redMask == 0xFF &&
                     clMasks.greenMask == 0xFF00 &&
                     clMasks.blueMask == 0xFF0000 &&
                     clMasks.alphaMask == 0
                 ) {
-                    format = RGBX8;
+                    format = PixelFormat::RGBX8;
                 } else {
                     co_return Make(status::Code::Unexpected); // Unsupported 32 bit format
                 }
@@ -158,7 +158,7 @@ auto BasicBitmapLoader::LoadParametersInternal(TextureParameters* parameters)
         } else {
             co_return Make(status::Code::Unexpected); // Only 24 and 32 BPP supported
         }
-        format = PixelFormat(format + ToSRGB * !linear);
+        format = PixelFormat(std::to_underlying(format) + std::to_underlying(PixelFormat::ToSRGB) * !linear);
         width = bitmapMeta.info.width;
         height = bitmapMeta.info.height;
         pixelsPos = bitmapMeta.header.bitmapDataStart;
@@ -177,16 +177,16 @@ auto BasicBitmapLoader::LoadDataInternal(void* recvBuffer, unsigned lod)
     bitmapFile.Seek(pixelsPos);
     int bytePerPix;
     switch (format) {
-    case BGR8:
-    case BGR8sRGB: bytePerPix = 3; break;
-    case BGRA8:
-    case BGRX8:
-    case RGBA8:
-    case RGBX8:
-    case BGRA8sRGB:
-    case BGRX8sRGB:
-    case RGBA8sRGB:
-    case RGBX8sRGB: bytePerPix = 4; break;
+    case PixelFormat::BGR8:
+    case PixelFormat::BGR8sRGB: bytePerPix = 3; break;
+    case PixelFormat::BGRA8:
+    case PixelFormat::BGRX8:
+    case PixelFormat::RGBA8:
+    case PixelFormat::RGBX8:
+    case PixelFormat::BGRA8sRGB:
+    case PixelFormat::BGRX8sRGB:
+    case PixelFormat::RGBA8sRGB:
+    case PixelFormat::RGBX8sRGB: bytePerPix = 4; break;
     default:
         co_return Make(status::Code::Unexpected); // Internal error: invalid format
     }

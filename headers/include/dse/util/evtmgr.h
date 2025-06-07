@@ -157,7 +157,7 @@ private:
         f(std::forward<Args>(args)...);
     }
 public:
-    auto register_e(event_id event, void* object, void(*callback)()) -> handler_id
+    auto subscribe(event_id event, void* object, void(*callback)()) -> handler_id
     {
         if (callback == nullptr) {
             return {};
@@ -170,7 +170,7 @@ public:
         insert_handler_into_chain(event, handler);
         return to_index(handler) + 1;
     }
-    void unregister(handler_id id)
+    void unsubscribe(handler_id id)
     {
         if ((id -= 1) >= handlers.size()) {
             return;
@@ -183,9 +183,9 @@ public:
         free_handler(handler);
     }
     template <event_id event>
-    bool register_e(const function_ptr<handler<event>>& f)
+    auto subscribe(const function_ptr<handler<event>>& f) -> handler_id
     {
-        return register_e(event, f.get_object_ptr(), reinterpret_cast<void(*)()>(f.get_function()));
+        return subscribe(event, f.get_object_ptr(), reinterpret_cast<void(*)()>(f.get_function()));
     }
     template <class H, class ... Args>
     bool send(event_id event, Args&& ... args)

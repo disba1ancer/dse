@@ -37,6 +37,7 @@ target_sources(core PUBLIC
     include/dse/core/errors.h
     include/dse/core/mcursor.h
     include/dse/core/modloader.h
+    include/dse/core/scene2.h
     include/dse/core/status.h
     include/dse/core/statusdef.h
     include/dse/renders/RenderOpenGL31.h

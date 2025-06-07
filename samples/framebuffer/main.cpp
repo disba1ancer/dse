@@ -61,9 +61,9 @@ App::App(int argc, char *argv[]) :
     framebuffer.SetDrawCallback({*this, fn_tag<&App::Draw>});
     window.Resize({640, 480});
     using enum dse::core::WindowEvent;
-    window.Register<Close>({*this, fn_tag<&App::OnClose>}).detach();
-    window.Register<Resize>({*this, fn_tag<&App::OnResize>}).detach();
-    window.Register<MouseMove>({*this, fn_tag<&App::OnMouseMove>}).detach();
+    window.SubscribeEvent<Close>({*this, fn_tag<&App::OnClose>}).detach();
+    window.SubscribeEvent<Resize>({*this, fn_tag<&App::OnResize>}).detach();
+    window.SubscribeEvent<MouseMove>({*this, fn_tag<&App::OnMouseMove>}).detach();
 }
 
 App::~App()
@@ -152,7 +152,7 @@ auto App::CoRun(eager_task_t) -> std::future<void>
             handle.resume();
         }
         Image &image;
-        dse::core::ITextureDataProvider& provider;
+        dse::core::ITexture& provider;
         std::coroutine_handle<> handle;
     };
     BasicBitmapLoader loader(ctx, u8"assets/textures/font.bmp", false);

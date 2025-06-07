@@ -1,25 +1,25 @@
 #ifndef DSE_CORE_SPHERE_H
 #define DSE_CORE_SPHERE_H
 
-#include "IMesh.h"
+#include "scene2.h"
 #include <vector>
 
 namespace dse::core {
 
-class Sphere : public IMesh
+class Sphere : public IMesh2
 {
 public:
     Sphere(int hseg, int vseg);
 
     // IMesh interface
 public:
-    void LoadMeshParameters(mesh_parameters *parameters, util::function_ptr<void ()> callback) override;
-    void LoadVertices(vertex *vertexBuffer, util::function_ptr<void ()> callback) override;
-    void LoadElements(std::uint32_t *elementBuffer, util::function_ptr<void ()> callback) override;
-    void LoadSubmeshRanges(submesh_range *ranges, util::function_ptr<void ()> callback) override;
-    unsigned int GetVersion() override;
+    auto LoadMeshParameters(MeshParameters *parameters, util::function_ptr<void (Status)> callback) -> Status override;
+    auto LoadVertices(Vertex *vertexBuffer, util::function_ptr<void (Status)> callback) -> Status override;
+    auto LoadElements(std::uint32_t *elementBuffer, util::function_ptr<void (Status)> callback) -> Status override;
+    auto LoadSubmeshRanges(SubmeshRange *ranges, util::function_ptr<void (Status)> callback) -> Status override;
+    auto GetResourceManager() -> IResourceManager& override;
 private:
-    std::vector<IMesh::vertex> vertices;
+    std::vector<IMesh2::Vertex> vertices;
     std::vector<std::uint32_t> elements;
 };
 

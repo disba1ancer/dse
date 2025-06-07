@@ -190,12 +190,12 @@ auto Window_win32::GetLoop() const -> SystemLoop&
 
 auto Window_win32::Register(WindowEvent evt, void* object, void (*cb)()) -> std::size_t
 {
-	return eventmgr.register_e(evt, object, cb);
+	return eventmgr.subscribe(evt, object, cb);
 }
 
 void Window_win32::Unregister(std::size_t id) noexcept
 {
-    eventmgr.unregister(id);
+    eventmgr.unsubscribe(id);
 }
 
 void Window_win32::fill_class_info(WNDCLASSEX& wcex)

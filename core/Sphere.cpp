@@ -96,37 +96,37 @@ Sphere::Sphere(int hseg, int vseg) :
     elements[index++] = j * (hseg + 1) + hseg;
 }
 
-void Sphere::LoadMeshParameters(mesh_parameters *parameters, util::function_ptr<void ()> callback)
+auto Sphere::LoadMeshParameters(MeshParameters *parameters, util::function_ptr<void (Status)> callback) -> Status
 {
     parameters->submeshCount = 1;
     parameters->elementsCount = elements.size();
     parameters->verticesCount = vertices.size();
-    callback();
+    return Make(status::Code::Success);
 }
 
-void Sphere::LoadVertices(vertex *vertexBuffer, util::function_ptr<void ()> callback)
+auto Sphere::LoadVertices(Vertex *vertexBuffer, util::function_ptr<void (Status)> callback) -> Status
 {
     std::copy(std::begin(vertices), std::end(vertices), vertexBuffer);
-    callback();
+    return Make(status::Code::Success);
 }
 
-void Sphere::LoadElements(uint32_t *elementBuffer, util::function_ptr<void ()> callback)
+auto Sphere::LoadElements(uint32_t *elementBuffer, util::function_ptr<void (Status)> callback) -> Status
 {
     std::copy(std::begin(elements), std::end(elements), elementBuffer);
-    callback();
+    return Make(status::Code::Success);
 }
 
-void Sphere::LoadSubmeshRanges(submesh_range *ranges, util::function_ptr<void ()> callback)
+auto Sphere::LoadSubmeshRanges(SubmeshRange *ranges, util::function_ptr<void (Status)> callback) -> Status
 {
     ranges->drawType = Draw::Stripes;
     ranges->start = 0;
     ranges->end = elements.size();
-    callback();
+    return Make(status::Code::Success);
 }
 
-unsigned int Sphere::GetVersion()
+auto Sphere::GetResourceManager() -> IResourceManager&
 {
-    return 1;
+    return StaticResourceManager::instance;
 }
 
 }

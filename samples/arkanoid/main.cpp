@@ -75,10 +75,10 @@ App::App(int argc, char *argv[])
     window.ChangeFrameStyle(Fixed);
     window.ResizeSurface(wSize);
     using enum dse::core::WindowEvent;
-    window.Register<Close>({*this, fn_tag<&App::OnClose>}).detach();
-    window.Register<Resize>({*this, fn_tag<&App::OnResize>}).detach();
-    window.Register<MouseMove>({*this, fn_tag<&App::OnMouseMove>}).detach();
-    window.Register<Key>({*this, fn_tag<&App::OnKey>}).detach();
+    window.SubscribeEvent<Close>({*this, fn_tag<&App::OnClose>}).detach();
+    window.SubscribeEvent<Resize>({*this, fn_tag<&App::OnResize>}).detach();
+    window.SubscribeEvent<MouseMove>({*this, fn_tag<&App::OnMouseMove>}).detach();
+    window.SubscribeEvent<Key>({*this, fn_tag<&App::OnKey>}).detach();
 }
 
 App::~App()
@@ -193,7 +193,7 @@ task<void> App::Load()
             image = std::move(img);
             handle.resume();
         }
-        dse::core::ITextureDataProvider* provider;
+        dse::core::ITexture* provider;
         Image image;
         std::coroutine_handle<> handle;
     };

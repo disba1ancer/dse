@@ -31,10 +31,10 @@ private:
     util::function_ptr<void (void*, math::ivec2)> renderCallback = nullptr;
     util::function_ptr<void ()> exitCallback = nullptr;
     Image frameBuffer{window.Size()};
-    using howner = util::handle_owner<WindowEventHandle>;
-    howner idErase = window.Register<WindowEvent::System + WM_ERASEBKGND>({*this, util::fn_tag<&FrameBuffer_win32::OnErase>});
-    howner idPaint = window.Register<WindowEvent::System + WM_PAINT>({*this, util::fn_tag<&FrameBuffer_win32::OnPaint>});
-    howner idResize = window.Register<WindowEvent::Resize>({*this, util::fn_tag<&FrameBuffer_win32::OnResize>});
+    using howner = core::Window::handle_owner;
+    howner idErase = window.SubscribeEvent<WindowEvent::System + WM_ERASEBKGND>({*this, util::fn_tag<&FrameBuffer_win32::OnErase>});
+    howner idPaint = window.SubscribeEvent<WindowEvent::System + WM_PAINT>({*this, util::fn_tag<&FrameBuffer_win32::OnPaint>});
+    howner idResize = window.SubscribeEvent<WindowEvent::Resize>({*this, util::fn_tag<&FrameBuffer_win32::OnResize>});
 };
 
 } // namespace dse::core

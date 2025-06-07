@@ -3,7 +3,7 @@
 
 #include <memory>
 #include <dse/math/vec.h>
-#include "ITextureDataProvider.h"
+#include "scene2.h"
 #include <dse/util/functional.h>
 #include "ImageManipulator.h"
 
@@ -21,7 +21,7 @@ public:
     auto Size() -> math::ivec2;
     void* Data();
     auto Manipulator() -> ImageManipulator;
-    static void LoadByProvider(ITextureDataProvider* provider, util::function_ptr<void(Image&&)> callback);
+    static void LoadByProvider(ITexture* provider, util::function_ptr<void(Image&&)> callback);
 private:
     std::unique_ptr<void, ImageDataDeleter> data;
     math::ivec2 size;

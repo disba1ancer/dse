@@ -5,53 +5,40 @@
  *      Author: disba1ancer
  */
 
-#include <dse/util/coroutine.h>
 #include <dse/core/Window.h>
-#include <cstdio>
 #include <dse/renders/RenderOpenGL31.h>
-#include <dse/util/functional.h>
-#include <dse/core/Scene.h>
 #include <dse/core/Cube.h>
 #include <dse/core/Sphere.h>
-#include <dse/core/Object.h>
-#include <cmath>
 #include <dse/math/qmath.h>
 #include <dse/math/constants.h>
-#include <dse/core/Camera.h>
 #include <dse/core/mcursor.h>
-#include <dse/core/Material.h>
-#include <algorithm>
-#include <dse/core/ThreadPool.h>
-#include <dse/core/File.h>
-#include <dse/util/scope_exit.h>
-#include <dse/util/execution.h>
 #include <dse/core/BasicBitmapLoader.h>
 
 #include <print>
 
-using namespace std::string_literals;
 using dse::core::Window;
-using dse::core::WindowShowCommand;
 using dse::core::KeyboardKeyState;
 using dse::ogl31rbe::RenderOpenGL31;
 using dse::core::Cube;
 using dse::core::Sphere;
-using dse::core::Scene;
-using dse::core::Object;
+using dse::core::IScene;
+using dse::core::ISceneObject;
+using dse::core::IMesh2;
+using dse::core::IMaterial;
+using dse::core::ITexture;
 using dse::core::Camera;
-using dse::core::SetMouseCursorPosWndRel;
-using dse::core::Material;
-using dse::core::ThreadPool;
 using dse::core::SystemLoop;
 using dse::core::IOContext;
-using dse::core::PoolCaps;
-using dse::core::File;
-using dse::core::OpenMode;
 using dse::core::BasicBitmapLoader;
 using dse::util::fn_tag;
+using dse::core::IResourceManager;
+using dse::util::event_manager;
+using dse::core::SceneEvent;
+using dse::core::ISceneVisitor;
+using dse::core::embedded_event_manager;
 using namespace dse::math;
 
-class App {
+class App : embedded_event_manager<IScene, SceneEvent> {
 public:
     int Run();
 private:
@@ -59,6 +46,36 @@ private:
     void OnKey(KeyboardKeyState cmd, int key);
     void OnMouseMove(int x, int y);
     void DoStep();
+    void VisitObjects(ISceneVisitor &visitor);
+    void VisitLights(ISceneVisitor &visitor);
+    void VisitAll(ISceneVisitor &visitor);
+
+    struct Object : ISceneObject
+    {
+        Object(vec3 p, vec4 r, IMesh2& m, IMaterial& mat) : position(p), rotation(r), mesh(m), material(mat) {}
+        vec3 GetPosition() override;
+        vec4 GetRotation() override;
+        vec3 GetScale() override;
+        auto GetMesh() -> IMesh2& override;
+        auto GetMaterial(int slotNum) -> IMaterial& override;
+
+        vec3 position;
+        vec4 rotation;
+        IMesh2& mesh;
+        IMaterial& material;
+    };
+
+    struct Material : IMaterial
+    {
+        Material(const vec4& c, ITexture& d, ITexture& n) : color(c), diffuse(d), normalMap(n) {}
+        vec4 GetColor() override;
+        auto GetDiffuseTexture() -> ITexture& override;
+        auto GetNormalMapTexture() -> ITexture& override;
+        auto GetResourceManager() -> IResourceManager& override;
+        vec4 color;
+        ITexture& diffuse;
+        ITexture& normalMap;
+    };
 
     IOContext context;
     SystemLoop loop;
@@ -68,37 +85,29 @@ private:
     BasicBitmapLoader mapTex{this->context, u8"assets/textures/earth.bmp"};
     BasicBitmapLoader mapNorm{this->context, u8"assets/textures/earthnormalfull.bmp", true};
     Camera cam;
-    Scene scene;
     Cube cubeMesh;
     Sphere sphereMesh{32, 48};
-    Material mat{&texture};
-    Material mapMat{&mapTex};
-    Object& cube = *scene.createObject( Object(&cubeMesh));
-    Object& sphere = *scene.createObject(Object(&sphereMesh));
+    Material mat{{1.f, 1.f, 1.f, 1.f}, texture, mapNorm};
+    Material mapMat{{1.f, 1.f, 1.f, 1.f}, mapTex, mapNorm};
+    Object cube{{-1.f, -1.f, -1.f}, {0.f, 0.f, 0.f, 1.f}, cubeMesh, mat};
+    Object sphere{{1.f, 1.f, 1.f}, {0.f, 0.f, 0.f, 1.f}, sphereMesh, mapMat};
     float pitch = dse::math::PI * 0.5, yaw = 0.f;
     float spd = 0.f, sdspd = 0.f;
     ivec2 moffset = { 0, 0 };
     std::chrono::steady_clock::time_point lastFrameEnd = std::chrono::steady_clock::now();
     std::chrono::steady_clock::time_point lastSecondEnd = lastFrameEnd + std::chrono::seconds(1);
     using enum dse::core::WindowEvent;
-    using howner = dse::util::handle_owner<dse::core::WindowEventHandle>;
-    howner hOnClose = window.Register<Close>({*this, fn_tag<&App::OnClose>});
-    howner hOnKey = window.Register<Key>({*this, fn_tag<&App::OnKey>});
-    howner hOnMouseMove = window.Register<MouseMove>({*this, fn_tag<&App::OnMouseMove>});
+    using howner = dse::core::Window::handle_owner;
+    howner hOnClose = window.SubscribeEvent<Close>({*this, fn_tag<&App::OnClose>});
+    howner hOnKey = window.SubscribeEvent<Key>({*this, fn_tag<&App::OnKey>});
+    howner hOnMouseMove = window.SubscribeEvent<MouseMove>({*this, fn_tag<&App::OnMouseMove>});
 };
 
 int App::Run()
 {
     window.Show();
     SetMouseCursorPosWndRel(window.SurfaceSize() / 2, window);
-    mapMat.SetNormalMap(&mapNorm);
-    cube.SetPos({-1.f, -1.f, -1.f});
-    //cube1.setScale({.25f, .25f, .25f});
-    cube.SetMaterial(0, &mat);
-    sphere.SetPos({1.f, 1.f, 1.f});
-    //cube2.setScale({.25f, .25f, .25f});
-    sphere.SetMaterial(0, &mapMat);
-    render.SetScene(scene);
+    render.SetScene(this);
     cam.setPos({0.f, -4.f, 0.f});
     cam.setRot({std::sqrt(2.f) * 0.5f, 0.f, 0.f, std::sqrt(2.f) * 0.5f});
     cam.setNear(.03125f);
@@ -168,9 +177,9 @@ void App::DoStep()
     auto angle = 1.f;
     auto axe1 = norm(vec3{0.f, 0.f, 1.f}) * std::sin(PI * angle / 360.f);
     auto cs1 = std::cos(PI * angle / 360.f);
-    auto rslt = norm(qmul(vec4{axe1.x(), axe1.y(), axe1.z(), cs1}, cube.GetQRot()));
-    cube.SetQRot(rslt);
-    sphere.SetQRot(rslt);
+    auto rslt = norm(qmul(vec4{axe1.x(), axe1.y(), axe1.z(), cs1}, cube.rotation));
+    cube.rotation = rslt;
+    sphere.rotation = rslt;
     if (spd != 0.f || sdspd != 0.f) {
         auto movement = vec3{0.f, 0.f, -1.f} * spd + vec3{1.f, 0.f, 0.f} * sdspd;
         cam.setPos(cam.getPos() + vecrotquat(movement, cam.getRot()));
@@ -183,6 +192,8 @@ void App::DoStep()
     auto camrot = qmul(vec4{ 0, 0, std::sin(yawHalf), std::cos(yawHalf) }, vec4{ std::sin(pitchHalf), 0, 0, std::cos(pitchHalf) });
     cam.setRot(camrot);
     moffset = vec2{0, 0};
+    eventManager.send<SceneEvent::ObjectModified>((IScene&)*this, (ISceneObject&)cube);
+    eventManager.send<SceneEvent::ObjectModified>((IScene&)*this, (ISceneObject&)sphere);
 
     render.Render();
 
@@ -202,8 +213,67 @@ void App::DoStep()
     //        while (std::chrono::steady_clock::now() < lastFrameEnd) ;
 }
 
+void App::VisitObjects(dse::core::ISceneVisitor &visitor)
+{
+    visitor.Visit(cube);
+    visitor.Visit(sphere);
+}
+
+void App::VisitLights(dse::core::ISceneVisitor &visitor)
+{}
+
+void App::VisitAll(dse::core::ISceneVisitor &visitor)
+{
+    VisitObjects(visitor);
+}
+
 int main(int argc, char* argv[])
 {
     App app;
     return app.Run();
+}
+
+vec3 App::Object::GetPosition()
+{
+    return position;
+}
+
+vec4 App::Object::GetRotation()
+{
+    return rotation;
+}
+
+vec3 App::Object::GetScale()
+{
+    return {1.f, 1.f, 1.f};
+}
+
+auto App::Object::GetMesh() -> IMesh2&
+{
+    return mesh;
+}
+
+auto App::Object::GetMaterial(int slotNum) -> IMaterial&
+{
+    return material;
+}
+
+vec4 App::Material::GetColor()
+{
+    return color;
+}
+
+auto App::Material::GetDiffuseTexture() -> ITexture&
+{
+    return diffuse;
+}
+
+auto App::Material::GetNormalMapTexture() -> ITexture&
+{
+    return normalMap;
+}
+
+auto App::Material::GetResourceManager() -> IResourceManager&
+{
+    return dse::core::StaticResourceManager::instance;
 }

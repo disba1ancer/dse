@@ -10,7 +10,7 @@
 
 #include <memory>
 #include <dse/core/Window.h>
-#include <dse/core/Scene.h>
+#include <dse/core/scene2.h>
 #include <dse/core/Camera.h>
 #include <dse/util/functional.h>
 #include <dse/util/execution.h>
@@ -36,7 +36,7 @@ public:
 	auto operator=(const RenderOpenGL31&) -> RenderOpenGL31& = delete;
 	auto operator=(RenderOpenGL31&&) -> RenderOpenGL31& = delete;
     void Render();
-	void SetScene(dse::core::Scene& scene);
+    void SetScene(dse::core::IScene* scene);
 	void SetCamera(dse::core::Camera& camera);
 };
 

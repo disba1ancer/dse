@@ -36,15 +36,15 @@ class API_DSE_CORE Window;
 
 } // namespace dse::core
 
-template <>
-struct dse::util::handle_traits<dse::core::WindowEventHandle> {
-    using sender = dse::core::Window;
-    static void kill_handle(sender&, dse::core::WindowEventHandle);
-};
+// template <>
+// struct dse::util::handle_traits<dse::core::WindowEventHandle> {
+//     using sender = dse::core::Window;
+//     static void kill_handle(sender&, dse::core::WindowEventHandle);
+// };
 
 namespace dse::core {
 
-class API_DSE_CORE Window {
+class API_DSE_CORE Window : public util::basic_subscribable<Window, WindowEvent> {
 public:
     Window(SystemLoop& loop);
 	~Window();
@@ -68,25 +68,26 @@ public:
 	void MakeMinimizable(bool state);
 	auto GetLoop() const -> SystemLoop&;
     // using PaintHandler = void(WndEvtDt);
-    auto Register(WindowEvent evt, void* object, void(*cb)()) -> std::size_t;
-    void Unregister(std::size_t id) noexcept;
-    template <WindowEvent evt>
-    auto Register(const util::function_ptr<typename util::event_traits<evt>::handler>& cb) -> util::handle_owner<WindowEventHandle>;
+    auto SubscribeEvent(WindowEvent evt, void* object, void(*cb)()) -> std::size_t;
+    void UnsubscribeEvent(std::size_t id) noexcept;
+    using util::basic_subscribable<Window, WindowEvent>::SubscribeEvent;
+    // template <WindowEvent evt>
+    // auto SubscribeEvent(const util::function_ptr<typename util::event_traits<evt>::handler>& cb) -> util::handle_owner<WindowEventHandle>;
 private:
     util::impl_ptr<Window_impl> impl;
 };
 
-template <WindowEvent evt>
-auto Window::Register(const util::function_ptr<typename util::event_traits<evt>::handler>& cb) -> util::handle_owner<WindowEventHandle>
-{
-    return {*this, WindowEventHandle(Register(evt, cb.get_object_ptr(), reinterpret_cast<void(*)()>(cb.get_function())))};
-}
+// template <WindowEvent evt>
+// auto Window::SubscribeEvent(const util::function_ptr<typename util::event_traits<evt>::handler>& cb) -> util::handle_owner<WindowEventHandle>
+// {
+//     return {*this, WindowEventHandle(SubscribeEvent(evt, cb.get_object_ptr(), reinterpret_cast<void(*)()>(cb.get_function())))};
+// }
 
 } // namespace dse::core
 
-inline void dse::util::handle_traits<dse::core::WindowEventHandle>::kill_handle(sender& s, dse::core::WindowEventHandle h)
-{
-    s.Unregister(std::to_underlying(h));
-}
+// inline void dse::util::handle_traits<dse::core::WindowEventHandle>::kill_handle(sender& s, dse::core::WindowEventHandle h)
+// {
+//     s.UnsubscribeEvent(std::to_underlying(h));
+// }
 
 #endif /* DSE_CORE_WINDOW_H_ */

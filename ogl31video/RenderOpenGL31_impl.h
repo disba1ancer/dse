@@ -42,10 +42,13 @@ class RenderOpenGL31_impl {
     void SetupCamera();
     void DrawPostprocess();
     void FillInstances();
-    void OnSceneChanged(core::SceneChangeEventType act, core::Object* obj);
+    void OnSceneObjectAdd(core::IScene& scene, core::ISceneObject &obj);
+    void OnSceneObjectMod(core::IScene& scene, core::ISceneObject &obj);
+    void OnSceneObjectDel(core::IScene& scene, core::ISceneObject &obj);
+    void OnSceneObjectsClr(core::IScene& scene);
     void CleanupMeshes();
     void DrawScene();
-    auto DrawTypeToGL(core::IMesh::Draw drawType) -> gl::GLenum;
+    auto DrawTypeToGL(core::IMesh2::Draw drawType) -> gl::GLenum;
     void PrepareSamplers();
 public:
     RenderOpenGL31_impl(core::Window& wnd);
@@ -55,26 +58,29 @@ public:
     RenderOpenGL31_impl& operator=(const RenderOpenGL31_impl &other) = delete;
     RenderOpenGL31_impl& operator=(RenderOpenGL31_impl &&other) = delete;
     void Render();
-    void SetScene(dse::core::Scene& scene);
+    void SetScene(dse::core::IScene* scene);
     void SetCamera(dse::core::Camera& camera);
-    auto GetObjectInstance(core::Object* object) -> gl31::ObjectInstance*;
-    auto GetMeshInstance(core::IMesh* mesh, bool withAcquire = false) -> gl31::MeshInstance*;
-    auto GetMaterialInstance(core::Material* material, bool withAcquire = false) -> gl31::MaterialInstance*;
-    auto GetTextureInstance(core::ITextureDataProvider* texture, bool withAcquire = false) -> gl31::TextureInstance*;
+    auto GetObjectInstance(core::ISceneObject* object) -> gl31::ObjectInstance*;
+    auto GetMeshInstance(core::IMesh2* mesh, bool withAcquire = false) -> gl31::MeshInstance*;
+    auto GetMaterialInstance(core::IMaterial* material, bool withAcquire = false) -> gl31::MaterialInstance*;
+    auto GetTextureInstance(core::ITexture *texture, bool withAcquire = false) -> gl31::TextureInstance*;
 private:
     core::Window* wnd;
-    using howner = util::handle_owner<core::WindowEventHandle>;
-    howner hPaint = wnd->Register<core::WindowEvent::System + WM_PAINT>({*this, util::fn_tag<&RenderOpenGL31_impl::OnPaint>});
-    howner hResize = wnd->Register<core::WindowEvent::Resize>({*this, util::fn_tag<&RenderOpenGL31_impl::OnResize>});
-    notifier::connection<core::Scene::ChangeEvent> scnChangeCon;
+    using howner = core::Window::handle_owner;
+    howner hPaint = wnd->SubscribeEvent<core::WindowEvent::System + WM_PAINT>({*this, util::fn_tag<&RenderOpenGL31_impl::OnPaint>});
+    howner hResize = wnd->SubscribeEvent<core::WindowEvent::Resize>({*this, util::fn_tag<&RenderOpenGL31_impl::OnResize>});
+    core::IScene::handle_owner hSceneObjectAdd;
+    core::IScene::handle_owner hSceneObjectMod;
+    core::IScene::handle_owner hSceneObjectDel;
+    core::IScene::handle_owner hSceneObjectsClr;
     glwrp::Context context;
     glwrp::VAO vao;
-    core::Scene* scene = nullptr;
+    core::IScene* scene = nullptr;
     core::Camera* camera = nullptr;
-    std::unordered_map<core::ITextureDataProvider*, gl31::TextureInstance> textures;
-    std::unordered_map<core::Material*, gl31::MaterialInstance> materials;
-    std::unordered_map<core::IMesh*, gl31::MeshInstance> meshes;
-    std::unordered_map<core::Object*, gl31::ObjectInstance> objects;
+    std::unordered_map<core::ITexture*, gl31::TextureInstance> textures;
+    std::unordered_map<core::IMaterial*, gl31::MaterialInstance> materials;
+    std::unordered_map<core::IMesh2*, gl31::MeshInstance> meshes;
+    std::unordered_map<const core::ISceneObject*, gl31::ObjectInstance> objects;
     glwrp::VertexBuffer vbo;
     glwrp::Program fragmentProg;
     glwrp::Program drawProg;
@@ -97,7 +103,7 @@ private:
     glwrp::Sampler postProcDepth = 0;
     glwrp::Sampler drawDiffuse = 0;
     glwrp::Sampler drawNormal = 0;
-    std::unordered_map<core::IMesh*, gl31::MeshInstance>::iterator cleanupPointer;
+    std::unordered_map<core::IMesh2*, gl31::MeshInstance>::iterator cleanupPointer;
 };
 
 } /* namespace dse::ogl31rbe */

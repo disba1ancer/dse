@@ -95,12 +95,12 @@ auto Window::GetLoop() const -> SystemLoop&
 	return impl->GetLoop();
 }
 
-auto Window::Register(WindowEvent evt, void* object, void (*cb)()) -> std::size_t
+auto Window::SubscribeEvent(WindowEvent evt, void* object, void (*cb)()) -> std::size_t
 {
 	return impl->Register(evt, object, cb);
 }
 
-void Window::Unregister(std::size_t id) noexcept
+void Window::UnsubscribeEvent(std::size_t id) noexcept
 {
     return impl->Unregister(id);
 }

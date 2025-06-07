@@ -43,10 +43,9 @@ TextureInstance::TextureInstance() :
 
 }
 
-TextureInstance::TextureInstance(core::ITextureDataProvider* texture) :
+TextureInstance::TextureInstance(core::ITexture* texture) :
     textureProvider(texture),
     texture(false),
-    lastVersion(0),
     readyStatus(Ready)
 {}
 
@@ -54,7 +53,7 @@ bool TextureInstance::IsReady()
 {
     switch (readyStatus.load(std::memory_order_acquire)) {
         case Ready: {
-            if (texture && lastVersion == textureProvider->GetVersion()) {
+            if (texture && valid) {
                 return true;
             }
             BeginLoad();
@@ -75,27 +74,37 @@ auto TextureInstance::GetTexture() -> glwrp::Texture2D&
     return texture;
 }
 
+void TextureInstance::Invalidate()
+{
+    valid = false;
+}
+
 void TextureInstance::BeginLoad()
 {
     readyStatus.store(Pending, std::memory_order_release);
-    textureProvider->LoadParameters(
-        &textureParameters,
-        {*this, util::fn_tag<&TextureInstance::LoadTexture>}
-    );
+    util::function_ptr f{*this, util::fn_tag<&TextureInstance::LoadTexture>};
+    auto status = textureProvider->LoadParameters(&textureParameters, f);
+    if (status != core::status::Code::PendingOperation) {
+        f(status);
+    }
 }
 
 void TextureInstance::LoadTexture(core::Status status)
 {
     GLFormatMapEntry* format;
-    if (textureParameters.format < std::size(glFormatMap)) {
-        format = glFormatMap + textureParameters.format;
+    if (std::to_underlying(textureParameters.format) < std::size(glFormatMap)) {
+        format = glFormatMap + std::to_underlying(textureParameters.format);
     } else {
         format = glFormatMap + 1;
     }
     std::size_t size = std::size_t((std::abs(textureParameters.width) * format->pixelSize + 3) & (~3)) *
         std::abs(textureParameters.height) * std::abs(textureParameters.depth);
     textureData.resize(size);
-    textureProvider->LoadData(textureData.data(), 0, {*this, util::fn_tag<&TextureInstance::TextureReady>});
+    util::function_ptr f{*this, util::fn_tag<&TextureInstance::TextureReady>};
+    status = textureProvider->LoadData(textureData.data(), 0, f);
+    if (status != core::status::Code::PendingOperation) {
+        f(status);
+    }
 }
 
 void TextureInstance::TextureReady(core::Status status)
@@ -106,8 +115,8 @@ void TextureInstance::TextureReady(core::Status status)
 void TextureInstance::UploadTexture()
 {
     GLFormatMapEntry* format;
-    if (textureParameters.format < std::size(glFormatMap)) {
-        format = glFormatMap + textureParameters.format;
+    if (std::to_underlying(textureParameters.format) < std::size(glFormatMap)) {
+        format = glFormatMap + std::to_underlying(textureParameters.format);
     } else {
         format = glFormatMap + 1;
     }
@@ -123,7 +132,7 @@ void TextureInstance::UploadTexture()
     );
     glGenerateMipmap(texture.target);
     textureData.clear();
-    lastVersion = textureProvider->GetVersion();
+    valid = true;
     readyStatus.store(Ready, std::memory_order_release);
 }
 

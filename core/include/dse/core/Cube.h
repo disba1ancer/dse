@@ -8,12 +8,12 @@
 #ifndef DSE_CORE_CUBE_H_
 #define DSE_CORE_CUBE_H_
 
-#include "IMesh.h"
+#include "scene2.h"
 #include "detail/impexp.h"
 
 namespace dse::core {
 
-class API_DSE_CORE Cube final : public IMesh {
+class API_DSE_CORE Cube final : public IMesh2 {
 public:
 	Cube() = default;
 	~Cube() = default;
@@ -22,13 +22,13 @@ public:
 	Cube& operator=(Cube &&other) = default;
 	Cube& operator=(const Cube &other) = default;
 
-	// IMesh interface
+    // IMesh2 interface
 public:
-	virtual void LoadMeshParameters(mesh_parameters *parameters, util::function_ptr<void ()> callback) override;
-	virtual void LoadSubmeshRanges(submesh_range *ranges, util::function_ptr<void ()> callback) override;
-	virtual void LoadVertices(vertex* vertexBuffer, util::function_ptr<void ()> callback) override;
-	virtual void LoadElements(uint32_t* elementBuffer, util::function_ptr<void ()> callback) override;
-	virtual auto GetVersion() -> unsigned override;
+    auto LoadMeshParameters(MeshParameters *parameters, util::function_ptr<void(Status)> callback) -> Status override;
+    auto LoadSubmeshRanges(SubmeshRange *ranges, util::function_ptr<void(Status)> callback) -> Status override;
+    auto LoadVertices(Vertex* vertexBuffer, util::function_ptr<void(Status)> callback) -> Status override;
+    auto LoadElements(uint32_t* elementBuffer, util::function_ptr<void(Status)> callback) -> Status override;
+    auto GetResourceManager() -> IResourceManager& override;
 };
 
 } /* namespace dse::core */

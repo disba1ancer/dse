@@ -25,9 +25,8 @@ enum {
 
 namespace dse::ogl31rbe::gl31 {
 
-MeshInstance::MeshInstance(core::IMesh* mesh) :
+MeshInstance::MeshInstance(core::IMesh2 *mesh) :
     mesh(mesh),
-    lastVersion(0),
     vao(0),
     vbo(0),
     ibo(0),
@@ -38,7 +37,7 @@ MeshInstance::MeshInstance(core::IMesh* mesh) :
     }
 }
 
-auto MeshInstance::GetMesh() const -> core::IMesh*
+auto MeshInstance::GetMesh() const -> core::IMesh2*
 {
     return mesh;
 }
@@ -47,7 +46,7 @@ bool MeshInstance::IsReady()
 {
     switch (readyStatus.load(std::memory_order_acquire)) {
         case Ready: {
-            if (vao && lastVersion == mesh->GetVersion()) {
+            if (vao && valid) {
                 return true;
             }
             BeginLoad();
@@ -83,48 +82,57 @@ auto MeshInstance::GetSubmeshCount() -> std::size_t
     return submeshRanges.size();
 }
 
-auto MeshInstance::GetSubmeshRange(size_t n) -> core::IMesh::submesh_range
+auto MeshInstance::GetSubmeshRange(size_t n) -> core::IMesh2::SubmeshRange
 {
     return submeshRanges[n];
+}
+
+void MeshInstance::Invalidate()
+{
+    valid = false;
 }
 
 void MeshInstance::BeginLoad()
 {
     readyStatus.store(Pending, std::memory_order_relaxed);
-    mesh->LoadMeshParameters(
-        &meshParameters,
-        {*this, util::fn_tag<&MeshInstance::LoadRanges>}
-    );
+    util::function_ptr f{*this, util::fn_tag<&MeshInstance::LoadRanges>};
+    auto result = mesh->LoadMeshParameters(&meshParameters, f);
+    if (result != core::status::Code::PendingOperation) {
+        f(result);
+    }
 }
 
-void MeshInstance::LoadRanges()
+void MeshInstance::LoadRanges(core::Status status)
 {
     vertexData.resize(meshParameters.verticesCount);
     elementData.resize(meshParameters.elementsCount);
     submeshRanges.resize(meshParameters.submeshCount);
-    mesh->LoadSubmeshRanges(
-        submeshRanges.data(),
-        {*this, util::fn_tag<&MeshInstance::LoadVertices>}
-    );
+    util::function_ptr f{*this, util::fn_tag<&MeshInstance::LoadVertices>};
+    status = mesh->LoadSubmeshRanges(submeshRanges.data(), f);
+    if (status != core::status::Code::PendingOperation) {
+        f(status);
+    }
 }
 
-void MeshInstance::LoadVertices()
+void MeshInstance::LoadVertices(core::Status status)
 {
-    mesh->LoadVertices(
-        vertexData.data(),
-        {*this, util::fn_tag<&MeshInstance::LoadElements>}
-    );
+    util::function_ptr f{*this, util::fn_tag<&MeshInstance::LoadElements>};
+    status = mesh->LoadVertices(vertexData.data(), f);
+    if (status != core::status::Code::PendingOperation) {
+        f(status);
+    }
 }
 
-void MeshInstance::LoadElements()
+void MeshInstance::LoadElements(core::Status status)
 {
-    mesh->LoadElements(
-        elementData.data(),
-        {*this, util::fn_tag<&MeshInstance::BuffersReady>}
-    );
+    util::function_ptr f{*this, util::fn_tag<&MeshInstance::BuffersReady>};
+    status = mesh->LoadElements(elementData.data(), f);
+    if (status != core::status::Code::PendingOperation) {
+        f(status);
+    }
 }
 
-void MeshInstance::BuffersReady()
+void MeshInstance::BuffersReady(core::Status)
 {
     readyStatus.store(UploadReady, std::memory_order_release);
 }
@@ -134,21 +142,21 @@ void MeshInstance::UploadBuffers()
     vao = {};
     vbo = {};
     ibo = {};
-    glBufferData(vbo.target, vertexData.size() * sizeof(core::IMesh::vertex), vertexData.data(), GL_STATIC_DRAW);
+    glBufferData(vbo.target, vertexData.size() * sizeof(core::IMesh2::Vertex), vertexData.data(), GL_STATIC_DRAW);
     glBufferData(ibo.target, elementData.size() * sizeof(std::uint32_t), elementData.data(), GL_STATIC_DRAW);
     glEnableVertexAttribArray(InputParams::Position);
     glEnableVertexAttribArray(InputParams::Normal);
     glEnableVertexAttribArray(InputParams::Tangent);
     glEnableVertexAttribArray(InputParams::UV);
     glEnableVertexAttribArray(InputParams::BTangSign);
-    glVertexAttribPointer(InputParams::Position, 3, GL_FLOAT, GL_FALSE, sizeof(core::IMesh::vertex), reinterpret_cast<void*>(offsetof(core::IMesh::vertex, pos)));
-    glVertexAttribPointer(InputParams::Normal, 3, GL_FLOAT, GL_FALSE, sizeof(core::IMesh::vertex), reinterpret_cast<void*>(offsetof(core::IMesh::vertex, norm)));
-    glVertexAttribPointer(InputParams::Tangent, 3, GL_FLOAT, GL_FALSE, sizeof(core::IMesh::vertex), reinterpret_cast<void*>(offsetof(core::IMesh::vertex, tang)));
-    glVertexAttribPointer(InputParams::UV, 2, GL_FLOAT, GL_FALSE, sizeof(core::IMesh::vertex), reinterpret_cast<void*>(offsetof(core::IMesh::vertex, uv)));
-    glVertexAttribPointer(InputParams::BTangSign, 1, GL_FLOAT, GL_FALSE, sizeof(core::IMesh::vertex), reinterpret_cast<void*>(offsetof(core::IMesh::vertex, bTangSign)));
+    glVertexAttribPointer(InputParams::Position, 3, GL_FLOAT, GL_FALSE, sizeof(core::IMesh2::Vertex), reinterpret_cast<void*>(offsetof(core::IMesh2::Vertex, pos)));
+    glVertexAttribPointer(InputParams::Normal, 3, GL_FLOAT, GL_FALSE, sizeof(core::IMesh2::Vertex), reinterpret_cast<void*>(offsetof(core::IMesh2::Vertex, norm)));
+    glVertexAttribPointer(InputParams::Tangent, 3, GL_FLOAT, GL_FALSE, sizeof(core::IMesh2::Vertex), reinterpret_cast<void*>(offsetof(core::IMesh2::Vertex, tang)));
+    glVertexAttribPointer(InputParams::UV, 2, GL_FLOAT, GL_FALSE, sizeof(core::IMesh2::Vertex), reinterpret_cast<void*>(offsetof(core::IMesh2::Vertex, uv)));
+    glVertexAttribPointer(InputParams::BTangSign, 1, GL_FLOAT, GL_FALSE, sizeof(core::IMesh2::Vertex), reinterpret_cast<void*>(offsetof(core::IMesh2::Vertex, bTangSign)));
     vertexData.clear();
     elementData.clear();
-    lastVersion = mesh->GetVersion();
+    valid = true;
     readyStatus.store(Ready, std::memory_order_release);
 }
 

@@ -37,7 +37,7 @@ ImageManipulator Image::Manipulator()
     return { data.get(), size, linear };
 }
 
-void Image::LoadByProvider(ITextureDataProvider *provider, util::function_ptr<void (Image &&)> callback)
+void Image::LoadByProvider(ITexture *provider, util::function_ptr<void (Image &&)> callback)
 {
     struct LoadParameters {
         bool await_ready() { return false; }
@@ -49,7 +49,7 @@ void Image::LoadByProvider(ITextureDataProvider *provider, util::function_ptr<vo
         }
         struct Result {
             Status status;
-            ITextureDataProvider::TextureParameters result;
+            ITexture::TextureParameters result;
         };
 
         auto await_resume() -> Result
@@ -59,7 +59,7 @@ void Image::LoadByProvider(ITextureDataProvider *provider, util::function_ptr<vo
             result.status = status;
             handle();
         }
-        ITextureDataProvider* provider;
+        ITexture* provider;
         std::coroutine_handle<> handle;
         Result result;
     };
@@ -78,7 +78,7 @@ void Image::LoadByProvider(ITextureDataProvider *provider, util::function_ptr<vo
             this->status = status;
             handle();
         }
-        ITextureDataProvider* provider;
+        ITexture* provider;
         void* data;
         std::coroutine_handle<> handle;
         Status status;
@@ -94,7 +94,7 @@ void Image::LoadByProvider(ITextureDataProvider *provider, util::function_ptr<vo
         util::function_ptr<void (Image &&)>& callback;
         Image& image;
     };
-    auto coro = +[](ITextureDataProvider *provider) -> util::auto_task<Image&&> {
+    auto coro = +[](ITexture *provider) -> util::auto_task<Image&&> {
         Image image;
         auto [status, params] = co_await LoadParameters{ provider };
         if (IsError(status)) {
@@ -102,12 +102,12 @@ void Image::LoadByProvider(ITextureDataProvider *provider, util::function_ptr<vo
         }
         image.linear = false;
         switch (params.format) {
-        case ITextureDataProvider::BGRA8:
-        case ITextureDataProvider::BGRX8:
+        case PixelFormat::BGRA8:
+        case PixelFormat::BGRX8:
             image.linear = true;
             [[fallthrough]];
-        case ITextureDataProvider::BGRA8sRGB:
-        case ITextureDataProvider::BGRX8sRGB:
+        case PixelFormat::BGRA8sRGB:
+        case PixelFormat::BGRX8sRGB:
             break;
         default:
             co_return image;

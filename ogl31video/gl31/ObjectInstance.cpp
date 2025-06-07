@@ -17,17 +17,15 @@ namespace dse::ogl31rbe::gl31 {
 
 ObjectInstance::ObjectInstance() :
     object(nullptr),
-    ubo(false),
-    lastVersion(0)
+    ubo(false)
 {}
 
-ObjectInstance::ObjectInstance(core::Object* object) :
+ObjectInstance::ObjectInstance(core::ISceneObject *object) :
     object(object),
-    ubo(false),
-    lastVersion(0)
+    ubo(false)
 {}
 
-ObjectInstance::ObjectInstance(RenderOpenGL31_impl* render, core::Object* object) :
+ObjectInstance::ObjectInstance(RenderOpenGL31_impl* render, core::ISceneObject *object) :
     ObjectInstance(object)
 {
     Reload(render);
@@ -36,15 +34,15 @@ ObjectInstance::ObjectInstance(RenderOpenGL31_impl* render, core::Object* object
 void ObjectInstance::Reload(RenderOpenGL31_impl* render)
 {
 	auto meshInst = mesh.get();
-	if (meshInst == nullptr || meshInst->GetMesh() != object->GetMesh()) {
-		auto m = object->GetMesh();
+    if (meshInst == nullptr || meshInst->GetMesh() != &object->GetMesh()) {
+        auto m = &object->GetMesh();
 		meshInst = render->GetMeshInstance(m, true);
 		mesh.reset(meshInst);
 		materials.clear();
 	}
 	ObjectInstanceUniform uniforms;
-	auto rotScale = math::transpose(math::matFromQuat(object->GetQRot()));
-	auto vPos = object->GetPos();
+    auto rotScale = math::transpose(math::matFromQuat(object->GetRotation()));
+    auto vPos = object->GetPosition();
 	auto vScale = object->GetScale();
 	rotScale[0] *= vScale;
 	rotScale[1] *= vScale;
@@ -59,13 +57,13 @@ void ObjectInstance::Reload(RenderOpenGL31_impl* render)
 		glBufferData(ubo.target, sizeof(uniforms), nullptr, GL_DYNAMIC_DRAW);
 	}
 	ubo.bind();
-	glBufferSubData(ubo.target, 0, sizeof(uniforms), &uniforms);
-	lastVersion = object->GetVersion();
+    glBufferSubData(ubo.target, 0, sizeof(uniforms), &uniforms);
+    invalid = false;
 }
 
 void ObjectInstance::CheckAndSync(RenderOpenGL31_impl* render)
 {
-	if (lastVersion != object->GetVersion()) {
+    if (invalid) {
 		Reload(render);
 	}
 }
@@ -79,7 +77,7 @@ auto ObjectInstance::GetMaterialInstance(RenderOpenGL31_impl* render, unsigned i
 {
 	auto it = materials.find(index);
 	if (it == materials.end()) {
-		auto matInst = render->GetMaterialInstance(object->GetMaterial(index), true);
+        auto matInst = render->GetMaterialInstance(&object->GetMaterial(index), true);
 		if (matInst == nullptr) {
 			return nullptr;
 		}
@@ -99,6 +97,11 @@ auto ObjectInstance::GetMaterialInstance(RenderOpenGL31_impl* render, unsigned i
 auto ObjectInstance::GetUBO() -> glwrp::UniformBuffer&
 {
 	return ubo;
+}
+
+void ObjectInstance::Invalidate()
+{
+    invalid = true;
 }
 
 } /* namespace dse::ogl31rbe::gl31 */
