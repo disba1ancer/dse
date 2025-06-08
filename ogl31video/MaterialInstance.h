@@ -3,7 +3,7 @@
 
 #include "RefCounted.h"
 #include <dse/core/scene2.h>
-#include "../glwrp/Buffer.h"
+#include "glwrp/Buffer.h"
 #include "binds.h"
 #include "TextureInstance.h"
 

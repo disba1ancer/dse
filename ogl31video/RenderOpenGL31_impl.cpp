@@ -13,8 +13,7 @@
 #include "RenderOpenGL31_impl.h"
 #include "glwrp/gl.h"
 #include <dse_shaders/gl31.h>
-#include "gl31/binds.h"
-#include <dse/core/Material.h>
+#include "binds.h"
 #include <dse/math/qmath.h>
 #include <iostream>
 

@@ -35,7 +35,7 @@ using dse::core::IResourceManager;
 using dse::util::event_manager;
 using dse::core::SceneEvent;
 using dse::core::ISceneVisitor;
-using dse::core::embedded_event_manager;
+using dse::util::embedded_event_manager;
 using namespace dse::math;
 
 class App : embedded_event_manager<IScene, SceneEvent> {
@@ -52,29 +52,29 @@ private:
 
     struct Object : ISceneObject
     {
-        Object(vec3 p, vec4 r, IMesh2& m, IMaterial& mat) : position(p), rotation(r), mesh(m), material(mat) {}
+        Object(vec3 p, vec4 r, IMesh2* m, IMaterial* mat) : position(p), rotation(r), mesh(m), material(mat) {}
         vec3 GetPosition() override;
         vec4 GetRotation() override;
         vec3 GetScale() override;
-        auto GetMesh() -> IMesh2& override;
-        auto GetMaterial(int slotNum) -> IMaterial& override;
+        auto GetMesh() -> IMesh2* override;
+        auto GetMaterial(int slotNum) -> IMaterial* override;
 
         vec3 position;
         vec4 rotation;
-        IMesh2& mesh;
-        IMaterial& material;
+        IMesh2* mesh;
+        IMaterial* material;
     };
 
     struct Material : IMaterial
     {
-        Material(const vec4& c, ITexture& d, ITexture& n) : color(c), diffuse(d), normalMap(n) {}
+        Material(const vec4& c, ITexture* d, ITexture* n) : color(c), diffuse(d), normalMap(n) {}
         vec4 GetColor() override;
-        auto GetDiffuseTexture() -> ITexture& override;
-        auto GetNormalMapTexture() -> ITexture& override;
+        auto GetDiffuseTexture() -> ITexture* override;
+        auto GetNormalMapTexture() -> ITexture* override;
         auto GetResourceManager() -> IResourceManager& override;
         vec4 color;
-        ITexture& diffuse;
-        ITexture& normalMap;
+        ITexture* diffuse;
+        ITexture* normalMap;
     };
 
     IOContext context;
@@ -87,10 +87,10 @@ private:
     Camera cam;
     Cube cubeMesh;
     Sphere sphereMesh{32, 48};
-    Material mat{{1.f, 1.f, 1.f, 1.f}, texture, mapNorm};
-    Material mapMat{{1.f, 1.f, 1.f, 1.f}, mapTex, mapNorm};
-    Object cube{{-1.f, -1.f, -1.f}, {0.f, 0.f, 0.f, 1.f}, cubeMesh, mat};
-    Object sphere{{1.f, 1.f, 1.f}, {0.f, 0.f, 0.f, 1.f}, sphereMesh, mapMat};
+    Material mat{{1.f, 1.f, 1.f, 1.f}, &texture, nullptr};
+    Material mapMat{{1.f, 1.f, 1.f, 1.f}, &mapTex, &mapNorm};
+    Object cube{{-1.f, -1.f, -1.f}, {0.f, 0.f, 0.f, 1.f}, &cubeMesh, &mat};
+    Object sphere{{1.f, 1.f, 1.f}, {0.f, 0.f, 0.f, 1.f}, &sphereMesh, &mapMat};
     float pitch = dse::math::PI * 0.5, yaw = 0.f;
     float spd = 0.f, sdspd = 0.f;
     ivec2 moffset = { 0, 0 };
@@ -248,12 +248,12 @@ vec3 App::Object::GetScale()
     return {1.f, 1.f, 1.f};
 }
 
-auto App::Object::GetMesh() -> IMesh2&
+auto App::Object::GetMesh() -> IMesh2*
 {
     return mesh;
 }
 
-auto App::Object::GetMaterial(int slotNum) -> IMaterial&
+auto App::Object::GetMaterial(int slotNum) -> IMaterial*
 {
     return material;
 }
@@ -263,12 +263,12 @@ vec4 App::Material::GetColor()
     return color;
 }
 
-auto App::Material::GetDiffuseTexture() -> ITexture&
+auto App::Material::GetDiffuseTexture() -> ITexture*
 {
     return diffuse;
 }
 
-auto App::Material::GetNormalMapTexture() -> ITexture&
+auto App::Material::GetNormalMapTexture() -> ITexture*
 {
     return normalMap;
 }

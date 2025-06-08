@@ -134,8 +134,8 @@ struct ISceneObject {
     virtual auto GetPosition() -> math::vec3 = 0;
     virtual auto GetRotation() -> math::vec4 = 0;
     virtual auto GetScale() -> math::vec3 = 0;
-    virtual auto GetMesh() -> IMesh2& = 0;
-    virtual auto GetMaterial(int slotNum) -> IMaterial& = 0;
+    virtual auto GetMesh() -> IMesh2* = 0;
+    virtual auto GetMaterial(int slotNum) -> IMaterial* = 0;
 protected:
     ~ISceneObject() = default;
 };
@@ -209,8 +209,8 @@ protected:
 struct IMaterial
 {
     virtual auto GetColor() -> math::vec4 = 0;
-    virtual auto GetDiffuseTexture() -> ITexture& = 0;
-    virtual auto GetNormalMapTexture() -> ITexture& = 0;
+    virtual auto GetDiffuseTexture() -> ITexture* = 0;
+    virtual auto GetNormalMapTexture() -> ITexture* = 0;
     virtual auto GetResourceManager() -> IResourceManager& = 0;
 protected:
     ~IMaterial() = default;
@@ -266,22 +266,6 @@ public:
     void UnsubscribeEvent(handler_id id)
     {}
     static StaticResourceManager instance;
-};
-
-template <class IBase, class Event>
-struct embedded_event_manager : IBase
-{
-    using handler_id = typename IBase::handler_id;
-    auto SubscribeEvent(Event type, void *data, void (*handler)()) -> handler_id override
-    {
-        return eventManager.subscribe(type, data, handler);
-    }
-    void UnsubscribeEvent(handler_id id) override
-    {
-        eventManager.unsubscribe(id);
-    }
-protected:
-    util::event_manager<Event> eventManager;
 };
 
 inline StaticResourceManager StaticResourceManager::instance;

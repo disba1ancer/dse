@@ -9,7 +9,7 @@
 #include "binds.h"
 #include <dse/math/qmath.h>
 #include <glbinding/gl31/gl.h>
-#include "../RenderOpenGL31_impl.h"
+#include "RenderOpenGL31_impl.h"
 
 using namespace gl;
 
@@ -34,8 +34,8 @@ ObjectInstance::ObjectInstance(RenderOpenGL31_impl* render, core::ISceneObject *
 void ObjectInstance::Reload(RenderOpenGL31_impl* render)
 {
 	auto meshInst = mesh.get();
-    if (meshInst == nullptr || meshInst->GetMesh() != &object->GetMesh()) {
-        auto m = &object->GetMesh();
+    auto m = object->GetMesh();
+    if (meshInst == nullptr || meshInst->GetMesh() != m) {
 		meshInst = render->GetMeshInstance(m, true);
 		mesh.reset(meshInst);
 		materials.clear();
@@ -77,7 +77,7 @@ auto ObjectInstance::GetMaterialInstance(RenderOpenGL31_impl* render, unsigned i
 {
 	auto it = materials.find(index);
 	if (it == materials.end()) {
-        auto matInst = render->GetMaterialInstance(&object->GetMaterial(index), true);
+        auto matInst = render->GetMaterialInstance(object->GetMaterial(index), true);
 		if (matInst == nullptr) {
 			return nullptr;
 		}

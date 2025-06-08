@@ -15,9 +15,9 @@
 #include "glwrp/VAO.h"
 #include <map>
 #include <unordered_map>
-#include "gl31/MeshInstance.h"
-#include "gl31/ObjectInstance.h"
-#include "gl31/MaterialInstance.h"
+#include "MeshInstance.h"
+#include "ObjectInstance.h"
+#include "MaterialInstance.h"
 #include "glwrp/Program.h"
 #include "glwrp/Buffer.h"
 #include "glwrp/Sampler.h"
@@ -27,7 +27,7 @@
 #include "glwrp/RenderBuffer.h"
 #include <dse_config.h>
 #include <dse/core/ThreadPool.h>
-#include "gl31/TextureInstance.h"
+#include "TextureInstance.h"
 #include "../../core/win32.h"
 #include <dse/core/Window_win32.h>
 

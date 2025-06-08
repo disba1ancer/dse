@@ -216,6 +216,22 @@ private:
     std::ptrdiff_t freeHandlersHead = -1;
 };
 
+template <class Base, class Event>
+struct embedded_event_manager : Base
+{
+    using handler_id = typename Base::handler_id;
+    auto SubscribeEvent(Event type, void *data, void (*handler)()) -> handler_id
+    {
+        return eventManager.subscribe(type, data, handler);
+    }
+    void UnsubscribeEvent(handler_id id)
+    {
+        eventManager.unsubscribe(id);
+    }
+protected:
+    util::event_manager<Event> eventManager;
+};
+
 } // namespace dse::util
 
 #endif // DSE_UTIL_EVTMGR_H

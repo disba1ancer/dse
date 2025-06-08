@@ -3,7 +3,7 @@
 
 #include <dse/core/scene2.h>
 #include "RefCounted.h"
-#include "../glwrp/Texture.h"
+#include "glwrp/Texture.h"
 #include <atomic>
 
 namespace dse::ogl31rbe::gl31 {

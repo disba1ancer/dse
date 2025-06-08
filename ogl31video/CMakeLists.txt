@@ -5,10 +5,10 @@ find_package(Threads REQUIRED)
 find_package(OpenGL REQUIRED)
 
 set(DSE_BUILT_IN_SHADERS
-   gl31/draw.frag
-   gl31/draw.vert
-   gl31/post.frag
-   gl31/post.vert
+   shaders/draw.frag
+   shaders/draw.vert
+   shaders/post.frag
+   shaders/post.vert
 )
 
 add_custom_command(OUTPUT
@@ -16,9 +16,9 @@ add_custom_command(OUTPUT
 COMMAND
    ${CMAKE_COMMAND}
    -DOUTPUT=${CMAKE_CURRENT_BINARY_DIR}/generated/dse_shaders/gl31
-   -P gl31/pack_shaders_to_cpp.cmake ${DSE_BUILT_IN_SHADERS}
+   -P shaders/pack_shaders_to_cpp.cmake ${DSE_BUILT_IN_SHADERS}
 DEPENDS
-   gl31/pack_shaders_to_cpp.cmake
+   shaders/pack_shaders_to_cpp.cmake
    ${DSE_BUILT_IN_SHADERS}
 BYPRODUCTS
    generated/dse_shaders/gl31.h
@@ -26,7 +26,7 @@ WORKING_DIRECTORY
    ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
-add_custom_target(ogl31shaders SOURCES gl31/pack_shaders_to_cpp.cmake ${DSE_BUILT_IN_SHADERS})
+add_custom_target(ogl31shaders SOURCES shaders/pack_shaders_to_cpp.cmake ${DSE_BUILT_IN_SHADERS})
 
 add_library(ogl31video STATIC)
 
@@ -43,22 +43,22 @@ target_link_libraries(ogl31video PRIVATE core glbinding::glbinding Threads::Thre
 target_sources(ogl31video PRIVATE
    ${CMAKE_CURRENT_BINARY_DIR}/generated/dse_shaders/gl31.cpp
    ${CMAKE_CURRENT_BINARY_DIR}/generated/dse_shaders/gl31.h
+   MaterialInstance.cpp
+   MaterialInstance.h
+   MeshInstance.cpp
+   MeshInstance.h
+   ObjectInstance.cpp
+   ObjectInstance.h
+   RefCounted.cpp
+   RefCounted.h
    RenderOpenGL31.cpp
    RenderOpenGL31_impl.cpp
    RenderOpenGL31_impl.h
-   gl31/MaterialInstance.cpp
-   gl31/MaterialInstance.h
-   gl31/MeshInstance.cpp
-   gl31/MeshInstance.h
-   gl31/ObjectInstance.cpp
-   gl31/ObjectInstance.h
-   gl31/RefCounted.cpp
-   gl31/RefCounted.h
-   gl31/Scene.cpp
-   gl31/Scene.h
-   gl31/TextureInstance.cpp
-   gl31/TextureInstance.h
-   gl31/binds.h
+   Scene.cpp
+   Scene.h
+   TextureInstance.cpp
+   TextureInstance.h
+   binds.h
    glwrp/Buffer.h
    glwrp/Context.cpp
    glwrp/Context.h

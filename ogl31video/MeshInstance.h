@@ -10,8 +10,8 @@
 
 #include <dse/core/scene2.h>
 #include <functional>
-#include "../glwrp/VAO.h"
-#include "../glwrp/Buffer.h"
+#include "glwrp/VAO.h"
+#include "glwrp/Buffer.h"
 #include <vector>
 #include "RefCounted.h"
 #include <atomic>

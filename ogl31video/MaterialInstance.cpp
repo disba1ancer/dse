@@ -1,5 +1,5 @@
 #include "MaterialInstance.h"
-#include "../RenderOpenGL31_impl.h"
+#include "RenderOpenGL31_impl.h"
 
 using namespace gl;
 
@@ -30,14 +30,14 @@ void MaterialInstance::Reload(RenderOpenGL31_impl* render)
     }
     ubo.bind();
     glBufferSubData(ubo.target, 0, sizeof(data), &data);
-    auto& texture = material->GetDiffuseTexture();
-    //if (texture) {
-        diffuseInstance.reset(render->GetTextureInstance(&texture, true));
-    //}
-    auto& normalMap = material->GetNormalMapTexture();
-    //if (texture) {
-        normalMapInstance.reset(render->GetTextureInstance(&normalMap, true));
-    //}
+    auto texture = material->GetDiffuseTexture();
+    if (texture) {
+        diffuseInstance.reset(render->GetTextureInstance(texture, true));
+    }
+    auto normalMap = material->GetNormalMapTexture();
+    if (texture) {
+        normalMapInstance.reset(render->GetTextureInstance(normalMap, true));
+    }
     valid = true;
 }
 
